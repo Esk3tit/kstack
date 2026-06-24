@@ -182,7 +182,9 @@ Default boundary = the synchronous request → response → immediate DB row. A 
 cont_mon, subprocessor diffs). For those, after the write:
 
 ```bash
-node "$H/harness/poll-until.mjs" --sql-file <verify.sql> --branch <id> --expect-rows 1 --timeout <seconds>
+# NMB_DATABASE_URL from Neon MCP get_connection_string for the resolved branch — never echo it:
+export NMB_DATABASE_URL="<connection string from Neon MCP>"
+node "$H/harness/poll-until.mjs" --sql-file <verify.sql> --expect-rows 1 --timeout <seconds>
 ```
 
 `poll-until.mjs` re-runs the verify query on a fixed interval until the expected condition holds or the

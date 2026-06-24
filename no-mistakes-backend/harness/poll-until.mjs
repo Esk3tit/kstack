@@ -46,10 +46,24 @@ function havePsql() {
 }
 if (!havePsql()) die('psql not found on PATH — fall back to the Neon MCP run_sql bounded loop', 3);
 
+// Keep the password out of argv (visible to `ps` and echoed in execFileSync error
+// messages) — move it to PGPASSWORD; psql reads the rest of the URI from a sanitized,
+// secret-free arg.
+let connArg = conn;
+const psqlEnv = { ...process.env };
+try {
+  const u = new URL(conn);
+  if (u.password) {
+    psqlEnv.PGPASSWORD = decodeURIComponent(u.password);
+    u.password = '';
+    connArg = u.toString();
+  }
+} catch { /* non-URI conninfo string — pass through unchanged */ }
+
 // Run the query with tuples-only / unaligned output; each returned row is one line.
 function runQuery() {
-  const out = execFileSync('psql', [conn, '-t', '-A', '-X', '-v', 'ON_ERROR_STOP=1', '-c', sql],
-    { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  const out = execFileSync('psql', [connArg, '-t', '-A', '-X', '-v', 'ON_ERROR_STOP=1', '-c', sql],
+    { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], env: psqlEnv });
   const rows = out.split('\n').filter((l) => l.trim() !== '');
   return rows;
 }
