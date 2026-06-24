@@ -60,17 +60,17 @@ if (bodyText !== undefined && !('Content-Type' in headers) && !('content-type' i
 }
 
 // --- Redaction: scrub the bearer string + known sensitive headers everywhere. ---
-const SENSITIVE_HEADER = /^(authorization|x-promptarmor-api-key|cookie|x-api-key)$/i;
+// One sensitive-name set drives the request-header-key check, the header-line text
+// redaction, AND the JSON-key redaction below — so they can never drift apart.
+const SENSITIVE_NAMES = 'authorization|cookie|set-cookie|x-api-key|x-promptarmor-api-key|access[_-]?token|refresh[_-]?token|id[_-]?token|token|api[_-]?key|client[_-]?secret|secret|password|private[_-]?key';
+const SENSITIVE_HEADER = new RegExp(`^(?:${SENSITIVE_NAMES})$`, 'i');
 function redact(text) {
   if (!text) return text;
-  // One sensitive-name set drives BOTH header-line and JSON-key redaction so they
-  // can't drift (covers auth headers + common secret field names).
-  const NAMES = 'authorization|cookie|set-cookie|x-api-key|x-promptarmor-api-key|access[_-]?token|refresh[_-]?token|id[_-]?token|token|api[_-]?key|client[_-]?secret|secret|password|private[_-]?key';
   let out = String(text);
   if (bearer) out = out.split(bearer).join('«redacted-token»');
   return out
-    .replace(new RegExp(`^(${NAMES})\\s*:.*$`, 'gim'), '$1: «redacted»')
-    .replace(new RegExp(`("(?:${NAMES})"\\s*:\\s*)"(?:[^"\\\\]|\\\\.)*"`, 'gi'), '$1"«redacted»"')
+    .replace(new RegExp(`^(${SENSITIVE_NAMES})\\s*:.*$`, 'gim'), '$1: «redacted»')
+    .replace(new RegExp(`("(?:${SENSITIVE_NAMES})"\\s*:\\s*)"(?:[^"\\\\]|\\\\.)*"`, 'gi'), '$1"«redacted»"')
     .replace(/\bBearer\s+[A-Za-z0-9._\-]{12,}/g, 'Bearer «redacted»')
     .replace(/\bpostgres(?:ql)?:\/\/[^\s"'`]+/gi, 'postgres://«redacted»');
 }
