@@ -40,4 +40,4 @@ else
   echo ">> some required tooling is missing (see MISS above) — install before running the skill."
 fi
 echo ">> Neon MCP tools (run_sql / get_connection_string / describe_branch) must be reachable in the Claude session."
-exit 0
+exit "$missing"

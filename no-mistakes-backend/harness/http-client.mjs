@@ -69,6 +69,7 @@ function redact(text) {
   // dumps, connection strings) so the capture is genuinely safe to post.
   return out
     .replace(/^(authorization|x-promptarmor-api-key|cookie|x-api-key)\s*:.*$/gim, '$1: «redacted»')
+    .replace(/("(?:access_token|refresh_token|id_token|token|api[_-]?key|x-promptarmor-api-key|authorization|password|client_secret|secret)"\s*:\s*)"[^"]*"/gi, '$1"«redacted»"')
     .replace(/\bBearer\s+[A-Za-z0-9._\-]{12,}/g, 'Bearer «redacted»')
     .replace(/\bpostgres(?:ql)?:\/\/[^\s"'`]+/gi, 'postgres://«redacted»');
 }
