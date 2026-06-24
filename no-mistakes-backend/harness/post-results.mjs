@@ -82,8 +82,12 @@ const esc = (s) => String(s ?? '').replace(/\\/g, '\\\\').replace(/\|/g, '\\|');
 // post a secret. Final safety net over every evidence string before it leaves the host.
 function redact(text) {
   if (!text) return text;
+  // One sensitive-name set drives BOTH header-line and JSON-key redaction so they
+  // can't drift (covers auth headers + common secret field names).
+  const NAMES = 'authorization|cookie|set-cookie|x-api-key|x-promptarmor-api-key|access[_-]?token|refresh[_-]?token|id[_-]?token|token|api[_-]?key|client[_-]?secret|secret|password|private[_-]?key';
   return String(text)
-    .replace(/^(authorization|x-promptarmor-api-key|cookie|x-api-key)\s*:.*$/gim, '$1: «redacted»')
+    .replace(new RegExp(`^(${NAMES})\\s*:.*$`, 'gim'), '$1: «redacted»')
+    .replace(new RegExp(`("(?:${NAMES})"\\s*:\\s*)"(?:[^"\\\\]|\\\\.)*"`, 'gi'), '$1"«redacted»"')
     .replace(/\bBearer\s+[A-Za-z0-9._\-]{12,}/g, 'Bearer «redacted»')
     .replace(/\bpostgres(?:ql)?:\/\/[^\s"'`]+/gi, 'postgres://«redacted»');
 }

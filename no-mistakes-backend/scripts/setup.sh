@@ -7,22 +7,25 @@ set -euo pipefail
 # live in the Claude session, not on PATH — this script only checks the shell-side tools.
 
 missing=0
+# check <cmd> <note> <required|optional>: only a missing REQUIRED tool fails the check.
 check() {
   if command -v "$1" >/dev/null 2>&1; then
     printf '  ok   %-8s %s\n' "$1" "$($1 --version 2>/dev/null | head -n1 || echo present)"
-  else
+  elif [ "$3" = "required" ]; then
     printf '  MISS %-8s %s\n' "$1" "$2"
     missing=1
+  else
+    printf '  --   %-8s %s\n' "$1" "$2"
   fi
 }
 
 echo ">> no-mistakes-backend tooling check"
-check node    "required — install Node 18+ (global fetch used by the harness)"
-check doppler "required — secrets/auth for both surfaces (brew install dopplerhq/cli/doppler)"
-check gh      "required — posts results to the PR (brew install gh)"
-check git     "required — repo/remote resolution"
-check psql    "optional — only for async poll-until.mjs tight polling; without it the skill polls via Neon MCP run_sql"
-check aws     "not needed — backend evidence is text (no S3, unlike no-mistakes)"
+check node    "install Node 18+ (global fetch used by the harness)" required
+check doppler "secrets/auth for both surfaces (brew install dopplerhq/cli/doppler)" required
+check gh      "posts results to the PR (brew install gh)" required
+check git     "repo/remote resolution" required
+check psql    "optional — async poll-until.mjs tight polling; without it the skill polls via Neon MCP run_sql" optional
+check aws     "not needed — backend evidence is text (no S3, unlike no-mistakes)" optional
 
 node_major="$(node -e 'process.stdout.write(String(process.versions.node.split(".")[0]||0))' 2>/dev/null || echo 0)"
 if [ "${node_major:-0}" -lt 18 ]; then
@@ -37,4 +40,4 @@ else
   echo ">> some required tooling is missing (see MISS above) — install before running the skill."
 fi
 echo ">> Neon MCP tools (run_sql / get_connection_string / describe_branch) must be reachable in the Claude session."
-exit 0
+exit "$missing"
