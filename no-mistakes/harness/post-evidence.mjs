@@ -359,7 +359,8 @@ function buildBodyBlock(galleryUrl) {
     if (c.evidence && pngs.includes(c.evidence) && galleryUrl) {
       ev = `[📸 ${c.evidence}](${galleryUrl})`;
     }
-    lines.push(`| ${String(c.name ?? '').replace(/\|/g, '\\|')} | ${res} | ${ev} |`);
+    const name = String(c.name ?? '').replace(/\\/g, '\\\\').replace(/\|/g, '\\|');
+    lines.push(`| ${name} | ${res} | ${ev} |`);
   }
   lines.push('');
   lines.push(findings.length === 0

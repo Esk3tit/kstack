@@ -74,7 +74,9 @@ function overallStatus() {
 }
 
 const cases = Array.isArray(results.cases) ? results.cases : [];
-const esc = (s) => String(s ?? '').replace(/\|/g, '\\|');
+// Escape the backslash FIRST, then the pipe — else a literal `\|` in input leaves
+// the pipe unescaped and breaks the markdown table cell.
+const esc = (s) => String(s ?? '').replace(/\\/g, '\\\\').replace(/\|/g, '\\|');
 
 // Defense-in-depth: captures SHOULD already be redacted by http-client.mjs, but never
 // post a secret. Final safety net over every evidence string before it leaves the host.
