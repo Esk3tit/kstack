@@ -187,6 +187,11 @@ function readS3Config() {
   } catch { return null; }
 }
 
+let s3FailureDetail = null;
+function isAwsAuthError(s) {
+  return /expired|reauthenticate|InvalidClientTokenId|ExpiredToken|sso[\s_-]?login|credential|Unable to locate credentials|AccessDenied/i.test(s || '');
+}
+
 function uploadS3(cfg) {
   if (pngs.length === 0) return null;
   const s3Prefix = (cfg.prefix || 'no-mistakes').replace(/\/+$/, '');
@@ -198,20 +203,41 @@ function uploadS3(cfg) {
     const uri = `s3://${cfg.bucket}/${key}`;
     try {
       execFileSync('aws', ['s3', 'cp', join(runDir, png), uri, '--content-type', 'image/png', ...regionArgs],
-        { encoding: 'utf8', stdio: ['ignore', 'inherit', 'inherit'] });
+        { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
       const url = execFileSync('aws', ['s3', 'presign', uri, '--expires-in', expiresIn, ...regionArgs],
-        { encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'] }).trim();
+        { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
       if (!url) {
-        console.error(`[post-evidence] aws presign printed empty URL for ${png}`);
+        s3FailureDetail = 'aws presign printed an empty URL';
+        console.error(`[post-evidence] ${s3FailureDetail} for ${png}`);
         return null;
       }
       urls[png] = url;
     } catch (e) {
-      console.error(`[post-evidence] aws upload/presign failed for ${png}: ${(e.message || '').split('\n')[0]}`);
+      s3FailureDetail = (e.stderr || e.message || '').toString().trim();
+      console.error(`[post-evidence] aws upload/presign failed for ${png}: ${s3FailureDetail.split('\n')[0]}`);
       return null;
     }
   }
   return urls;
+}
+
+// Loud, actionable banner when a CONFIGURED S3 backend fails closed to the branch —
+// the common cause is an expired SSO session, which is otherwise easy to miss.
+function noteS3Fallback() {
+  const authExpired = isAwsAuthError(s3FailureDetail);
+  console.error('========================================================================');
+  if (authExpired) {
+    console.error('[post-evidence] AWS SESSION EXPIRED — S3 inline evidence is configured but');
+    console.error('  the upload failed auth. Falling back to the orphan-branch click-through');
+    console.error('  path (links, not inline thumbnails, on a private repo).');
+    console.error('  FIX: run `aws login` (or `aws sso login`), then re-run no-mistakes — it');
+    console.error('  will upload to S3 and update the gallery comment with inline thumbnails.');
+  } else {
+    console.error('[post-evidence] native S3 upload FAILED — falling back to the orphan-branch');
+    console.error(`  click-through path. reason: ${(s3FailureDetail || 'unknown').split('\n')[0]}`);
+    console.error('  Re-run after resolving, or `aws login` if it is a credentials issue.');
+  }
+  console.error('========================================================================');
 }
 
 let externalUrls = null;
@@ -225,7 +251,7 @@ if (process.env.NOMISTAKES_EVIDENCE_UPLOAD_CMD) {
   if (s3Config) {
     externalUrls = uploadS3(s3Config);
     if (!externalUrls && pngs.length > 0) {
-      console.error('[post-evidence] native S3 upload failed; falling back to orphan-branch click-through path');
+      noteS3Fallback();
     }
   }
 }
