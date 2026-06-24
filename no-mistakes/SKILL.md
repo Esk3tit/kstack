@@ -63,6 +63,19 @@ checkouts under `~/PromptArmor/AI-TPRM` and `~/PromptArmor/AI-ARG`.
    `Date`), e.g. `RUN="$(date +%Y%m%d-%H%M%S)-$$"`. Evidence dir = `~/.no-mistakes/$RUN/`. Reject
    any caller-supplied evidence dir that resolves **inside a product checkout** (fall back to the
    default). `mkdir -p ~/.no-mistakes/$RUN`.
+7. **Evidence backend healthy (warn-only, never blocks).** If the inline-S3 backend is configured
+   (`~/.no-mistakes/evidence.json` present with `"backend":"s3"`) AND no `NOMISTAKES_EVIDENCE_UPLOAD_CMD`
+   override is set, verify the AWS session is live **before** capturing — an expired SSO session makes
+   the S3 upload fail closed to the orphan-branch click-through path (links, not inline thumbnails on
+   a private repo), which is easy to miss after a full run:
+   ```bash
+   if [ -z "${NOMISTAKES_EVIDENCE_UPLOAD_CMD:-}" ] && grep -q '"backend":"s3"' ~/.no-mistakes/evidence.json 2>/dev/null; then
+     aws sts get-caller-identity >/dev/null 2>&1 || echo "WARN: AWS session expired — run 'aws login' for inline S3 thumbnails (else evidence posts as orphan-branch links)"
+   fi
+   ```
+   If it warns, tell the user to run `aws login` (or `aws sso login`) for inline thumbnails. **Do not
+   block** — the run still completes and posts via the orphan-branch fallback; this is purely a
+   heads-up so they re-auth before (not after) a long run.
 
 ## 2. Derive test cases (gate)
 
