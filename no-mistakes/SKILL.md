@@ -68,7 +68,14 @@ Announce the chosen route before proceeding.
      install silently.** Until resolved: `BLOCKED reason=missing-sibling-skill`. (A pure frontend-only
      localhost run technically needs only `$FE`; still surface a missing `$BE` so a later fullstack run
      isn't surprised.)
-2. **Target resolution (depends on route + where the app runs):**
+2. **Inline-S3 evidence gate (FE-involving routes — frontend-only & fullstack).** These routes capture
+   and post frontend screenshots via the `$FE` S3 backend. If inline S3 is configured
+   (`~/.no-mistakes/evidence.json` `"backend":"s3"`, no `NOMISTAKES_EVIDENCE_UPLOAD_CMD`), the AWS
+   session MUST be live **before** capturing — `aws sts get-caller-identity`; if it fails, **STOP: do
+   not run the verification, do not capture/upload.** `BLOCKED reason=aws-auth-expired` (run `aws login`).
+   Inline S3 is mandatory once configured; never downgrade to the orphan-branch path. (Backend-only
+   routes skip this — `$BE` evidence is text, no images.)
+3. **Target resolution (depends on route + where the app runs):**
    - **Preview target** (fullstack, or a single-stack run against a PR preview) — resolve **once**,
      **un-sandboxed** (preview ClusterIPs are reachable only over the VPN; the default sandbox blocks
      them):
@@ -85,10 +92,10 @@ Announce the chosen route before proceeding.
    - **Localhost target** (single-stack dev verification) — skip preview resolution; use the
      specialist defaults (`$FE`: `http://localhost:5173`; `$BE`: `http://localhost:8090` + the
      dev_personal Neon branch). Their own preflights handle `app-not-up` / `no-creds`.
-3. **Scope guard.** Preview = **redacted Neon branch** (dev-equivalent, no prod data) → **in-scope**
+4. **Scope guard.** Preview = **redacted Neon branch** (dev-equivalent, no prod data) → **in-scope**
    (throwaway-safe to read + mutate). Localhost dev → in-scope. **Only a production target is refused**
    → `BLOCKED reason=out-of-scope-target`.
-4. **Resolve PR(s).** For the branch, find the frontend repo PR and/or the TPRM-API PR via `gh`. Post
+5. **Resolve PR(s).** For the branch, find the frontend repo PR and/or the TPRM-API PR via `gh`. Post
    to whichever the route produces; none → report locally (`pr_post=no-pr`).
 
 ## 3. Execute the routed flow
@@ -206,7 +213,7 @@ be trusted.
 - `NOMISTAKES_STATUS=FAIL` — one+ behaviors broken. In a fullstack run this **includes a UI action whose
   write did not persist correctly to the Neon DB** (the round-trip mismatch is a first-class FAIL). Each
   FAIL lists suspected cause + evidence.
-- `NOMISTAKES_STATUS=BLOCKED reason=<unclear-scope|needs-setup|missing-sibling-skill|porter-auth|frontend-undetected|preview-unreachable|neon-branch-unresolved|out-of-scope-target|unclear-intent|preview-auth|app-not-up|no-creds|indeterminate>`
+- `NOMISTAKES_STATUS=BLOCKED reason=<unclear-scope|needs-setup|missing-sibling-skill|aws-auth-expired|porter-auth|frontend-undetected|preview-unreachable|neon-branch-unresolved|out-of-scope-target|unclear-intent|preview-auth|app-not-up|no-creds|indeterminate>`
   — couldn't route, run, or trust the run; state what's needed.
 
 **Always also report PR-post outcome, separable from the verdict:** posting failure still emits the real

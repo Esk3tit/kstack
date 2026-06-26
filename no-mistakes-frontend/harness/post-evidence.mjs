@@ -221,44 +221,44 @@ function uploadS3(cfg) {
   return urls;
 }
 
-// Loud, actionable banner when a CONFIGURED S3 backend fails closed to the branch —
-// the common cause is an expired SSO session, which is otherwise easy to miss.
-function noteS3Fallback() {
+// Loud, actionable banner when a CONFIGURED inline backend fails. Inline is MANDATORY
+// once configured, so we REFUSE to downgrade to the orphan-branch (non-inline) path —
+// nothing is posted; the verdict is kept locally and the user must re-auth + re-run.
+function noteInlineRequiredFailure() {
   const authExpired = isAwsAuthError(s3FailureDetail);
   console.error('========================================================================');
   if (authExpired) {
-    console.error('[post-evidence] AWS SESSION EXPIRED — S3 inline evidence is configured but');
-    console.error('  the upload failed auth. Falling back to the orphan-branch click-through');
-    console.error('  path (links, not inline thumbnails, on a private repo).');
-    console.error('  FIX: run `aws login` (or `aws sso login`), then re-run no-mistakes — it');
-    console.error('  will upload to S3 and update the gallery comment with inline thumbnails.');
+    console.error('[post-evidence] AWS SESSION EXPIRED — inline S3 evidence is configured and');
+    console.error('  REQUIRED, but the upload failed auth. REFUSING to downgrade to the orphan-');
+    console.error('  branch (non-inline) path. No images posted; verdict kept locally only.');
+    console.error('  FIX: run `aws login` (or `aws sso login`), then re-run no-mistakes-frontend.');
   } else {
-    console.error('[post-evidence] native S3 upload FAILED — falling back to the orphan-branch');
-    console.error(`  click-through path. reason: ${(s3FailureDetail || 'unknown').split('\n')[0]}`);
-    console.error('  Re-run after resolving, or `aws login` if it is a credentials issue.');
+    console.error('[post-evidence] inline evidence upload FAILED and is REQUIRED (configured');
+    console.error(`  backend). reason: ${(s3FailureDetail || 'unknown').split('\n')[0]}`);
+    console.error('  REFUSING to downgrade to the orphan-branch path. Resolve + re-run.');
   }
   console.error('========================================================================');
 }
 
+const s3Config = process.env.NOMISTAKES_EVIDENCE_UPLOAD_CMD ? null : readS3Config();
+const inlineConfigured = !!process.env.NOMISTAKES_EVIDENCE_UPLOAD_CMD || !!s3Config;
 let externalUrls = null;
 if (process.env.NOMISTAKES_EVIDENCE_UPLOAD_CMD) {
   externalUrls = uploadExternal();
-  if (!externalUrls && pngs.length > 0) {
-    console.error('[post-evidence] external upload failed; falling back to orphan-branch click-through path');
-  }
-} else {
-  const s3Config = readS3Config();
-  if (s3Config) {
-    externalUrls = uploadS3(s3Config);
-    if (!externalUrls && pngs.length > 0) {
-      noteS3Fallback();
-    }
-  }
+} else if (s3Config) {
+  externalUrls = uploadS3(s3Config);
 }
+
+// Inline backend configured but upload failed → inline is REQUIRED. Do NOT downgrade
+// to the orphan-branch path; hard-stop (handled after persistAndExit is defined).
+const inlineRequiredFailed = inlineConfigured && !externalUrls && pngs.length > 0;
+if (inlineRequiredFailed) noteInlineRequiredFailure();
 
 let pushResult;
 if (externalUrls) {
   pushResult = { pushed: false, reason: 'inline-host (orphan push skipped)' };
+} else if (inlineRequiredFailed) {
+  pushResult = { pushed: false, reason: 'inline-required: upload failed, orphan downgrade refused' };
 } else {
   try { pushResult = pushEvidence(); }
   catch (e) { pushResult = { pushed: false, reason: e.message.split('\n')[0] }; }
@@ -399,6 +399,10 @@ function persistAndExit(status, galleryUrl = null) {
   console.log(`summary_file=${summaryFile}`);
   process.exit(status === 'ok' ? 0 : 1);
 }
+
+// Inline S3 is mandatory once configured: never post a degraded (non-inline) result.
+// Keep the verdict locally and fail — the user re-auths and re-runs for inline S3.
+if (inlineRequiredFailed) persistAndExit('failed');
 
 if (!pr) persistAndExit('no-pr');
 
