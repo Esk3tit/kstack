@@ -1,4 +1,4 @@
-// no-mistakes harness: mint a real PropelAuth access token (Bearer) for the test
+// no-mistakes-frontend harness: mint a real PropelAuth access token (Bearer) for the test
 // user — no browser, no password — so the skill can call TPRM-API directly for
 // ground-truth value checks. Uses the PropelAuth integration key + create_access_token.
 // Run where those secrets resolve, e.g.:  doppler run -- node api-token.mjs --json

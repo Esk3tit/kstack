@@ -1,8 +1,8 @@
 // no-mistakes harness: publish UI-verification evidence to a GitHub PR on TWO surfaces.
 //
-//   1. A single idempotent GALLERY COMMENT (marker <!-- no-mistakes:gallery -->) holding
+//   1. A single idempotent GALLERY COMMENT (marker <!-- no-mistakes-frontend:gallery -->) holding
 //      the inline screenshot gallery + visual-findings detail. Updated in place on re-run.
-//   2. A COMPACT BODY BLOCK (markers <!-- no-mistakes:start -->…<!-- no-mistakes:end -->)
+//   2. A COMPACT BODY BLOCK (markers <!-- no-mistakes-frontend:start -->…<!-- no-mistakes-frontend:end -->)
 //      spliced at the TOP of the PR description: status header + test-case table whose
 //      Evidence cells link to the gallery comment. NO inline images, NO presigned URLs —
 //      so the body stays commit-clean (squash-merge messages pre-fill from the body).
@@ -61,10 +61,10 @@ import { readFileSync, writeFileSync, existsSync, readdirSync, mkdtempSync } fro
 import { join, basename } from 'node:path';
 import { tmpdir } from 'node:os';
 
-const MARKER_START = '<!-- no-mistakes:start -->';
-const MARKER_END = '<!-- no-mistakes:end -->';
-const MARKER_REGION = /<!-- no-mistakes:start -->[\s\S]*?<!-- no-mistakes:end -->/;
-const MARKER_GALLERY = '<!-- no-mistakes:gallery -->';
+const MARKER_START = '<!-- no-mistakes-frontend:start -->';
+const MARKER_END = '<!-- no-mistakes-frontend:end -->';
+const MARKER_REGION = /<!-- no-mistakes-frontend:start -->[\s\S]*?<!-- no-mistakes-frontend:end -->/;
+const MARKER_GALLERY = '<!-- no-mistakes-frontend:gallery -->';
 const BRANCH = 'no-mistakes-evidence';
 
 function die(msg) { console.error(`[post-evidence] ${msg}`); process.exit(1); }
@@ -348,7 +348,7 @@ function buildBodyBlock(galleryUrl) {
 
   const lines = [];
   lines.push(MARKER_START);
-  lines.push(`### no-mistakes: ${badge}`);
+  lines.push(`### no-mistakes-frontend: ${badge}`);
   lines.push(`**Revision:** \`${revision}\`  ·  **Intent:** ${intent}`);
   lines.push('');
   lines.push('| Test case | Result | Evidence |');

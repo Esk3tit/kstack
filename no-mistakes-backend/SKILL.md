@@ -12,7 +12,7 @@ user-invocable: true
 
 # no-mistakes-backend — agentic API + DB verification
 
-The backend sibling of `no-mistakes`. Where `no-mistakes` proves a **UI** change by comparing the
+The backend sibling of `no-mistakes-frontend`. Where `no-mistakes-frontend` proves a **UI** change by comparing the
 rendered screen to API ground-truth, this proves a **TPRM-API** change by driving the changed
 endpoints with real auth, asserting the HTTP response, and then verifying ground-truth **one layer
 below the API — the Neon DB** (read-after-write: the endpoint returned 200, but did the row actually
@@ -218,7 +218,7 @@ Collect the run's evidence into `~/.no-mistakes-backend/$RUN/` and build `result
 node "$H/harness/post-results.mjs" --pr <N> --run-dir ~/.no-mistakes-backend/$RUN --results ~/.no-mistakes-backend/$RUN/results.json --repo <owner/name>
 ```
 
-It posts on **two idempotent surfaces** (uniform with `no-mistakes`, so a future fullstack router gets
+It posts on **two idempotent surfaces** (uniform with `no-mistakes-frontend`, so a future fullstack router gets
 one shape from both skills):
 
 1. **Compact body block** spliced at the **top of the PR description** via
