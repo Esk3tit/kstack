@@ -38,7 +38,9 @@ try { r = JSON.parse(readFileSync(resultsPath, 'utf8')); } catch (e) { die(`bad 
 
 const badge = (s) => (s === 'PASS' ? '✅ PASS' : s === 'FAIL' ? '❌ FAIL' : s === 'BLOCKED' ? '⚠️ BLOCKED' : (s || '—'));
 const mark = (s) => (s === 'PASS' ? '✅' : s === 'FAIL' ? '❌' : s === 'BLOCKED' ? '⚠️' : '—');
-const esc = (s) => String(s ?? '').replace(/\|/g, '\\|');
+// Escape the backslash FIRST, then the pipe — else a literal `\|` in input leaves
+// the pipe unescaped and breaks the markdown table cell.
+const esc = (s) => String(s ?? '').replace(/\\/g, '\\\\').replace(/\|/g, '\\|');
 
 const fe = r.frontend || {};
 const be = r.backend || {};
