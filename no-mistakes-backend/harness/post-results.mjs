@@ -1,5 +1,5 @@
 // no-mistakes-backend harness: publish API-verification results to a GitHub PR on TWO
-// idempotent surfaces (uniform with no-mistakes, so a fullstack router gets one shape):
+// idempotent surfaces (uniform with no-mistakes-frontend, so a fullstack router gets one shape):
 //
 //   1. A COMPACT BODY BLOCK (markers <!-- no-mistakes-backend:start -->…:end -->)
 //      spliced at the TOP of the PR description: status header + endpoint-case table.
@@ -9,7 +9,7 @@
 //      per-case captured request + response + SQL read-after-write, in collapsible
 //      <details>. Updated in place on re-run (PATCH), else created — never duplicated.
 //
-// Unlike no-mistakes there are NO screenshots/S3/orphan-branch — backend evidence is
+// Unlike no-mistakes-frontend there are NO screenshots/S3/orphan-branch — backend evidence is
 // all text, so it goes straight into the comment. The request/response/dbCheck strings
 // are expected to be ALREADY REDACTED by the harness (no Authorization, no secrets).
 //
