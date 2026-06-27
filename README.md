@@ -18,6 +18,7 @@ documents what's third-party (so I know what I'm dropping vs. keeping).
 | `commands/` | Custom slash commands (Codex-driven review loops + PR hygiene). |
 | `codex-cli/` | The `codex-cli` skill — the reliable `codex exec` recipe these commands depend on. |
 | `no-mistakes/` · `no-mistakes-frontend/` · `no-mistakes-backend/` | The verification skill family (router + two specialists). See each `SKILL.md`. |
+| `wide-event-logging/` | Skill — canonical-log-line / wide-event logging for Python/FastAPI (with reference modules). |
 | `codex/config.toml.example` | My Codex CLI config, **token redacted**. |
 
 ---
@@ -64,6 +65,10 @@ All user-authored, plugin-independent (they shell out to `codex` / `gh-axi`, not
   `ai-arg`/`ai-tprm-v2` frontends + `tprm-api-tprm-api`, Neon `preview-pr-<N>`). Each `SKILL.md` is the
   runtime playbook; `scripts/setup.sh` checks tooling.
 
+- **`wide-event-logging/`** — implement wide event logging (canonical log lines) in Python/FastAPI:
+  `SKILL.md` + reference modules (`config.py`, `context.py`, `middleware.py`, `security.py`, `usage.py`)
+  for TPRM-API observability.
+
 Install: copy each dir into `~/.claude/skills/<name>/`.
 
 ## 4. Codex CLI setup (`codex/config.toml.example`)
@@ -86,7 +91,8 @@ Documented so I know what each provides when deciding keep/drop. Reinstall from 
 | `excalidraw-diagram-generator` | Excalidraw diagrams from NL. | optional |
 | `find-skills` | Discover/install agent skills. | optional |
 | `langfuse` | Langfuse CLI + docs (traces, prompts, datasets). | keep if using Langfuse |
-| `wide-event-logging` | Canonical-log-line / wide-event logging for Python/FastAPI. | reference |
+
+(`wide-event-logging` was moved into this repo — see **Custom skills** above.)
 
 ## 6. Plugins & marketplaces — what I'm migrating OFF
 
