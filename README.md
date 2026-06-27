@@ -96,7 +96,7 @@ the rest are default-on when installed.
 | Plugin (marketplace) | Provides | Migration note |
 |----------------------|----------|----------------|
 | **superpowers-extended-cc** (6.0.4-dev) | `brainstorming`, `writing-plans`, `subagent-driven-development`, `finishing-a-development-branch`, `using-git-worktrees`, `requesting-code-review`, … | **The big drop.** Losing it means losing the brainstorm→spec→plan→subagent pipeline — replicate only the parts I want as plain skills/commands. |
-| **context-mode** (1.0.168) | Context-window protection (`ctx_*` tools), session memory, SessionStart guidance. | Decide: keep for big-context work, or drop for a leaner loop. |
+| **context-mode** (1.0.168) | Context-window protection (`ctx_*` tools), session memory, SessionStart guidance. | **Keep** — context-window protection + session memory across compaction. |
 | **claude-code-builder** | `/create-skill`, `/create-plugin` (how the no-mistakes skills were scaffolded). | Keep for authoring skills. |
 | **claude-code-warp** | `warp`. | Optional. |
 | **claude-plugins-official** | `context7` (live docs), `playwright` (MCP browser), `pyright-lsp`, `typescript-lsp`, `sentry`, `linear`. | Keep LSPs + context7 + linear/sentry MCP; playwright is superseded by dev-browser for my use. |
