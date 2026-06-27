@@ -63,19 +63,20 @@ checkouts under `~/PromptArmor/AI-TPRM` and `~/PromptArmor/AI-ARG`.
    `Date`), e.g. `RUN="$(date +%Y%m%d-%H%M%S)-$$"`. Evidence dir = `~/.no-mistakes/$RUN/`. Reject
    any caller-supplied evidence dir that resolves **inside a product checkout** (fall back to the
    default). `mkdir -p ~/.no-mistakes/$RUN`.
-7. **Evidence backend healthy (warn-only, never blocks).** If the inline-S3 backend is configured
-   (`~/.no-mistakes/evidence.json` present with `"backend":"s3"`) AND no `NOMISTAKES_EVIDENCE_UPLOAD_CMD`
-   override is set, verify the AWS session is live **before** capturing — an expired SSO session makes
-   the S3 upload fail closed to the orphan-branch click-through path (links, not inline thumbnails on
-   a private repo), which is easy to miss after a full run:
+7. **Evidence backend healthy (HARD GATE — inline S3 is required, not optional).** When the inline-S3
+   backend is configured (`~/.no-mistakes/evidence.json` with `"backend":"s3"`) AND no
+   `NOMISTAKES_EVIDENCE_UPLOAD_CMD` override is set, the AWS session MUST be live **before** capturing.
+   We force S3 inline evidence and **refuse to degrade** to the orphan-branch click-through path:
    ```bash
    if [ -z "${NOMISTAKES_EVIDENCE_UPLOAD_CMD:-}" ] && grep -q '"backend":"s3"' ~/.no-mistakes/evidence.json 2>/dev/null; then
-     aws sts get-caller-identity >/dev/null 2>&1 || echo "WARN: AWS session expired — run 'aws login' for inline S3 thumbnails (else evidence posts as orphan-branch links)"
+     aws sts get-caller-identity >/dev/null 2>&1 || echo "AWS_AUTH_EXPIRED"
    fi
    ```
-   If it warns, tell the user to run `aws login` (or `aws sso login`) for inline thumbnails. **Do not
-   block** — the run still completes and posts via the orphan-branch fallback; this is purely a
-   heads-up so they re-auth before (not after) a long run.
+   If `aws sts get-caller-identity` fails (`AWS_AUTH_EXPIRED`): **STOP immediately — do NOT run the
+   verification, do NOT capture or upload any images.** Emit
+   `NOMISTAKES_FRONTEND_STATUS=BLOCKED reason=aws-auth-expired` and tell the user to run `aws login`
+   (or `aws sso login`), then re-invoke. Inline S3 is mandatory once configured; the orphan-branch
+   fallback exists only for when S3 isn't set up at all — never as a silent downgrade when auth lapses.
 
 ## 2. Derive test cases (gate)
 
@@ -350,9 +351,10 @@ number (default: current branch's PR).
   the readable threshold; overlap/overflow that intercepts the interaction under test). Slop signals
   and "fits the app's visual language" are findings, not FAIL triggers. Each FAIL lists suspected
   cause + evidence.
-- `NOMISTAKES_FRONTEND_STATUS=BLOCKED reason=<needs-setup|app-not-up|no-creds|login-failed|unclear-intent|out-of-scope-target|revision-mismatch|indeterminate|required-case-unverified>`
+- `NOMISTAKES_FRONTEND_STATUS=BLOCKED reason=<needs-setup|aws-auth-expired|app-not-up|no-creds|login-failed|unclear-intent|out-of-scope-target|revision-mismatch|indeterminate|required-case-unverified>`
   — couldn't run or couldn't trust the run; state what's needed.
   - `needs-setup` = dev-browser/chromium missing.
+  - `aws-auth-expired` = inline-S3 evidence is configured but the AWS session is expired — refused before capturing (run `aws login`; inline S3 is mandatory, no orphan-branch downgrade).
   - `app-not-up` = dev server unreachable.
   - `no-creds` = auth creds unresolvable.
   - `login-failed` = PropelAuth login didn't carry a session.
