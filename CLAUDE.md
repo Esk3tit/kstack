@@ -2,7 +2,7 @@
 
 ## Technical decisions
 
-When making technical decisions, do not give much weight to development cost. Instead, prefer quality, simplicity, robustness, scalability, and long-term maintainability.
+When making technical decisions, give no weight to development cost or engineering effort by default. **Quality, simplicity, robustness, scalability, and long-term maintainability are the decisive factors** in any technical decision. Give cost/effort weight only when the user signals urgency, and even then very little — never more than that urgency clearly warrants.
 
 ## Bug fixes
 
