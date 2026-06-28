@@ -17,7 +17,7 @@ documents what's third-party (so I know what I'm dropping vs. keeping).
 | `CLAUDE.md` | Global instructions for Claude Code. **Shared with Codex** via a symlink (below). |
 | `commands/` | Custom slash commands (Codex-driven review loops + PR hygiene). |
 | `codex-cli/` | The `codex-cli` skill — the reliable `codex exec` recipe these commands depend on. |
-| `no-mistakes/` · `no-mistakes-frontend/` · `no-mistakes-backend/` | The verification skill family (router + two specialists). See each `SKILL.md`. |
+| `no-mistakes/` · `no-mistakes-frontend/` · `no-mistakes-backend/` · `no-mistakes-a11y/` | The verification skill family (router + three specialists: frontend, backend, deep-a11y). See each `SKILL.md`. |
 | `wide-event-logging/` | Skill — canonical-log-line / wide-event logging for Python/FastAPI (with reference modules). |
 | `codex/config.toml.example` | My Codex CLI config, **token redacted**. |
 
@@ -57,11 +57,12 @@ All user-authored, plugin-independent (they shell out to `codex` / `gh-axi`, not
 - **`codex-cli/`** — the source-of-truth recipe for calling `codex exec` reliably (consults, code
   review, web-search research) and avoiding the common failure modes (hangs, empty output, JSONL
   parsing, diff-piping killed by MCP churn). Every command/skill that shells out to Codex follows it.
-- **`no-mistakes/` (router) + `no-mistakes-frontend/` + `no-mistakes-backend/`** — agentic verification
+- **`no-mistakes/` (router) + `no-mistakes-frontend/` + `no-mistakes-backend/` + `no-mistakes-a11y/`** — agentic verification
   for PromptArmor changes against a running app + Neon DB. The router classifies a request and runs
   frontend-only / backend-only / **fullstack round-trip** (drive a UI action → assert the UI → read the
-  Neon preview DB to prove the write persisted). Composes the two specialists' harnesses; posts results
-  to the PR(s). Report-only, ephemeral. Built around Porter previews (project 8417 / cluster 3429,
+  Neon preview DB to prove the write persisted), and offers the opt-in **deep-a11y** pass (keyboard
+  operability / focus / 320px reflow, emitting its own `NOMISTAKES_A11Y_STATUS`). Composes the
+  specialists' harnesses; posts results to the PR(s). Report-only, ephemeral. Built around Porter previews (project 8417 / cluster 3429,
   `ai-arg`/`ai-tprm-v2` frontends + `tprm-api-tprm-api`, Neon `preview-pr-<N>`). Each `SKILL.md` is the
   runtime playbook; `scripts/setup.sh` checks tooling.
 
