@@ -117,7 +117,9 @@ Announce the chosen route before proceeding.
 
 **frontend-only** → follow `$FE/SKILL.md` (derive cases, auth, recon, functional + visual verify,
 self-heal) against the resolved FE target (preview `feUrl` or localhost). Post its evidence to the
-frontend PR via the `$FE` poster. The router's verdict mirrors the frontend run.
+frontend PR via the `$FE` poster — when the target was a preview, pass the resolved `feUrl` as
+`previewUrl` in its `results.json` so the PR body carries a clickable **Open the preview UI →** link.
+The router's verdict mirrors the frontend run.
 
 **backend-only** → follow `$BE/SKILL.md` (derive endpoint cases, auth, request → response → **DB
 read-after-write**, async poll, self-heal) against the resolved API target + preview DB branch or
@@ -179,14 +181,16 @@ only with positive product-misbehavior evidence, else `BLOCKED reason=indetermin
   ```json
   {
     "overall": "PASS|FAIL|BLOCKED",
-    "preview": {"namespace": "...", "apiHost": "...", "dbBranch": "<preview branch>"},
+    "preview": {"namespace": "...", "apiHost": "...", "dbBranch": "<preview branch>", "feUrl": "<preview frontend URL>"},
     "frontend": {"name": "<frontend app>", "repo": "<owner>/<frontend>", "pr": 522, "status": "PASS", "detailUrl": "..."},
     "backend":  {"name": "<backend app>", "repo": "<owner>/<backend>", "pr": 1980, "status": "PASS", "detailUrl": "..."},
     "roundtrip": [{"name": "create record via UI persists to DB", "pass": true}]
   }
   ```
   It splices an idempotent header (`<!-- no-mistakes:start/end -->`) into **both** PR bodies — overall
-  status + `(FE · BE · round-trip)`, the preview namespace / API host / DB branch, a per-layer table,
+  status + `(FE · BE · round-trip)`, the preview namespace / API host / DB branch, a clickable
+  **Open the preview UI →** link (`preview.feUrl`, so a reviewer can open the running app without
+  re-running), a per-layer table,
   and the round-trip case list — so a reviewer on either PR sees the whole-stack verdict. Author body
   preserved; updated in place on re-run. `gh` failure on a target → still writes `summary.md`, prints
   `pr_post=<repo>#<pr>:failed`. No PR → `pr_post=no-pr`. The verdict is never lost.
