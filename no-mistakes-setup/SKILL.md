@@ -68,8 +68,13 @@ file):
 ```bash
 node "$NM/setup.mjs" --cwd "$PWD" --yes \
   --preset <platform> --project <id> [--org <o>] [--repo-owner <o>] [--checkout-base <dir>] \
+  [--evidence <git-branch|gdrive|imgur|s3|cmd|local>] [--fallback <git-branch|local|none>] \
   [--output <path> | --central] [--force]
 ```
+
+Pick the evidence host with the user: for a **PUBLIC repo**, `--evidence git-branch` is free and renders
+inline with zero setup. For a **private repo**, use an external host (`gdrive`/`imgur`/`s3`/`cmd`) so
+images render inline; git-branch then only serves as the fallback (click-through on private).
 
 `--central` writes `~/.no-mistakes/<project>.json` instead of `<cwd>/.no-mistakes.json` (use when the
 config shouldn't live in the product repo). `setup.mjs` validates before writing and refuses to

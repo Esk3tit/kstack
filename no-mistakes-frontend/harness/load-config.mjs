@@ -83,9 +83,13 @@ export function withDefaults(cfg) {
   cfg.preview = pv
   const ev = cfg.evidence || {}
   ev.backend ||= 'local'
+  ev.fallback ||= 'git-branch'
   ev.prefix ||= 'no-mistakes'
   ev.expiresIn ??= 604800
   ev.expireDays ??= 30
+  if (ev.backend === 'gdrive' || ev.gdrive) ev.gdrive = { remote: 'gdrive', folder: 'no-mistakes-evidence', ...(ev.gdrive || {}) }
+  if (ev.backend === 'imgur' || ev.imgur) ev.imgur = { clientIdEnv: 'IMGUR_CLIENT_ID', ...(ev.imgur || {}) }
+  ev.cleanup = { onMerge: true, keepDays: 14, ...(ev.cleanup || {}) }
   cfg.evidence = ev
   cfg.apps = (cfg.apps || []).map((a) => {
     const repoBase = a.repo ? a.repo.split('/').pop() : a.name
@@ -151,11 +155,16 @@ export function exportLines(cfg, cfgPath) {
   if (backendApp) set('NMF_API_SVC', backendApp.previewService)
   // evidence (names existing scripts already read)
   set('NM_EVIDENCE_BACKEND', cfg.evidence.backend)
+  set('NM_EVIDENCE_FALLBACK', cfg.evidence.fallback)
   set('NM_EVIDENCE_BUCKET', cfg.evidence.bucket)
   set('AWS_REGION', cfg.evidence.region)
   set('NM_EVIDENCE_PREFIX', cfg.evidence.prefix)
+  set('NM_EVIDENCE_EXPIRES_IN', cfg.evidence.expiresIn)
   set('NM_EVIDENCE_EXPIRE_DAYS', cfg.evidence.expireDays)
   set('NOMISTAKES_EVIDENCE_UPLOAD_CMD', cfg.evidence.uploadCmd)
+  if (cfg.evidence.gdrive) { set('NM_EVIDENCE_GDRIVE_REMOTE', cfg.evidence.gdrive.remote); set('NM_EVIDENCE_GDRIVE_FOLDER', cfg.evidence.gdrive.folder) }
+  if (cfg.evidence.imgur) set('NM_EVIDENCE_IMGUR_CLIENT_ID_ENV', cfg.evidence.imgur.clientIdEnv)
+  if (cfg.evidence.cleanup) { set('NM_EVIDENCE_CLEANUP_ON_MERGE', String(cfg.evidence.cleanup.onMerge)); set('NM_EVIDENCE_KEEP_DAYS', cfg.evidence.cleanup.keepDays) }
   // auth
   set('NM_API_KEY_HEADER', cfg.auth?.apiKeyHeader)
   return out.join('\n')

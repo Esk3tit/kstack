@@ -8,44 +8,30 @@
 //      so the body stays commit-clean (squash-merge messages pre-fill from the body).
 //   The author's existing body is preserved.
 //
-// Evidence backends (resolved by this precedence — FIRST match wins):
+// Evidence hosting: a PRIMARY host (from config) with a FALLBACK. Evidence is NEVER committed to
+// the PR branch / merged diff — external hosts live off-repo; git-branch uses a SEPARATE orphan branch.
 //
-//   1. (env NOMISTAKES_EVIDENCE_UPLOAD_CMD SET) EXTERNAL-CMD INLINE — power-user override:
-//     For each PNG, runs $NOMISTAKES_EVIDENCE_UPLOAD_CMD via `sh -c` with two env
-//     vars provided to it:
-//       NM_FILE = absolute local path to the PNG
-//       NM_NAME = dest object name, `<pr>/<run>/<basename>`
-//     The command's stdout (trimmed) is used as the image URL. Because that host
-//     serves the image publicly/signed-fetchably, GitHub renders it INLINE as a
-//     real ![](url) thumbnail (no click-through-only note). The orphan-branch git
-//     push is SKIPPED entirely in this mode.
+//   PRIMARY — config `evidence.backend`, exported as $NM_EVIDENCE_BACKEND:
+//     cmd    — runs $NOMISTAKES_EVIDENCE_UPLOAD_CMD per PNG (NM_FILE/NM_NAME in env); stdout = URL.
+//     s3     — aws s3 cp + presign (from $NM_EVIDENCE_{BUCKET,PREFIX,EXPIRES_IN}/$AWS_REGION, else
+//              legacy ~/.no-mistakes/evidence.json). Presigned URL.
+//     gdrive — rclone copy to $NM_EVIDENCE_GDRIVE_REMOTE:$NM_EVIDENCE_GDRIVE_FOLDER, share
+//              anyone-with-link, embed the direct https://lh3.googleusercontent.com/d/<id> URL.
+//     imgur  — anonymous upload (curl, Client-ID from $NM_EVIDENCE_IMGUR_CLIENT_ID_ENV); direct
+//              i.imgur.com link (renders inline reliably).
+//   A successful host serves public/signed bytes, so GitHub renders ![](url) INLINE even on PRIVATE
+//   repos, and the orphan-branch push is skipped.
 //
-//   2. (config file ${HOME}/.no-mistakes/evidence.json present) NATIVE S3 INLINE — the
-//     default once `scripts/s3-evidence-setup.sh` has been run once (NO env var needed):
-//     Config shape: {"backend":"s3","bucket":"...","region":"...","prefix":"...","expiresIn":604800}
-//     For each PNG, key = `<prefix>/<pr|'no-pr'>/<run>/<basename>`, then via the aws
-//     CLI directly (execFileSync, no shell):
-//       aws s3 cp <file> s3://<bucket>/<key> --content-type image/png [--region <region>]
-//       aws s3 presign s3://<bucket>/<key> --expires-in <expiresIn|604800> [--region <region>]
-//     The presign stdout (trimmed) is the inline ![](url) image URL; the orphan-branch
-//     push is SKIPPED. Malformed/missing config => silently skip to backend 3.
+//   FALLBACK — $NM_EVIDENCE_FALLBACK (default git-branch) — used when the primary fails or is local/unset:
+//     git-branch — pushes PNGs to an orphan `no-mistakes-evidence` branch via git plumbing (temp
+//       index — NEVER touches the PR working tree or PR branch; evidence is never in the merged diff).
+//       raw.githubusercontent URLs render inline on PUBLIC repos, click-through on private. Reclaim
+//       with evidence-cleanup.mjs (per-PR on merge / age prune).
+//     local | none — no upload; the gallery is still written to <run-dir>/summary.md.
 //
-//   3. (else) ORPHAN-BRANCH CLICK-THROUGH — zero-infra default:
-//     Pushes run screenshots to an orphan `no-mistakes-evidence` branch WITHOUT
-//     checking it out (git plumbing + temp index, never touches the PR working
-//     tree), embeds raw.githubusercontent.com URLs. For PRIVATE repos these do
-//     NOT render inline (GitHub's camo image proxy fetches anonymously => 404 for
-//     both raw.githubusercontent.com and github.com/.../raw forms), so the images
-//     are posted as click-through links (resolve for any repo-authed viewer) plus
-//     a limitation note. No external host; trust boundary = the private repo.
-//
-//   FAIL-CLOSED (backends 1 & 2): if any upload/aws call errors OR yields an empty URL
-//     for ANY screenshot, that inline mode is abandoned for the whole run and we FALL
-//     BACK to the orphan-branch click-through path (log the failure, note it) so the
-//     verdict still posts — the run is never lost over an upload hiccup.
-//   CONFIDENTIALITY: the upload target must be one the org trusts at the SAME data
-//     classification as the private repo (dev/test screenshots only) — never a
-//     public/anonymous host for customer data. See DESIGN.md "Evidence delivery".
+//   CONFIDENTIALITY: gdrive (anyone-with-link) and imgur (anonymous) are PUBLIC hosts — use ONLY for
+//     non-production dev/test screenshots, never customer data. For private customer data use s3/cmd
+//     (org-trusted) or git-branch (stays in the private repo).
 //
 // Usage:
 //   node post-evidence.mjs --pr <N> --run-dir <dir> --results <results.json> [--repo owner/name]
@@ -191,11 +177,6 @@ function readS3Config() {
   } catch { return null; }
 }
 
-let s3FailureDetail = null;
-function isAwsAuthError(s) {
-  return /expired|reauthenticate|InvalidClientTokenId|ExpiredToken|sso[\s_-]?login|credential|Unable to locate credentials|AccessDenied/i.test(s || '');
-}
-
 function uploadS3(cfg) {
   if (pngs.length === 0) return null;
   const s3Prefix = (cfg.prefix || 'no-mistakes').replace(/\/+$/, '');
@@ -211,61 +192,118 @@ function uploadS3(cfg) {
       const url = execFileSync('aws', ['s3', 'presign', uri, '--expires-in', expiresIn, ...regionArgs],
         { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
       if (!url) {
-        s3FailureDetail = 'aws presign printed an empty URL';
-        console.error(`[post-evidence] ${s3FailureDetail} for ${png}`);
+        console.error(`[post-evidence] aws presign printed an empty URL for ${png}`);
         return null;
       }
       urls[png] = url;
     } catch (e) {
-      s3FailureDetail = (e.stderr || e.message || '').toString().trim();
-      console.error(`[post-evidence] aws upload/presign failed for ${png}: ${s3FailureDetail.split('\n')[0]}`);
+      const detail = (e.stderr || e.message || '').toString().trim();
+      console.error(`[post-evidence] aws upload/presign failed for ${png}: ${detail.split('\n')[0]}`);
       return null;
     }
   }
   return urls;
 }
 
-// Loud, actionable banner when a CONFIGURED inline backend fails. Inline is MANDATORY
-// once configured, so we REFUSE to downgrade to the orphan-branch (non-inline) path —
-// nothing is posted; the verdict is kept locally and the user must re-auth + re-run.
-function noteInlineRequiredFailure() {
-  const authExpired = isAwsAuthError(s3FailureDetail);
-  console.error('========================================================================');
-  if (authExpired) {
-    console.error('[post-evidence] AWS SESSION EXPIRED — inline S3 evidence is configured and');
-    console.error('  REQUIRED, but the upload failed auth. REFUSING to downgrade to the orphan-');
-    console.error('  branch (non-inline) path. No images posted; verdict kept locally only.');
-    console.error('  FIX: run `aws login` (or `aws sso login`), then re-run no-mistakes-frontend.');
-  } else {
-    console.error('[post-evidence] inline evidence upload FAILED and is REQUIRED (configured');
-    console.error(`  backend). reason: ${(s3FailureDetail || 'unknown').split('\n')[0]}`);
-    console.error('  REFUSING to downgrade to the orphan-branch path. Resolve + re-run.');
+// --- 1d. Google Drive upload (rclone). --------------------------------------
+// Copies each PNG to the Drive remote/folder, shares anyone-with-link, and builds the direct
+// lh3.googleusercontent.com/d/<id> URL (Camo-fetchable for small images). Fail-closed → null.
+function uploadGdrive() {
+  if (pngs.length === 0) return null;
+  const remote = process.env.NM_EVIDENCE_GDRIVE_REMOTE || 'gdrive';
+  const folder = (process.env.NM_EVIDENCE_GDRIVE_FOLDER || 'no-mistakes-evidence').replace(/\/+$/, '');
+  const urls = {};
+  for (const png of pngs) {
+    const dest = `${remote}:${folder}/${prefix}/${png}`;
+    try {
+      execFileSync('rclone', ['copyto', join(runDir, png), dest], { stdio: ['ignore', 'pipe', 'pipe'] });
+      const link = execFileSync('rclone', ['link', dest], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+      const id = (link.match(/[?&]id=([-\w]+)/) || link.match(/\/d\/([-\w]+)/) || [])[1] || (link.match(/[-\w]{28,}/) || [])[0];
+      if (!id) { console.error(`[post-evidence] rclone link gave no file id for ${png}: ${link}`); return null; }
+      urls[png] = `https://lh3.googleusercontent.com/d/${id}`;
+    } catch (e) {
+      console.error(`[post-evidence] rclone upload failed for ${png}: ${(e.stderr || e.message || '').toString().split('\n')[0]}`);
+      return null;
+    }
   }
-  console.error('========================================================================');
+  return urls;
 }
 
-const s3Config = process.env.NOMISTAKES_EVIDENCE_UPLOAD_CMD ? null : readS3Config();
-const inlineConfigured = !!process.env.NOMISTAKES_EVIDENCE_UPLOAD_CMD || !!s3Config;
+// --- 1e. imgur anonymous upload (curl). -------------------------------------
+function uploadImgur() {
+  if (pngs.length === 0) return null;
+  const clientId = process.env[process.env.NM_EVIDENCE_IMGUR_CLIENT_ID_ENV || 'IMGUR_CLIENT_ID'];
+  if (!clientId) { console.error('[post-evidence] imgur backend selected but no Client-ID env set'); return null; }
+  const urls = {};
+  for (const png of pngs) {
+    try {
+      const out = execFileSync('curl', ['-s', '-H', `Authorization: Client-ID ${clientId}`,
+        '-F', `image=@${join(runDir, png)}`, 'https://api.imgur.com/3/image'],
+        { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+      const link = JSON.parse(out)?.data?.link;
+      if (!link) { console.error(`[post-evidence] imgur upload gave no link for ${png}`); return null; }
+      urls[png] = link;
+    } catch (e) {
+      console.error(`[post-evidence] imgur upload failed for ${png}: ${(e.message || '').split('\n')[0]}`);
+      return null;
+    }
+  }
+  return urls;
+}
+
+// s3 config from the loader's env exports, else the legacy ~/.no-mistakes/evidence.json.
+function s3ConfigFromEnv() {
+  if (process.env.NM_EVIDENCE_BACKEND === 's3' && process.env.NM_EVIDENCE_BUCKET) {
+    return { backend: 's3', bucket: process.env.NM_EVIDENCE_BUCKET, region: process.env.AWS_REGION,
+      prefix: process.env.NM_EVIDENCE_PREFIX, expiresIn: Number(process.env.NM_EVIDENCE_EXPIRES_IN) || 604800 };
+  }
+  return readS3Config();
+}
+
+// --- Resolve the PRIMARY host, attempt it, then fall back. -------------------
+const EXTERNAL = ['cmd', 's3', 'gdrive', 'imgur'];
+function resolvePrimary() {
+  const b = process.env.NM_EVIDENCE_BACKEND;
+  if (b && EXTERNAL.includes(b)) return b;
+  if (process.env.NOMISTAKES_EVIDENCE_UPLOAD_CMD) return 'cmd';   // legacy override
+  if ((b === undefined || b === '' || b === 'local') && readS3Config()) return 's3'; // legacy evidence.json
+  return b || 'local';
+}
+function uploadVia(backend) {
+  switch (backend) {
+    case 'cmd': return uploadExternal();
+    case 's3': return uploadS3(s3ConfigFromEnv());
+    case 'gdrive': return uploadGdrive();
+    case 'imgur': return uploadImgur();
+    default: return null;
+  }
+}
+
+const primaryBackend = resolvePrimary();
+const fallbackBackend = process.env.NM_EVIDENCE_FALLBACK || 'git-branch';
+if (primaryBackend === 'gdrive' || primaryBackend === 'imgur') {
+  console.error(`[post-evidence] NOTE: '${primaryBackend}' is a PUBLIC host — dev/test screenshots only, never customer data.`);
+}
+
 let externalUrls = null;
-if (process.env.NOMISTAKES_EVIDENCE_UPLOAD_CMD) {
-  externalUrls = uploadExternal();
-} else if (s3Config) {
-  externalUrls = uploadS3(s3Config);
+let usedBackend = null;
+if (EXTERNAL.includes(primaryBackend)) {
+  externalUrls = uploadVia(primaryBackend);
+  if (externalUrls) usedBackend = primaryBackend;
+  else console.error(`[post-evidence] primary evidence host '${primaryBackend}' failed; falling back to '${fallbackBackend}'.`);
 }
 
-// Inline backend configured but upload failed → inline is REQUIRED. Do NOT downgrade
-// to the orphan-branch path; hard-stop (handled after persistAndExit is defined).
-const inlineRequiredFailed = inlineConfigured && !externalUrls && pngs.length > 0;
-if (inlineRequiredFailed) noteInlineRequiredFailure();
-
+// Push to the orphan branch when no external URL and the effective host is git-branch
+// (primary git-branch, or primary external-failed/local with git-branch fallback).
+const wantOrphan = !externalUrls && (primaryBackend === 'git-branch' || fallbackBackend === 'git-branch');
 let pushResult;
 if (externalUrls) {
-  pushResult = { pushed: false, reason: 'inline-host (orphan push skipped)' };
-} else if (inlineRequiredFailed) {
-  pushResult = { pushed: false, reason: 'inline-required: upload failed, orphan downgrade refused' };
-} else {
+  pushResult = { pushed: false, reason: `inline-host:${usedBackend}` };
+} else if (wantOrphan) {
   try { pushResult = pushEvidence(); }
   catch (e) { pushResult = { pushed: false, reason: e.message.split('\n')[0] }; }
+} else {
+  pushResult = { pushed: false, reason: primaryBackend === 'local' ? 'local (no host)' : `no host (fallback=${fallbackBackend})` };
 }
 
 // --- 2. URL resolution + render-validation (unchanged backends). ------------
@@ -287,8 +325,8 @@ function firstImageRenders() {
 // already-resolved backend (externalUrls / orphan push). Does NOT change upload logic.
 function resolveImages() {
   if (externalUrls) {
-    // Inline host (native S3 or external cmd): signed-fetchable => GitHub renders inline.
-    return { urlFor: (name) => externalUrls[name], inline: true, note: null, mode: 'inline-host' };
+    // External host (s3/gdrive/imgur/cmd): public/signed-fetchable => GitHub renders inline.
+    return { urlFor: (name) => externalUrls[name], inline: true, note: null, mode: usedBackend };
   }
   if (firstImageRenders()) {
     return { urlFor: rawUrl, inline: false, note: null, mode: 'raw-public' };
@@ -403,10 +441,6 @@ function persistAndExit(status, galleryUrl = null) {
   console.log(`summary_file=${summaryFile}`);
   process.exit(status === 'ok' ? 0 : 1);
 }
-
-// Inline S3 is mandatory once configured: never post a degraded (non-inline) result.
-// Keep the verdict locally and fail — the user re-auths and re-runs for inline S3.
-if (inlineRequiredFailed) persistAndExit('failed');
 
 if (!pr) persistAndExit('no-pr');
 

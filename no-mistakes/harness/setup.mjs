@@ -32,6 +32,8 @@ try {
       org: { type: 'string' },
       'repo-owner': { type: 'string' },
       'checkout-base': { type: 'string' },
+      evidence: { type: 'string' },
+      fallback: { type: 'string' },
       yes: { type: 'boolean', short: 'y', default: false },
       force: { type: 'boolean', short: 'f', default: false },
       color: { type: 'boolean', default: true },
@@ -59,6 +61,9 @@ Usage: node setup.mjs [options]
   --org <name>           org / display name
   --repo-owner <o>       default GitHub owner for PR posting
   --checkout-base <dir>  base dir for app repo checkouts
+  --evidence <host>      evidence host: s3 | gdrive | imgur | cmd | git-branch | local
+                         (git-branch is free + inline on PUBLIC repos)
+  --fallback <host>      evidence fallback: git-branch | local | none (default git-branch)
   -y, --yes              non-interactive: accept detected/flag defaults
   -f, --force            overwrite an existing config without asking
   --no-color             disable ANSI color
@@ -172,7 +177,10 @@ else if (platform === 'firebase') authProfiles.firebase = { kind: 'firebase-idto
 else if (platform === 'convex') authProfiles.convex = { kind: 'bearer-env', keyEnv: 'CONVEX_DEPLOY_KEY' }
 if (Object.keys(authProfiles).length) for (const a of apps) a.auth ||= Object.keys(authProfiles)[0]
 
-const cfg = buildConfig({ platform, project, org, repoOwner, checkoutBase, apps, authProfiles })
+const evidence = (values.evidence || values.fallback)
+  ? { backend: values.evidence || 'local', ...(values.fallback ? { fallback: values.fallback } : {}) }
+  : undefined
+const cfg = buildConfig({ platform, project, org, repoOwner, checkoutBase, apps, authProfiles, evidence })
 
 // validate (raw) + show normalized
 const errs = validationErrors(cfg)
@@ -193,7 +201,7 @@ if (existsSync(outPath) && !values.force) {
 }
 
 output.write(`\n${C.dim('Will write')} ${C.bold(outPath)}:\n`)
-output.write(`  db.platform=${normalized.db.platform}  db.adapter=${C.bold(normalized.db.adapter)}  apps=${cfg.apps.map((a) => `${a.name}:${a.kind}`).join(', ')}\n\n`)
+output.write(`  db.platform=${normalized.db.platform}  db.adapter=${C.bold(normalized.db.adapter)}  evidence=${normalized.evidence.backend}→${normalized.evidence.fallback}  apps=${cfg.apps.map((a) => `${a.name}:${a.kind}`).join(', ')}\n\n`)
 if (!await confirm('Write this configuration?', true)) { output.write('Aborted.\n'); process.exit(1) }
 
 mkdirSync(dirname(outPath), { recursive: true })

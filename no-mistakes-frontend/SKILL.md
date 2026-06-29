@@ -78,20 +78,18 @@ they are verified-live and parameterized by the app's config fields. Never hardc
    `Date`), e.g. `RUN="$(date +%Y%m%d-%H%M%S)-$$"`. Evidence dir = `~/.no-mistakes/$RUN/`. Reject
    any caller-supplied evidence dir that resolves **inside a product checkout** (fall back to the
    default). `mkdir -p ~/.no-mistakes/$RUN`.
-7. **Evidence backend healthy (HARD GATE — inline S3 is required, not optional).** When the inline-S3
-   backend is configured (`~/.no-mistakes/evidence.json` with `"backend":"s3"`) AND no
-   `NOMISTAKES_EVIDENCE_UPLOAD_CMD` override is set, the AWS session MUST be live **before** capturing.
-   We force S3 inline evidence and **refuse to degrade** to the orphan-branch click-through path:
-   ```bash
-   if [ -z "${NOMISTAKES_EVIDENCE_UPLOAD_CMD:-}" ] && grep -q '"backend":"s3"' ~/.no-mistakes/evidence.json 2>/dev/null; then
-     aws sts get-caller-identity >/dev/null 2>&1 || echo "AWS_AUTH_EXPIRED"
-   fi
-   ```
-   If `aws sts get-caller-identity` fails (`AWS_AUTH_EXPIRED`): **STOP immediately — do NOT run the
-   verification, do NOT capture or upload any images.** Emit
-   `NOMISTAKES_FRONTEND_STATUS=BLOCKED reason=aws-auth-expired` and tell the user to run `aws login`
-   (or `aws sso login`), then re-invoke. Inline S3 is mandatory once configured; the orphan-branch
-   fallback exists only for when S3 isn't set up at all — never as a silent downgrade when auth lapses.
+7. **Evidence host reachable (SOFT pre-check — never a gate).** Resolve the primary evidence host
+   `$NM_EVIDENCE_BACKEND`. If it's an **external host**, sanity-check it's reachable/authed **before**
+   capture so evidence renders inline rather than silently falling back:
+   - `s3` → AWS session live (`aws sts get-caller-identity`);
+   - `gdrive` → the rclone remote `$NM_EVIDENCE_GDRIVE_REMOTE` reachable (`rclone lsd <remote>:`);
+   - `imgur` → the Client-ID env named by `$NM_EVIDENCE_IMGUR_CLIENT_ID_ENV` is set;
+   - `cmd` → the `$NOMISTAKES_EVIDENCE_UPLOAD_CMD` command is present.
+
+   If the check fails, **WARN** that evidence will fall back to `$NM_EVIDENCE_FALLBACK` (default
+   `git-branch`) and recommend fixing auth (e.g. `aws login` / `aws sso login`, `rclone config`),
+   then **proceed** — do NOT block capture and do NOT lose the verdict. Host health is a
+   recommendation, never a gate.
 
 ## 2. Derive test cases (gate)
 
@@ -260,57 +258,45 @@ It posts on **two idempotent surfaces** for the best reviewer UX:
 bulky screenshots live in the comment so they don't pollute the PR body or the squash-merge commit
 message. Order per run: upload evidence → post/update gallery comment (get URL) → splice the compact
 body block. A `gh` failure on either surface still writes `summary.md` and prints `pr_post=failed`,
-attempting both surfaces so one failing doesn't skip the other. Evidence resolves its backend by
-this **precedence (first match wins)**:
+attempting both surfaces so one failing doesn't skip the other.
 
-1. **Env `NOMISTAKES_EVIDENCE_UPLOAD_CMD` set** → external-cmd inline (advanced override, below).
-2. **Config file `~/.no-mistakes/evidence.json` present** → native S3 inline (the default after setup).
-3. **else** → orphan-branch click-through (zero-infra default).
+**Evidence model = a PRIMARY host + a FALLBACK.** The primary host (`evidence.backend`, exported
+`$NM_EVIDENCE_BACKEND`) uploads each PNG and yields a URL that GitHub renders **inline** as a real
+`![](url)` thumbnail. External hosts serve public/signed bytes, so the gallery renders inline **even
+on private repos**. Primary hosts:
 
-**Inline S3 — the only setup step.** Run `$H/scripts/s3-evidence-setup.sh` **once**. It is idempotent
-and parameterized (`NM_EVIDENCE_BUCKET`, default `no-mistakes`; `AWS_REGION`, default the CLI's
-configured region; `NM_EVIDENCE_EXPIRE_DAYS`, default `30`): it creates a **fully private** bucket
-(block-public-access fully on, no public objects, no bucket policy), adds a lifecycle rule expiring
-`no-mistakes/` objects after the retention window, and **writes `~/.no-mistakes/evidence.json`**:
+- **`cmd`** — runs `$NOMISTAKES_EVIDENCE_UPLOAD_CMD` once per PNG via `sh -c` with `NM_FILE` (absolute
+  local path) and `NM_NAME` (`<pr>/<run>/<basename>`); the trimmed stdout is the image URL. Plug in
+  your own uploader. Setup: `$H/scripts/s3-evidence-setup.sh` (when wrapping aws) or none.
+- **`s3`** — `aws s3 cp` (`--content-type image/png`, key `<prefix>/<pr|no-pr>/<run>/<basename>`) then
+  `aws s3 presign`, from `$NM_EVIDENCE_BUCKET`/`$AWS_REGION`/`$NM_EVIDENCE_PREFIX`/`$NM_EVIDENCE_EXPIRES_IN`
+  (else legacy `~/.no-mistakes/evidence.json`); fully-private bucket, signed time-limited URLs. Setup:
+  `$H/scripts/s3-evidence-setup.sh`.
+- **`gdrive`** — rclone upload to `$NM_EVIDENCE_GDRIVE_REMOTE:$NM_EVIDENCE_GDRIVE_FOLDER`, shared
+  anyone-with-link, embeds the direct `https://lh3.googleusercontent.com/d/<id>` URL. Setup:
+  `$H/scripts/gdrive-evidence-setup.sh`.
+- **`imgur`** — anonymous upload via curl (Client-ID from `$NM_EVIDENCE_IMGUR_CLIENT_ID_ENV`), direct
+  `i.imgur.com` link. Setup: `$H/scripts/imgur-evidence-setup.sh`.
 
-```json
-{"backend":"s3","bucket":"no-mistakes","region":"us-west-2","prefix":"no-mistakes","expiresIn":604800}
-```
+**Fallback (`evidence.fallback`, exported `$NM_EVIDENCE_FALLBACK`, default `git-branch`)** kicks in
+when the primary fails OR is local/unset:
 
-After that, inline S3 evidence is **on for all future runs — no env var needed**. On each run the
-harness reads the config, uploads each PNG with the aws CLI (`aws s3 cp ... --content-type image/png`,
-key `<prefix>/<pr|no-pr>/<run>/<basename>`), and presigns it (`aws s3 presign --expires-in 604800`).
-Those presigned URLs render **inline** as real `![](url)` thumbnails (no click-through note), and the
-orphan-branch push is **skipped**. Inline rendering is served by **short-lived presigned URLs** that
-GitHub's camo proxy fetches — not public read. Delete `~/.no-mistakes/evidence.json` to revert to the
-orphan-branch default.
+- **`git-branch`** — pushes PNGs to an orphan `no-mistakes-evidence` branch via git plumbing (a temp
+  index — **NEVER** the PR working tree or PR branch, so evidence is never in the merged diff) and
+  embeds `raw.githubusercontent` URLs. These render **inline on PUBLIC repos**; on **private** repos
+  GitHub's camo proxy fetches anonymously and 404s, so they degrade to **click-through links** (a
+  limitation note is included) that still resolve for any repo-authenticated viewer.
+- **`local` / `none`** — no upload; the gallery is still written to `<run-dir>/summary.md`.
 
-**(default — no config, no env) Orphan-branch click-through [zero-infra, no inline].** It pushes PNGs
-to an orphan `no-mistakes-evidence` branch via git plumbing (no checkout, never the PR working tree)
-and embeds `raw.githubusercontent` URLs as **click-through links**. **Evidence-rendering reality
-(expected, not a bug):** GitHub's camo image proxy fetches anonymously, which **404s for a private
-repo** — confirmed for both `raw.githubusercontent.com` and `github.com/.../raw` — so screenshots
-do **not** render as inline thumbnails for private repos. The links still resolve for any viewer
-authenticated to the repo; a limitation note is included. This is the intended zero-infra outcome.
+**Cleanup:** orphan-branch evidence is reclaimed with `$H/harness/evidence-cleanup.mjs` —
+`--pr <N>` on merge/close, `--prune-days <N>`, or `--all`.
 
-**(optional advanced override) External-cmd inline.** Set `NOMISTAKES_EVIDENCE_UPLOAD_CMD` only to
-plug in your **own** uploader instead of the native S3 backend. It runs once per PNG via `sh -c` with
-`NM_FILE` (absolute local path) and `NM_NAME` (`<pr>/<run>/<basename>`); the trimmed stdout is the
-inline image URL, and the orphan-branch push is skipped. It takes precedence over the config file.
-
-The bucket is private; presigned URLs use `--expires-in 604800` = **7 days** (the SigV4 IAM max),
-which camo fetches and caches on first render. It holds **only dev/test screenshots** (the skill never
-runs against prod and never captures secrets, per §9), and the 30-day lifecycle bounds storage +
-residual exposure. **Camo-cache nuance:** presigned URLs expire at 7 days; camo caches the image on
-first render so thumbnails usually persist, but a PR revisited weeks later may show a broken thumbnail
-— re-running the skill regenerates fresh URLs.
-
-**Fail-closed:** if any aws call (native S3) or the override command errors / yields an empty URL for
-any screenshot, the run **falls back to the orphan-branch click-through path** (logged) so the verdict
-still posts. **Confidentiality:** the upload target must be one the org trusts at the **same data
-classification as the private repo** (dev/test screenshots only). The S3 backend stays within that
-boundary — the bucket is **fully private** (no anonymous/public read), reachable only via signed,
-time-limited URLs.
+**Fail-soft:** if the primary host errors / yields an empty URL for any screenshot, the run **logs a
+warning and falls back** to `$NM_EVIDENCE_FALLBACK` — it never hard-stops and the verdict is never
+lost. **Confidentiality:** `gdrive` (anyone-with-link) and `imgur` (anonymous) are **PUBLIC** hosts —
+use for **dev/test screenshots only**, never customer data. For private customer data use `s3`/`cmd`
+(org-trusted) or `git-branch` (stays in the private repo). Either way the skill never runs against
+prod and never captures secrets (§9).
 
 **Do NOT commit images to the PR branch.** No-PR / `gh` failure → it writes `summary.md` locally and
 prints `pr_post=no-pr` / `pr_post=failed`; the verdict is never lost.
@@ -318,15 +304,14 @@ prints `pr_post=no-pr` / `pr_post=failed`; the verdict is never lost.
 ## 9. Confidentiality & data handling
 
 - **Non-production data only** — localhost dev OR redacted preview-DB dev/preview envs (incl. same-PR previews are dev-equivalent). Never pointed at production.
-- **Trust boundary = the private repo (default path).** Evidence lives only in `~/.no-mistakes/$RUN/`
-  (local) and the `no-mistakes-evidence` branch of the **same private repo**. The opt-in inline
-  path (`NOMISTAKES_EVIDENCE_UPLOAD_CMD`) extends this to the configured S3 bucket's `no-mistakes/`
-  prefix on an org-owned, **fully private** bucket (no anonymous/public read): it holds **only
-  dev/test screenshots** (no secrets, no prod data — the skill never runs against prod), reachable
-  only via **signed, time-limited presigned URLs** (7-day max), with a 30-day lifecycle bounding
-  storage + residual exposure. Signed + private keeps it inside the trust boundary — no public-read
-  prefix. Never point the uploader at a host the org doesn't trust at the repo's data classification,
-  and never expose the bucket for anonymous read.
+- **Trust boundary = the private repo / the chosen host.** Evidence always lives in
+  `~/.no-mistakes/$RUN/` (local); beyond that it goes to the configured primary host or the
+  `git-branch` fallback (orphan `no-mistakes-evidence` branch of the **same private repo**). Match the
+  host to the data classification: `s3`/`cmd` (org-trusted, signed/private) and `git-branch` (stays in
+  the private repo) are in-boundary for private customer data; `gdrive` (anyone-with-link) and `imgur`
+  (anonymous) are **PUBLIC** hosts — **dev/test screenshots only, never customer data**. Whatever the
+  host, it holds **only dev/test screenshots** (no secrets, no prod data — the skill never runs against
+  prod). Never point a host at data classified above what it can hold.
 - **Never publish secrets — across ALL artifacts** (screenshots, console, AI snapshots, findings,
   quoted PR/page text). Never capture credential entry, bearer tokens / API keys, or Doppler/`.auth`
   values; redact if they appear. When redaction confidence is low on a frame/log, **drop it** rather
@@ -369,11 +354,10 @@ number (default: current branch's PR).
   the readable threshold; overlap/overflow that intercepts the interaction under test). Slop signals
   and "fits the app's visual language" are findings, not FAIL triggers. Each FAIL lists suspected
   cause + evidence.
-- `NOMISTAKES_FRONTEND_STATUS=BLOCKED reason=<needs-config|needs-setup|aws-auth-expired|app-not-up|no-creds|login-failed|unclear-intent|out-of-scope-target|revision-mismatch|indeterminate|required-case-unverified>`
+- `NOMISTAKES_FRONTEND_STATUS=BLOCKED reason=<needs-config|needs-setup|app-not-up|no-creds|login-failed|unclear-intent|out-of-scope-target|revision-mismatch|indeterminate|required-case-unverified>`
   — couldn't run or couldn't trust the run; state what's needed.
   - `needs-config` = no `.no-mistakes.json` resolved (walk up from CWD, else `~/.no-mistakes/<project>.json`) or it's invalid — see `no-mistakes/config/README.md` + the examples.
   - `needs-setup` = dev-browser/chromium missing.
-  - `aws-auth-expired` = inline-S3 evidence is configured but the AWS session is expired — refused before capturing (run `aws login`; inline S3 is mandatory, no orphan-branch downgrade).
   - `app-not-up` = dev server unreachable.
   - `no-creds` = auth creds unresolvable.
   - `login-failed` = the configured login didn't carry a session.
