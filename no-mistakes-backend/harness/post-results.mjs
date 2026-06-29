@@ -52,8 +52,10 @@ let results;
 try { results = JSON.parse(readFileSync(resultsPath, 'utf8')); }
 catch (e) { die(`could not parse results json: ${e.message}`); }
 
+const repoBase = repo ? repo.split('/')[1] : null;
 const repoCwd = process.env.NOMISTAKESBACKEND_REPO_DIR
-  || (repo && process.env.HOME ? join(process.env.HOME, 'PromptArmor', repo.split('/')[1]) : process.cwd());
+  || (repoBase && process.env.NM_CHECKOUT_BASE ? join(process.env.NM_CHECKOUT_BASE, repoBase) : null)
+  || (repoBase && process.env.HOME ? join(process.env.HOME, repoBase) : process.cwd());
 const gitCwd = existsSync(join(repoCwd, '.git')) ? repoCwd : process.cwd();
 
 function gitQuiet(args) {
@@ -80,11 +82,18 @@ const esc = (s) => String(s ?? '').replace(/\\/g, '\\\\').replace(/\|/g, '\\|');
 
 // Defense-in-depth: captures SHOULD already be redacted by http-client.mjs, but never
 // post a secret. Final safety net over every evidence string before it leaves the host.
+// One sensitive-name set drives BOTH header-line and JSON-key redaction so they can't
+// drift; the project's custom API-key header ($NM_API_KEY_HEADER) is folded in dynamically.
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const apiKeyHeader = (process.env.NM_API_KEY_HEADER || '').toLowerCase().trim();
+const NAMES = [
+  'authorization', 'cookie', 'set-cookie', 'x-api-key',
+  ...(apiKeyHeader ? [escapeRe(apiKeyHeader)] : []),
+  'access[_-]?token', 'refresh[_-]?token', 'id[_-]?token', 'token',
+  'api[_-]?key', 'client[_-]?secret', 'secret', 'password', 'private[_-]?key',
+].join('|');
 function redact(text) {
   if (!text) return text;
-  // One sensitive-name set drives BOTH header-line and JSON-key redaction so they
-  // can't drift (covers auth headers + common secret field names).
-  const NAMES = 'authorization|cookie|set-cookie|x-api-key|x-promptarmor-api-key|access[_-]?token|refresh[_-]?token|id[_-]?token|token|api[_-]?key|client[_-]?secret|secret|password|private[_-]?key';
   return String(text)
     .replace(new RegExp(`^(${NAMES})\\s*:.*$`, 'gim'), '$1: «redacted»')
     .replace(new RegExp(`("(?:${NAMES})"\\s*:\\s*)"(?:[^"\\\\]|\\\\.)*"`, 'gi'), '$1"«redacted»"')

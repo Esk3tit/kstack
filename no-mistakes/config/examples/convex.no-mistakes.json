@@ -1,0 +1,61 @@
+{
+  "$schema": "../no-mistakes.schema.json",
+  "project": "chatty",
+  "org": "Acme",
+  "repoOwner": "acme",
+  "checkoutBase": "~/code",
+  "db": {
+    "platform": "convex",
+    "adapter": "convex",
+    "convex": {
+      "deploymentEnv": "CONVEX_DEPLOYMENT",
+      "urlEnv": "NEXT_PUBLIC_CONVEX_URL",
+      "deployKeyEnv": "CONVEX_DEPLOY_KEY",
+      "previewNamePattern": "pr-{pr}",
+      "runCmd": "npx convex run",
+      "dataCmd": "npx convex data",
+      "mcp": {
+        "server": "Convex",
+        "runOneoffQuery": "runOneoffQuery",
+        "data": "data",
+        "run": "run"
+      }
+    }
+  },
+  "preview": {
+    "platform": "vercel",
+    "fePort": 3000
+  },
+  "evidence": {
+    "backend": "git-branch",
+    "prefix": "no-mistakes"
+  },
+  "auth": {
+    "profiles": {
+      "convex": {
+        "kind": "bearer-env",
+        "secretsTool": "dotenv",
+        "secretsScopeDir": "~/code/chatty",
+        "keyEnv": "CONVEX_DEPLOY_KEY"
+      }
+    }
+  },
+  "apps": [
+    {
+      "name": "chatty-web",
+      "kind": "frontend",
+      "repo": "acme/chatty",
+      "devUrl": "http://localhost:3000",
+      "devCommand": "npx convex dev & next dev",
+      "browserProfile": "no-mistakes-chatty",
+      "auth": "convex"
+    },
+    {
+      "name": "chatty-functions",
+      "kind": "backend",
+      "repo": "acme/chatty",
+      "devUrl": "http://localhost:3000",
+      "auth": "convex"
+    }
+  ]
+}

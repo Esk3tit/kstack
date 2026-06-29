@@ -2,7 +2,7 @@
 
 `no-mistakes-a11y` takes the same inputs as `no-mistakes-frontend` (base URL/app
 name, intent/checklist, evidence dir, PR number) and can run on its own: it reuses
-the persistent dev-browser profile (`--browser no-mistakes-tprm` / `-arg`) so it
+the persistent dev-browser profile (the frontend app's configured `browserProfile`) so it
 re-uses the existing authed session with no re-login, does its own light recon of
 the touched screens, and derives its "required controls" from the intent. When the
 `no-mistakes` router runs it after `-frontend`, it opportunistically reuses

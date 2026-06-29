@@ -1,0 +1,67 @@
+{
+  "$schema": "../no-mistakes.schema.json",
+  "project": "acme-app",
+  "org": "Acme",
+  "repoOwner": "acme",
+  "checkoutBase": "~/code",
+  "db": {
+    "platform": "supabase",
+    "projectId": "abcdwxyzproject",
+    "localBranch": "local",
+    "previewBranchPattern": "preview-{pr}",
+    "connStringEnv": "NMB_DATABASE_URL",
+    "migrations": "drizzle",
+    "migrationsVersionTable": "__drizzle_migrations",
+    "mcp": {
+      "server": "Supabase",
+      "runSql": "execute_sql",
+      "describeBranch": "get_branch",
+      "getConnectionString": "get_connection_string"
+    }
+  },
+  "preview": {
+    "platform": "vercel",
+    "apiPort": 3000,
+    "fePort": 3000
+  },
+  "evidence": {
+    "backend": "git-branch",
+    "prefix": "no-mistakes"
+  },
+  "auth": {
+    "apiKeyHeader": "X-Acme-Api-Key",
+    "profiles": {
+      "supabase": {
+        "kind": "supabase-jwt",
+        "secretsTool": "dotenv",
+        "secretsScopeDir": "~/code/acme-app",
+        "env": {
+          "url": "SUPABASE_URL",
+          "anonKey": "SUPABASE_ANON_KEY",
+          "serviceKey": "SUPABASE_SERVICE_ROLE_KEY"
+        },
+        "testEmailEnv": "TEST_USER_EMAIL"
+      }
+    }
+  },
+  "apps": [
+    {
+      "name": "acme-web",
+      "kind": "frontend",
+      "repo": "acme/acme-web",
+      "devUrl": "http://localhost:3000",
+      "devCommand": "pnpm dev",
+      "browserProfile": "no-mistakes-acme",
+      "auth": "supabase"
+    },
+    {
+      "name": "acme-api",
+      "kind": "backend",
+      "repo": "acme/acme-api",
+      "devUrl": "http://localhost:3000/api",
+      "devCommand": "pnpm dev",
+      "auth": "supabase",
+      "errorEnvelope": "{error, message}"
+    }
+  ]
+}

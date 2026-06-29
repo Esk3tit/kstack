@@ -1,10 +1,25 @@
 # dev-browser auth + recon snippets
 
-Reusable, verified-live templates for driving the PromptArmor frontends with the
-`dev-browser` CLI. dev-browser runs scripts in a QuickJS sandbox: **no `process`,
-no `fs`, no `import`**. Globals available: `browser.getPage(name)` (persistent
-named pages), the full Playwright `Page` API, `saveScreenshot`, `writeFile`,
-`readFile`.
+Reusable, verified-live templates for driving the **configured frontend app(s)**
+with the `dev-browser` CLI. dev-browser runs scripts in a QuickJS sandbox: **no
+`process`, no `fs`, no `import`**. Globals available: `browser.getPage(name)`
+(persistent named pages), the full Playwright `Page` API, `saveScreenshot`,
+`writeFile`, `readFile`.
+
+These templates are **parameterized by the app's config** (`load-config.mjs --app
+<name>`): use its `repoPath`, `devUrl`, `devCommand`, `browserProfile`, and its
+auth profile (`auth.profiles[app.auth]`: `kind`, `secretsTool`, `secretsScopeDir`,
+`keyEnv`, credential env vars). The examples below use shell vars set from those
+fields:
+
+```bash
+# Resolve once, then set per the app under test (load-config.mjs --app <name>):
+APP_DIR=<app.repoPath>            # local checkout / secrets scope
+export APP_URL=<app.devUrl>       # e.g. http://localhost:5173
+export APP_PROFILE=<app.browserProfile>   # persistent dev-browser profile name
+```
+
+(`export` so the inner `bash -lc` / `doppler run` sees them.)
 
 Key facts learned live:
 - `--browser <NAME>` keeps a persistent browser profile (cookies + localStorage)
@@ -13,28 +28,33 @@ Key facts learned live:
 - The QuickJS sandbox cannot read env vars, so creds must be injected by the
   SHELL into the heredoc text. Inject them as JSON via `python3 json.dumps` so
   quoting/special chars are safe. **Never write creds to a file, never echo them.**
-- AI-TPRM dev redirects through PropelAuth's hosted login, then back to the
-  configured app origin (a Porter preview URL in dev, not localhost). Don't
-  hard-assert the post-login URL is localhost.
+- A hosted-login auth profile (e.g. PropelAuth) redirects through the identity
+  provider's hosted login, then back to the app origin (which may be a preview
+  URL in dev, not localhost). Don't hard-assert the post-login URL is localhost.
 - Default per-script timeout is ~30s. Chaining `goto(..., {waitUntil:"networkidle"})`
-  after PropelAuth redirects can blow it. Use `domcontentloaded` + an explicit
+  after a hosted-login redirect can blow it. Use `domcontentloaded` + an explicit
   `waitForTimeout`, and split heavy steps across runs.
 
 ---
 
-## A. AI-TPRM login (PropelAuth)
+## A. Login (hosted-login auth profile — PropelAuth example)
 
-Run from the AI-TPRM repo so Doppler resolves `PLAYWRIGHT_*` creds. Creds enter the
-script via stdin heredoc as JSON — never a file, never printed. No screenshot
-during credential entry. Prints `auth-ok user-visible` on success.
+For an app whose auth profile needs an interactive login (`kind: propelauth` /
+`browser-login`). Run from the auth profile's `secretsScopeDir` (here the app's
+`repoPath`) so the secrets tool resolves the right scope (worktrees aren't
+scoped). The example uses `doppler run` (when `secretsTool=doppler`) and the
+`PLAYWRIGHT_*` credential env vars; substitute your profile's secrets tool /
+selectors. Creds enter the script via stdin heredoc as JSON — never a file, never
+printed. No screenshot during credential entry. Prints `auth-ok user-visible` on
+success.
 
 ```bash
-cd ~/PromptArmor/AI-TPRM
+cd "$APP_DIR"
 doppler run -- bash -lc '
-BASE="${PLAYWRIGHT_BASE_URL:-http://localhost:5173}"
+BASE="${PLAYWRIGHT_BASE_URL:-$APP_URL}"
 EMAIL_JSON=$(printf "%s" "$PLAYWRIGHT_USER_EMAIL" | python3 -c "import json,sys;print(json.dumps(sys.stdin.read()))")
 PASS_JSON=$(printf "%s" "$PLAYWRIGHT_USER_PASSWORD" | python3 -c "import json,sys;print(json.dumps(sys.stdin.read()))")
-dev-browser --browser no-mistakes-tprm --headless <<EOF
+dev-browser --browser "$APP_PROFILE" --headless <<EOF
 const page = await browser.getPage("app");
 await page.goto("$BASE", { waitUntil: "domcontentloaded" });
 await page.getByLabel("Email").fill($EMAIL_JSON);
@@ -48,28 +68,29 @@ console.log(ok ? "auth-ok user-visible" : "auth-FAILED no-user-img");
 EOF'
 ```
 
-Notes:
-- The hosted login email box has accessible name `Email Sign in with SSO`;
-  `getByLabel("Email")` (substring match) still resolves it.
-- Logged-in marker is the user-avatar `img` with accessible name `User`
-  (`page.getByRole("img", { name: "User" })`).
-- If PropelAuth is slow, bump the post-click `waitForTimeout` (2500ms verified).
+Notes (the selectors below are the PropelAuth example; calibrate to your app):
+- The PropelAuth hosted login email box has accessible name `Email Sign in with
+  SSO`; `getByLabel("Email")` (substring match) still resolves it.
+- Logged-in marker in this example is the user-avatar `img` with accessible name
+  `User` (`page.getByRole("img", { name: "User" })`). Use whatever authenticated
+  marker your app renders.
+- If the hosted login is slow, bump the post-click `waitForTimeout` (2500ms verified).
 
 ---
 
 ## B. Recon (session already persisted — NO login, NO creds)
 
-After A has run once under `--browser no-mistakes-tprm`, the session is reused.
+After A has run once under `--browser "$APP_PROFILE"`, the session is reused.
 This block takes a `PATH` and dumps the accessibility tree via `snapshotForAI()`.
-Run from anywhere; Doppler only needed for `PLAYWRIGHT_BASE_URL` (or hardcode the
-app origin). No creds in this script at all.
+Run from anywhere; the secrets tool is only needed for `PLAYWRIGHT_BASE_URL` (or
+use `$APP_URL` directly). No creds in this script at all.
 
 ```bash
-cd ~/PromptArmor/AI-TPRM
+cd "$APP_DIR"
 PATH_TO_VISIT="/"   # e.g. "/organization", "/vendors/123"
 doppler run -- bash -lc '
-BASE="${PLAYWRIGHT_BASE_URL:-http://localhost:5173}"
-dev-browser --browser no-mistakes-tprm --headless <<EOF
+BASE="${PLAYWRIGHT_BASE_URL:-$APP_URL}"
+dev-browser --browser "$APP_PROFILE" --headless <<EOF
 const page = await browser.getPage("app");
 await page.goto("$BASE" + "'"$PATH_TO_VISIT"'", { waitUntil: "domcontentloaded" });
 await page.waitForTimeout(3000);
@@ -84,29 +105,30 @@ Tip: `snapshotForAI().full` can be large — pipe it through `ctx_execute`/
 
 ---
 
-## C. AI-ARG (internal Knightwing — NO login)
+## C. No-login app (bearer-env auth profile — internal-tool example)
 
-AI-ARG has no user login flow. Its dev server starts already authenticated using a
-static Bearer token (`VITE_PROMPTARMOR_MOFFITT_KEY`) injected by Doppler on every
-request. So just start the server and drive the browser straight to a path —
-skip the entire login dance. Use a SEPARATE persistent profile, `no-mistakes-arg`.
+For an app whose auth profile has `kind: bearer-env` / `noLogin: true` (an
+internal tool with no user login flow). Its dev server starts already
+authenticated using a static Bearer token (the profile's `keyEnv`) injected by
+the secrets tool on every request. So just start the server and drive the browser
+straight to a path — skip the entire login dance. Use a SEPARATE persistent
+profile (the app's own `browserProfile`).
 
-Start the dev server (AI-ARG uses npm, not pnpm):
+Start the dev server (use the app's `devCommand` from config):
 
 ```bash
-cd ~/PromptArmor/AI-ARG && doppler run -- npm run dev
-# (npm run dev == "doppler run -- vite"; Vite default port 5173)
+cd "$APP_DIR" && doppler run -- <app.devCommand>
+# e.g. "doppler run -- npm run dev" — injects the profile's keyEnv; Vite default port 5173
 ```
 
 Recon a path (no creds, no login):
 
 ```bash
-cd ~/PromptArmor/AI-ARG
-ARG_BASE="http://localhost:5173"
+cd "$APP_DIR"
 PATH_TO_VISIT="/"
-dev-browser --browser no-mistakes-arg --headless <<EOF
+dev-browser --browser "$APP_PROFILE" --headless <<EOF
 const page = await browser.getPage("arg");
-await page.goto("$ARG_BASE" + "'"$PATH_TO_VISIT"'", { waitUntil: "domcontentloaded" });
+await page.goto("$APP_URL" + "$PATH_TO_VISIT", { waitUntil: "domcontentloaded" });
 await page.waitForTimeout(3000);
 console.log("url:", page.url());
 const snap = await page.snapshotForAI();
@@ -114,11 +136,12 @@ console.log(snap.full);
 EOF
 ```
 
-For API ground-truth, read the admin Bearer token from Doppler (keep it out of
-logs/reports — pipe directly into the consuming command, never echo it):
+For API ground-truth, read the admin Bearer from the profile's `keyEnv` (keep it
+out of logs/reports — pipe it directly into the consuming command, never echo it).
+Set `KEY_ENV` to the profile's `keyEnv` name:
 
 ```bash
-cd ~/PromptArmor/AI-ARG && doppler run -- bash -lc 'echo "$VITE_PROMPTARMOR_MOFFITT_KEY"'
+cd "$APP_DIR" && doppler run -- bash -lc 'printenv "$KEY_ENV"'   # pipe into the consumer, do not print
 ```
 
 ---
@@ -132,26 +155,26 @@ across the QuickJS->page bridge as a plain function (no closure) and runs via
 `page.evaluate`. Outputs land in `~/.dev-browser/tmp/`:
 `look-<SLUG>-{desktop,tablet,mobile}.png` and `audit-<SLUG>.json`.
 
-Origin: localhost:5173 IS the AI-TPRM Vite dev server (title "PromptArmor",
-react-refresh present). It's a client-rendered SPA, so the served HTML is just
-a shell — auth/redirect happens client-side. To verify LOCAL changes, log in
-with `BASE` forced to `http://localhost:5173` (template A, override BASE — do
-NOT rely on `PLAYWRIGHT_BASE_URL`, which points at a Porter preview). Once the
-`no-mistakes-tprm` session exists, the session cookie persists on the localhost
-origin and this block reuses it with no creds.
+The app's `devUrl` (e.g. `http://localhost:5173`) IS the app's own Vite dev
+server (its title + react-refresh present). For a client-rendered SPA the served
+HTML is just a shell — auth/redirect happens client-side. To verify LOCAL
+changes, log in with `BASE` forced to the app's `devUrl` (template A, override
+BASE — do NOT rely on `PLAYWRIGHT_BASE_URL`, which may point at a preview origin).
+Once the app's persistent session exists, the session cookie persists on the
+devUrl origin and this block reuses it with no creds.
 
-Set `SLUG` + the authenticated `URL`, then run. Verified live against
-`http://localhost:5173/` — 3 viewports + audit completed in ONE run inside the
-~30s budget. If a heavier page (more DOM / slower hydration) blows the timeout,
-split into two runs: run the viewport loop first (capture), then a second run
-with just the `page.evaluate(collectMetrics)` + `writeFile` (audit).
+Set `SLUG` + the authenticated `URL`, then run. Verified live against a Vite dev
+server at `http://localhost:5173/` — 3 viewports + audit completed in ONE run
+inside the ~30s budget. If a heavier page (more DOM / slower hydration) blows the
+timeout, split into two runs: run the viewport loop first (capture), then a
+second run with just the `page.evaluate(collectMetrics)` + `writeFile` (audit).
 
 ```bash
-cd ~/PromptArmor/AI-TPRM
+cd "$APP_DIR"
 doppler run -- bash -lc '
-BASE="http://localhost:5173"
-SLUG="tprm-home"
-dev-browser --browser no-mistakes-tprm --headless <<EOF
+BASE="$APP_URL"
+SLUG="home"
+dev-browser --browser "$APP_PROFILE" --headless <<EOF
 const collectMetrics = () => {
   const els = [...document.querySelectorAll("*")].slice(0, 1500);
   const cs = (e) => getComputedStyle(e);
@@ -252,7 +275,7 @@ cat ~/.dev-browser/tmp/audit-<SLUG>.json | node -e "let s='';process.stdin.on('d
 ```
 
 Expect 3 non-zero `look-<SLUG>-*.png` and an `audit-<SLUG>.json` with non-empty
-`fonts`/`colors`. Verified `tprm-home`: fonts 2, colors 10, lowContrast 5.
+`fonts`/`colors` (example run: fonts 2, colors 10, lowContrast 5).
 
 Notes:
 - Inline-string caveats vs `audit-metrics.js`: the heredoc is single-quoted in

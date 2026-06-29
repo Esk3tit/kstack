@@ -1,6 +1,6 @@
 # no-mistakes-a11y
 
-Deep accessibility verification for PromptArmor UI changes — the interaction-driven
+Deep accessibility verification for the configured frontend app's UI changes — the interaction-driven
 accessibility checks that `no-mistakes-frontend`'s single-snapshot visual audit
 structurally cannot perform. A sibling harness to `no-mistakes-frontend` /
 `no-mistakes-backend`, composed by the `no-mistakes` router.

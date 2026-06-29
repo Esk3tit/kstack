@@ -8,12 +8,20 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+# Defaults come from the resolved project config. The skill's step 0 already
+# exports these; source them here too so this setup is runnable standalone.
+# An explicitly pre-set env var still wins (only sourced when unset).
+H="${CLAUDE_PLUGIN_ROOT:-$(cd "$SCRIPT_DIR/.." && pwd)}"
+if [ -z "${NM_EVIDENCE_BUCKET:-}" ] && [ -f "$H/harness/load-config.mjs" ]; then
+  eval "$(node "$H/harness/load-config.mjs" --export 2>/dev/null || true)"
+fi
+
 BUCKET="${NM_EVIDENCE_BUCKET:-no-mistakes}"
 # Default to the CLI's configured region (so the bucket lands where the rest of
 # the org's buckets are, and presigned URLs — which use the CLI default region —
 # match the bucket region with no cross-region redirect). Falls back to us-west-2.
 REGION="${AWS_REGION:-$(aws configure get region 2>/dev/null || echo us-west-2)}"
-PREFIX="no-mistakes"
+PREFIX="${NM_EVIDENCE_PREFIX:-no-mistakes}"
 EXPIRE_DAYS="${NM_EVIDENCE_EXPIRE_DAYS:-30}"
 
 command -v aws >/dev/null 2>&1 || { echo "error: aws CLI not found on PATH" >&2; exit 1; }
