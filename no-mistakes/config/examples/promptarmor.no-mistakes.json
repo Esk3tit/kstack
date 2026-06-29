@@ -1,0 +1,101 @@
+{
+  "$schema": "../no-mistakes.schema.json",
+  "project": "promptarmor",
+  "org": "PromptArmor",
+  "repoOwner": "promptarmor",
+  "checkoutBase": "~/PromptArmor",
+  "db": {
+    "platform": "neon",
+    "projectId": "round-unit-34763685",
+    "localBranch": "dev_personal",
+    "previewBranchPattern": "preview-pr-{pr}",
+    "connStringEnv": "NMB_DATABASE_URL",
+    "migrations": "alembic",
+    "migrationsVersionTable": "alembic_version",
+    "mcp": {
+      "server": "Neon",
+      "runSql": "run_sql",
+      "describeBranch": "describe_branch",
+      "getConnectionString": "get_connection_string"
+    }
+  },
+  "preview": {
+    "platform": "porter",
+    "apiPort": 8090,
+    "fePort": 3000,
+    "porter": { "project": "8417", "cluster": "3429" }
+  },
+  "evidence": {
+    "backend": "s3",
+    "bucket": "no-mistakes",
+    "region": "us-west-2",
+    "prefix": "no-mistakes",
+    "expiresIn": 604800,
+    "expireDays": 30
+  },
+  "auth": {
+    "apiKeyHeader": "X-PromptArmor-API-Key",
+    "profiles": {
+      "propelauth": {
+        "kind": "propelauth",
+        "secretsTool": "doppler",
+        "dopplerProject": "tprm-api",
+        "secretsScopeDir": "~/PromptArmor/TPRM-API",
+        "env": {
+          "authUrl": "PROPEL_AUTH_TEST_AUTH_URL",
+          "apiKey": "PROPEL_AUTH_TEST_API_KEY"
+        },
+        "testEmailEnv": "PLAYWRIGHT_USER_EMAIL",
+        "apiPaths": {
+          "email": "/api/backend/v1/user/email",
+          "accessToken": "/api/backend/v1/access_token"
+        }
+      },
+      "moffitt": {
+        "kind": "bearer-env",
+        "secretsTool": "doppler",
+        "secretsScopeDir": "~/PromptArmor/AI-ARG",
+        "keyEnv": "VITE_PROMPTARMOR_MOFFITT_KEY",
+        "noLogin": true
+      }
+    }
+  },
+  "apps": [
+    {
+      "name": "AI-TPRM",
+      "kind": "frontend",
+      "repo": "promptarmor/AI-TPRM",
+      "repoPath": "~/PromptArmor/AI-TPRM",
+      "devUrl": "http://localhost:5173",
+      "devCommand": "pnpm run dev",
+      "browserProfile": "no-mistakes-tprm",
+      "auth": "propelauth",
+      "previewService": "ai-tprm-v2-ai-tprm-v2",
+      "previewSlug": "ai-tprm-v2"
+    },
+    {
+      "name": "AI-ARG",
+      "kind": "frontend",
+      "repo": "promptarmor/AI-ARG",
+      "repoPath": "~/PromptArmor/AI-ARG",
+      "devUrl": "http://localhost:5173",
+      "devCommand": "pnpm run dev",
+      "browserProfile": "no-mistakes-arg",
+      "auth": "moffitt",
+      "noLogin": true,
+      "previewService": "ai-arg-auto-report-gen-frontend",
+      "previewSlug": "ai-arg"
+    },
+    {
+      "name": "TPRM-API",
+      "kind": "backend",
+      "repo": "promptarmor/TPRM-API",
+      "repoPath": "~/PromptArmor/TPRM-API",
+      "devUrl": "http://localhost:8090",
+      "devCommand": "make api",
+      "auth": "propelauth",
+      "previewService": "tprm-api-tprm-api",
+      "errorEnvelope": "{status_code, message, data}"
+    }
+  ]
+}

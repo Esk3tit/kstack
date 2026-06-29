@@ -17,7 +17,7 @@ documents what's third-party (so I know what I'm dropping vs. keeping).
 | `CLAUDE.md` | Global instructions for Claude Code. **Shared with Codex** via a symlink (below). |
 | `commands/` | Custom slash commands (Codex-driven review loops + PR hygiene). |
 | `codex-cli/` | The `codex-cli` skill — the reliable `codex exec` recipe these commands depend on. |
-| `no-mistakes/` · `no-mistakes-frontend/` · `no-mistakes-backend/` · `no-mistakes-a11y/` | The verification skill family (router + three specialists: frontend, backend, deep-a11y). See each `SKILL.md`. |
+| `no-mistakes/` · `no-mistakes-frontend/` · `no-mistakes-backend/` · `no-mistakes-a11y/` · `no-mistakes-setup/` | The verification skill family (router + three specialists: frontend, backend, deep-a11y) plus the onboarding skill that generates a project's `.no-mistakes.json`. See each `SKILL.md`. |
 | `wide-event-logging/` | Skill — canonical-log-line / wide-event logging for Python/FastAPI (with reference modules). |
 | `codex/config.toml.example` | My Codex CLI config, **token redacted**. |
 
@@ -58,19 +58,29 @@ All user-authored, plugin-independent (they shell out to `codex` / `gh-axi`, not
   review, web-search research) and avoiding the common failure modes (hangs, empty output, JSONL
   parsing, diff-piping killed by MCP churn). Every command/skill that shells out to Codex follows it.
 - **`no-mistakes/` (router) + `no-mistakes-frontend/` + `no-mistakes-backend/` + `no-mistakes-a11y/`** — agentic verification
-  for PromptArmor changes against a running app + Neon DB. The router classifies a request and runs
+  for app changes against a running app + its database. The router classifies a request and runs
   frontend-only / backend-only / **fullstack round-trip** (drive a UI action → assert the UI → read the
-  Neon preview DB to prove the write persisted), and offers the opt-in **deep-a11y** pass (keyboard
+  preview DB to prove the write persisted), and offers the opt-in **deep-a11y** pass (keyboard
   operability / focus / 320px reflow, emitting its own `NOMISTAKES_A11Y_STATUS`). Composes the
-  specialists' harnesses; posts results to the PR(s). Report-only, ephemeral. Built around Porter previews (project 8417 / cluster 3429,
-  `ai-arg`/`ai-tprm-v2` frontends + `tprm-api-tprm-api`, Neon `preview-pr-<N>`). Each `SKILL.md` is the
-  runtime playbook; `scripts/setup.sh` checks tooling.
+  specialists' harnesses; posts results to the PR(s). Report-only, ephemeral. **Platform-agnostic:** the
+  skill is the *method*; all *targets* (apps, org, BaaS/DB, auth, preview platform) come from a
+  per-project **`.no-mistakes.json`** resolved at runtime (`harness/load-config.mjs` — walk up from CWD,
+  else `~/.no-mistakes/<project>.json`); no config → `BLOCKED reason=needs-config`. Schema, docs, and
+  examples live in `no-mistakes/config/` — `examples/promptarmor.no-mistakes.json` reproduces the
+  original PromptArmor setup (Neon project `round-unit-34763685`, Porter project 8417 / cluster 3429,
+  PropelAuth/MOFFITT, S3 evidence), `examples/supabase.no-mistakes.json` proves multi-BaaS generality.
+  Each `SKILL.md` is the runtime playbook; `scripts/setup.sh` checks tooling.
 
 - **`wide-event-logging/`** — implement wide event logging (canonical log lines) in Python/FastAPI:
   `SKILL.md` + reference modules (`config.py`, `context.py`, `middleware.py`, `security.py`, `usage.py`)
   for TPRM-API observability.
 
-Install: copy each dir into `~/.claude/skills/<name>/`.
+Install: copy each dir into `~/.claude/skills/<name>/`. For the no-mistakes family, generate each target
+project's `.no-mistakes.json` with the onboarding wizard — run the **`no-mistakes-setup`** skill in
+Claude Code, or `node ~/.claude/skills/no-mistakes/harness/setup.mjs` (interactive) /
+`… setup.mjs --yes --preset <neon|supabase|convex|…>` (CI). It autodetects the stack (DB/BaaS, framework,
+package manager, git remote), picks the right ground-truth adapter (`sql`/`convex`/`firestore`), and
+writes a validated starter; verify with `… load-config.mjs --export` from inside the project.
 
 ## 4. Codex CLI setup (`codex/config.toml.example`)
 

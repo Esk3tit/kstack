@@ -90,10 +90,14 @@ catch (e) { die(`could not parse results json: ${e.message}`); }
 const runId = basename(runDir.replace(/\/+$/, '')) || 'run';
 const prefix = `${pr || 'no-pr'}/${runId}`;
 
-// Local checkout to run git from: explicit override, else the repo's ~/PromptArmor
-// checkout (portable — no hardcoded machine path), else current cwd.
+// Local checkout to run git from: explicit override (NOMISTAKES_REPO_DIR), else
+// the repo under the configured checkout base (NM_CHECKOUT_BASE), else under HOME,
+// else current cwd. No hardcoded org dir.
+const repoBase = repo ? repo.split('/')[1] : '';
 const repoCwd = process.env.NOMISTAKES_REPO_DIR
-  || (repo && process.env.HOME ? join(process.env.HOME, 'PromptArmor', repo.split('/')[1]) : process.cwd());
+  || (repoBase && process.env.NM_CHECKOUT_BASE ? join(process.env.NM_CHECKOUT_BASE, repoBase) : '')
+  || (repoBase && process.env.HOME ? join(process.env.HOME, repoBase) : '')
+  || process.cwd();
 const gitCwd = existsSync(join(repoCwd, '.git')) ? repoCwd : process.cwd();
 
 function git(args, opts = {}) {

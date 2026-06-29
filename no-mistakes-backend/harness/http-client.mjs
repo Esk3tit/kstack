@@ -1,14 +1,15 @@
-// no-mistakes-backend harness: make ONE authenticated request to TPRM-API and emit a
-// REDACTED request/response capture for PR evidence + an optional status assertion.
+// no-mistakes-backend harness: make ONE authenticated request to the backend API under
+// test and emit a REDACTED request/response capture for PR evidence + an optional status
+// assertion.
 //
 // The Bearer is read from the env (NMB_BEARER) — NEVER from argv (argv shows in `ps`).
-// The captured request/response have the Authorization header value, any
-// X-PromptArmor-API-Key, and the bearer string itself scrubbed before they are
-// printed, so the evidence is safe to post. See SKILL.md §8.
+// The captured request/response have the Authorization header value, the configured
+// API-key header ($NM_API_KEY_HEADER), and the bearer string itself scrubbed before they
+// are printed, so the evidence is safe to post. See SKILL.md §8.
 //
 // Usage:
 //   NMB_BEARER="$(… api-token.mjs)" node http-client.mjs \
-//     --method POST --url http://localhost:8090/api/.../vendors \
+//     --method POST --url "$BASE/api/.../resource" \
 //     --body '{"name":"nmb-<run>-acme"}'  [--body-file payload.json] \
 //     [--header 'X-Foo: bar']  [--expect-status 201]  [--json]
 //
@@ -61,8 +62,16 @@ if (bodyText !== undefined && !('Content-Type' in headers) && !('content-type' i
 
 // --- Redaction: scrub the bearer string + known sensitive headers everywhere. ---
 // One sensitive-name set drives the request-header-key check, the header-line text
-// redaction, AND the JSON-key redaction below — so they can never drift apart.
-const SENSITIVE_NAMES = 'authorization|cookie|set-cookie|x-api-key|x-promptarmor-api-key|access[_-]?token|refresh[_-]?token|id[_-]?token|token|api[_-]?key|client[_-]?secret|secret|password|private[_-]?key';
+// redaction, AND the JSON-key redaction below — so they can never drift apart. The
+// project's custom API-key header ($NM_API_KEY_HEADER) is folded in dynamically.
+const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const apiKeyHeader = (process.env.NM_API_KEY_HEADER || '').toLowerCase().trim();
+const SENSITIVE_NAMES = [
+  'authorization', 'cookie', 'set-cookie', 'x-api-key',
+  ...(apiKeyHeader ? [escapeRe(apiKeyHeader)] : []),
+  'access[_-]?token', 'refresh[_-]?token', 'id[_-]?token', 'token',
+  'api[_-]?key', 'client[_-]?secret', 'secret', 'password', 'private[_-]?key',
+].join('|');
 const SENSITIVE_HEADER = new RegExp(`^(?:${SENSITIVE_NAMES})$`, 'i');
 function redact(text) {
   if (!text) return text;

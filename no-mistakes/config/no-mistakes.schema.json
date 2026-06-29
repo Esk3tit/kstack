@@ -1,0 +1,209 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/promptarmor/kstack/no-mistakes/config/no-mistakes.schema.json",
+  "title": "no-mistakes project config",
+  "description": "Per-project targets for the no-mistakes verification skill family. The skills supply the METHOD (drive -> assert -> ground-truth one layer below); this file supplies the TARGETS (which BaaS/DB, which apps, which auth, which preview platform). Discovered by walking up from CWD for .no-mistakes.json, else ~/.no-mistakes/<project>.json.",
+  "type": "object",
+  "required": ["project", "db", "apps"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "project": {
+      "type": "string",
+      "description": "Stable project identifier. Also the filename used for the central fallback (~/.no-mistakes/<project>.json)."
+    },
+    "org": { "type": "string", "description": "Org/display name (e.g. PromptArmor). Used in prose/labels only." },
+    "repoOwner": { "type": "string", "description": "Default GitHub owner for PR posting when an app omits its own repo." },
+    "checkoutBase": {
+      "type": "string",
+      "description": "Base dir under which app repos are checked out (e.g. ~/PromptArmor). Used to derive a repo dir when an app omits repoPath. Supports ~."
+    },
+    "db": {
+      "type": "object",
+      "description": "The Backend-as-a-Service / database the read-after-write ground-truth runs against.",
+      "required": ["platform"],
+      "additionalProperties": false,
+      "properties": {
+        "platform": {
+          "type": "string",
+          "description": "BaaS/DB platform.",
+          "enum": ["neon", "supabase", "planetscale", "convex", "firebase", "postgres", "mysql", "other"]
+        },
+        "adapter": {
+          "type": "string",
+          "description": "How read-after-write ground-truth is read. Derived from platform if omitted: neon/supabase/planetscale/postgres/mysql -> sql; convex -> convex; firebase -> firestore. SQL adapters read a row via run_sql; convex/firestore are non-SQL (see their blocks).",
+          "enum": ["sql", "convex", "firestore"]
+        },
+        "projectId": { "type": "string", "description": "Platform project/instance id (e.g. Neon project id, Supabase project ref)." },
+        "localBranch": { "type": "string", "description": "DB branch/database the LOCAL app points at (e.g. Neon dev_personal). Ground-truth source for localhost targets." },
+        "previewBranchPattern": {
+          "type": "string",
+          "description": "Template for the per-PR preview DB branch. {pr} is substituted with the PR number (e.g. preview-pr-{pr}).",
+          "default": "preview-pr-{pr}"
+        },
+        "connStringEnv": {
+          "type": "string",
+          "description": "Env var name the harness expects the resolved connection string in (e.g. NMB_DATABASE_URL). Value is resolved at runtime via MCP, never stored here.",
+          "default": "NMB_DATABASE_URL"
+        },
+        "migrations": {
+          "type": "string",
+          "description": "Migration tool, for the migration-state gate. 'none' disables the gate.",
+          "enum": ["alembic", "prisma", "drizzle", "knex", "none"],
+          "default": "none"
+        },
+        "migrationsVersionTable": { "type": "string", "description": "Table holding the applied migration version (e.g. alembic_version)." },
+        "mcp": {
+          "type": "object",
+          "description": "SQL adapter: MCP tool names for DB ground-truth. Defaults match the Neon MCP server.",
+          "additionalProperties": false,
+          "properties": {
+            "server": { "type": "string", "description": "MCP server label (e.g. Neon)." },
+            "runSql": { "type": "string", "default": "run_sql" },
+            "describeBranch": { "type": "string", "default": "describe_branch" },
+            "getConnectionString": { "type": "string", "default": "get_connection_string" },
+            "listBranches": { "type": "string" }
+          }
+        },
+        "convex": {
+          "type": "object",
+          "description": "Convex (non-SQL) ground-truth adapter. Convex has no SQL — read via the CLI/MCP and assert on returned documents, not rows. Used when adapter=convex.",
+          "additionalProperties": false,
+          "properties": {
+            "deploymentEnv": { "type": "string", "description": "Env var holding the deployment (e.g. CONVEX_DEPLOYMENT).", "default": "CONVEX_DEPLOYMENT" },
+            "urlEnv": { "type": "string", "description": "Env var holding the deployment URL (e.g. CONVEX_URL / NEXT_PUBLIC_CONVEX_URL)." },
+            "deployKeyEnv": { "type": "string", "description": "Env var holding a preview/deployment-scoped deploy key.", "default": "CONVEX_DEPLOY_KEY" },
+            "previewNamePattern": { "type": "string", "description": "Preview-deployment name template; {pr} substituted.", "default": "pr-{pr}" },
+            "runCmd": { "type": "string", "description": "CLI to invoke a query function.", "default": "npx convex run" },
+            "dataCmd": { "type": "string", "description": "CLI to dump a table.", "default": "npx convex data" },
+            "mcp": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "server": { "type": "string", "default": "Convex" },
+                "runOneoffQuery": { "type": "string", "description": "Sandboxed read-only JS query tool.", "default": "runOneoffQuery" },
+                "data": { "type": "string", "default": "data" },
+                "run": { "type": "string", "default": "run" }
+              }
+            }
+          }
+        },
+        "firestore": {
+          "type": "object",
+          "description": "Firestore (non-SQL) ground-truth adapter. Read by document path via Admin SDK / MCP; bypasses Security Rules; no DB branching (isolate per-PR via a separate project or the emulator). Used when adapter=firestore.",
+          "additionalProperties": false,
+          "properties": {
+            "credsEnv": { "type": "string", "description": "Service-account / ADC env var.", "default": "GOOGLE_APPLICATION_CREDENTIALS" },
+            "emulatorHostEnv": { "type": "string", "default": "FIRESTORE_EMULATOR_HOST" },
+            "isolation": { "type": "string", "description": "How per-PR isolation is achieved (Firestore has no DB branching).", "enum": ["separate-project", "emulator", "none"], "default": "emulator" },
+            "mcp": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "server": { "type": "string", "default": "Firebase" },
+                "getDocument": { "type": "string", "default": "firestore_get_document" },
+                "queryCollection": { "type": "string", "default": "firestore_query_collection" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "preview": {
+      "type": "object",
+      "description": "Per-PR preview environment platform and the ports/services the harness drives.",
+      "additionalProperties": false,
+      "properties": {
+        "platform": { "type": "string", "enum": ["porter", "vercel", "render", "none"], "default": "none" },
+        "apiPort": { "type": "integer", "default": 8090 },
+        "fePort": { "type": "integer", "default": 3000 },
+        "porter": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "project": { "type": "string" },
+            "cluster": { "type": "string" }
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "description": "Where screenshot/SQL evidence is uploaded so it can be embedded in a PR comment.",
+      "additionalProperties": false,
+      "properties": {
+        "backend": { "type": "string", "enum": ["s3", "git-branch", "local", "cmd"], "default": "local" },
+        "bucket": { "type": "string" },
+        "region": { "type": "string" },
+        "prefix": { "type": "string", "default": "no-mistakes" },
+        "expiresIn": { "type": "integer", "default": 604800 },
+        "expireDays": { "type": "integer", "default": 30 },
+        "uploadCmd": { "type": "string", "description": "For backend=cmd: a command template uploading $NM_FILE and printing a public URL." }
+      }
+    },
+    "auth": {
+      "type": "object",
+      "description": "Auth surfaces the harness mints/uses. Each app references a profile by key.",
+      "additionalProperties": false,
+      "properties": {
+        "apiKeyHeader": { "type": "string", "description": "Custom API-key header to treat as sensitive/redact (e.g. X-PromptArmor-API-Key)." },
+        "profiles": {
+          "type": "object",
+          "description": "Named auth profiles keyed by id (referenced by app.auth).",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "kind": {
+                "type": "string",
+                "description": "How a token is obtained. 'propelauth' uses the api-token.mjs minter; 'bearer-env' reads a key straight from a secret env var; 'supabase-jwt' / 'firebase-idtoken' / 'none' for other platforms.",
+                "enum": ["propelauth", "bearer-env", "supabase-jwt", "firebase-idtoken", "browser-login", "none"]
+              },
+              "secretsTool": { "type": "string", "enum": ["doppler", "env", "dotenv"], "default": "env" },
+              "dopplerProject": { "type": "string", "description": "Doppler project for `doppler run -p <project>` (when secretsTool=doppler)." },
+              "secretsScopeDir": { "type": "string", "description": "Dir to cd into so the secrets tool resolves the right scope (e.g. the app repo)." },
+              "env": {
+                "type": "object",
+                "description": "Map of logical name -> env var holding the secret (e.g. {authUrl: PROPEL_AUTH_TEST_AUTH_URL, apiKey: PROPEL_AUTH_TEST_API_KEY}).",
+                "additionalProperties": { "type": "string" }
+              },
+              "keyEnv": { "type": "string", "description": "For bearer-env: the env var holding the bearer token/key." },
+              "testEmailEnv": { "type": "string" },
+              "testEmailDefault": { "type": "string" },
+              "apiPaths": {
+                "type": "object",
+                "description": "For propelauth: API paths the minter calls.",
+                "additionalProperties": { "type": "string" }
+              },
+              "noLogin": { "type": "boolean", "description": "App needs no interactive login (internal tool).", "default": false }
+            }
+          }
+        }
+      }
+    },
+    "apps": {
+      "type": "array",
+      "description": "The deployable units the skills drive. At least one.",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["name", "kind"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string", "description": "Display name (e.g. AI-TPRM, TPRM-API)." },
+          "kind": { "type": "string", "enum": ["frontend", "backend"] },
+          "repo": { "type": "string", "description": "owner/name for PR posting." },
+          "repoPath": { "type": "string", "description": "Local checkout path. If omitted, derived from checkoutBase + repo basename. Supports ~." },
+          "devUrl": { "type": "string", "description": "Local dev URL (e.g. http://localhost:5173 or :8090)." },
+          "devCommand": { "type": "string", "description": "Command to start it locally (e.g. pnpm run dev, make api)." },
+          "browserProfile": { "type": "string", "description": "dev-browser profile name (frontend)." },
+          "auth": { "type": "string", "description": "Key into auth.profiles. Omit/none for no auth." },
+          "noLogin": { "type": "boolean", "default": false },
+          "previewService": { "type": "string", "description": "Preview-platform service name (e.g. Porter service)." },
+          "previewSlug": { "type": "string", "description": "Short slug used to match this app in preview detection." },
+          "errorEnvelope": { "type": "string", "description": "Backend custom validation-error envelope shape, asserted on 422 (e.g. {status_code, message, data})." }
+        }
+      }
+    }
+  }
+}

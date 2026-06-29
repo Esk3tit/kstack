@@ -2,10 +2,11 @@
 set -uo pipefail
 
 # Preflight for no-mistakes: checks the shell tooling AND that the two sibling
-# skills it composes (no-mistakes + no-mistakes-backend) are installed. Read-only — it
-# reports; the skill's own preflight offers to install a missing sibling from kstack.
+# skills it composes (no-mistakes-frontend + no-mistakes-backend) are installed. Read-only — it
+# reports; the skill's own preflight offers to install a missing sibling from the skills repo.
 # Exits nonzero if a REQUIRED tool or a sibling skill is missing.
 
+H="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/no-mistakes}"
 SKILLS_DIR="${CLAUDE_SKILLS_DIR:-$HOME/.claude/skills}"
 missing=0
 
@@ -28,8 +29,8 @@ check porter   "resolve the preview env (porter app manifests / kubectl)" requir
 check gh       "post the combined verdict to both PRs" required
 check git      "repo/branch/PR resolution" required
 check dev-browser "drive the frontend UI for round-trip cases" required
-check neonctl  "optional CLI fallback for Neon branch resolution; Neon MCP (in-session) is preferred" optional
-check psql     "optional — async DB poll-until tight polling (else Neon MCP run_sql loop)" optional
+check neonctl  "optional CLI fallback for preview DB branch resolution; the DB MCP (in-session) is preferred" optional
+check psql     "optional — async DB poll-until tight polling (else the DB MCP run-SQL loop)" optional
 
 echo
 echo ">> sibling skills (composed by this coordinator)"
@@ -38,7 +39,7 @@ sib_check() {  # <skill-dir-name>
   if [ -d "$d" ] && [ -d "$d/harness" ]; then
     printf '  ok   %-20s %s\n' "$1" "$d"
   else
-    printf '  MISS %-20s not installed — install from kstack: cp -R ~/PromptArmor/kstack/%s %s/\n' "$1" "$1" "$SKILLS_DIR"
+    printf '  MISS %-20s not installed — install from the kstack skills repo: cp -R <kstack-checkout>/%s %s/\n' "$1" "$1" "$SKILLS_DIR"
     missing=1
   fi
 }
@@ -46,12 +47,20 @@ sib_check no-mistakes-frontend
 sib_check no-mistakes-backend
 
 echo
+echo ">> project config"
+if cfg="$(node "$H/harness/load-config.mjs" --path 2>/dev/null)" && [ -n "$cfg" ]; then
+  printf '  ok   %-20s %s\n' "config" "$cfg"
+else
+  printf '  --   %-20s no .no-mistakes.json resolved — see config/README.md (skill BLOCKs reason=needs-config)\n' "config"
+fi
+
+echo
 if [ "$missing" -eq 0 ]; then
   echo ">> all required tooling + sibling skills present."
 else
   echo ">> missing required tooling or a sibling skill (see MISS above)."
   echo "   For a missing sibling, the skill's preflight will offer to install it from"
-  echo "   ~/PromptArmor/kstack (clone promptarmor/kstack first if you don't have it)."
+  echo "   the kstack skills repo (clone it first if you don't have a checkout)."
 fi
-echo ">> Reminder: preview ClusterIPs need the un-sandboxed VPN network; Neon MCP must be reachable in the Claude session."
+echo ">> Reminder: preview ClusterIPs need the un-sandboxed VPN network; the DB MCP must be reachable in the Claude session."
 exit "$missing"

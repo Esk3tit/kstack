@@ -1,5 +1,5 @@
 // no-mistakes: splice ONE combined full-stack verdict header into BOTH PRs
-// (the frontend repo's PR and the TPRM-API PR), idempotently. Each sub-skill's
+// (the frontend repo's PR and the backend repo's PR), idempotently. Each sub-skill's
 // per-repo DETAIL (screenshots / request-response-SQL) is posted separately by the
 // sibling skills' own posters; this only writes the shared top-of-PR summary so a
 // reviewer on either PR sees the whole-stack status.
@@ -10,9 +10,9 @@
 // results.json:
 // {
 //   "overall": "PASS|FAIL|BLOCKED",
-//   "preview": { "namespace": "...", "apiHost": "...:8090", "neonBranch": "preview-pr-N" },
-//   "frontend": { "name": "AI-ARG|AI-TPRM", "repo": "owner/name", "pr": N, "status": "PASS|FAIL|BLOCKED", "detailUrl": "..." },
-//   "backend":  { "repo": "owner/name", "pr": M, "status": "PASS|FAIL|BLOCKED", "detailUrl": "..." },
+//   "preview": { "namespace": "...", "apiHost": "...", "dbBranch": "<preview branch>" },
+//   "frontend": { "name": "<frontend app>", "repo": "owner/name", "pr": N, "status": "PASS|FAIL|BLOCKED", "detailUrl": "..." },
+//   "backend":  { "name": "<backend app>", "repo": "owner/name", "pr": M, "status": "PASS|FAIL|BLOCKED", "detailUrl": "..." },
 //   "roundtrip": [ { "name": "...", "pass": true } ]
 // }
 //
@@ -60,12 +60,12 @@ function buildHeader() {
   const lines = [];
   lines.push(MARK_START);
   lines.push(`### no-mistakes: ${badge(overall)}  (FE ${mark(fe.status)} · BE ${mark(be.status)} · round-trip ${rtBadge})`);
-  lines.push(`**Preview:** \`${pv.namespace ?? '?'}\`  ·  **API:** \`${pv.apiHost ?? '?'}\`  ·  **DB:** \`${pv.neonBranch ?? '?'}\``);
+  lines.push(`**Preview:** \`${pv.namespace ?? '?'}\`  ·  **API:** \`${pv.apiHost ?? '?'}\`  ·  **DB:** \`${pv.dbBranch ?? '?'}\``);
   lines.push('');
   lines.push('| Layer | PR | Result | Detail |');
   lines.push('| --- | --- | :---: | --- |');
   lines.push(`| Frontend (${esc(fe.name) || 'FE'}) | ${fe.pr ? '#' + fe.pr : '—'} | ${mark(fe.status)} | ${detailCell(fe)} |`);
-  lines.push(`| Backend (TPRM-API) | ${be.pr ? '#' + be.pr : '—'} | ${mark(be.status)} | ${detailCell(be)} |`);
+  lines.push(`| Backend (${esc(be.name) || 'Backend'}) | ${be.pr ? '#' + be.pr : '—'} | ${mark(be.status)} | ${detailCell(be)} |`);
   if (rt.length) lines.push(`| Round-trip (UI→API→DB) | | ${rtBadge} | ${rtPass}/${rt.length} cases |`);
   lines.push('');
   if (rt.length) {
