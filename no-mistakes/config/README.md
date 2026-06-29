@@ -53,6 +53,43 @@ omitted:
 For **Supabase**, read with the service-role / direct-postgres connection — the anon key is RLS-gated
 and masks freshly-written rows (false negatives).
 
+## Evidence hosting (`evidence`)
+
+Screenshot evidence is embedded inline in the PR comment. It is **never committed to the PR branch /
+merged diff** — external hosts live off-repo; the `git-branch` fallback uses a *separate* orphan
+branch. Configure a **primary host** and a **fallback**:
+
+| `evidence.backend` | What it does | Inline on private repos? | Setup |
+|--------------------|--------------|--------------------------|-------|
+| `s3` | aws cp + presigned URL | yes | `no-mistakes-frontend/scripts/s3-evidence-setup.sh` |
+| `gdrive` | rclone upload, anyone-with-link, `lh3.googleusercontent.com/d/<id>` | yes (small imgs) | `gdrive-evidence-setup.sh` |
+| `imgur` | anonymous upload, `i.imgur.com` link | yes | `imgur-evidence-setup.sh` |
+| `cmd` | `evidence.uploadCmd` per PNG, stdout = URL (anywhere) | depends | — |
+| `git-branch` | orphan `no-mistakes-evidence` branch, raw URLs | **no** (public repos only) | none |
+| `local` | no upload; gallery written to `<run>/summary.md` | n/a | none |
+
+`evidence.fallback` (default `git-branch`) kicks in when the primary fails or is `local`/unset, so a
+verdict is never lost over an upload hiccup. **`gdrive` and `imgur` are PUBLIC hosts** — dev/test
+screenshots only, never customer data; use `s3`/`cmd` (org-trusted) or `git-branch` (stays in the
+private repo) for sensitive data.
+
+**Cleanup** (`evidence.cleanup`, git-branch only — external hosts self-expire via `expiresIn`/lifecycle):
+reclaim orphan-branch evidence with
+`node no-mistakes-frontend/harness/evidence-cleanup.mjs --pr <N>` (on PR merge/close), `--prune-days <N>`,
+or `--all`. Automate on merge with a GitHub Action:
+
+```yaml
+# .github/workflows/no-mistakes-evidence-cleanup.yml
+on:
+  pull_request: { types: [closed] }
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: node no-mistakes-frontend/harness/evidence-cleanup.mjs --pr ${{ github.event.pull_request.number }} --repo ${{ github.repository }}
+```
+
 ## Autodetect & generate (setup wizard)
 
 Don't hand-write the config — generate it. Detection uses a tiered-confidence model (own SDK dep /
