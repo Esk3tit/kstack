@@ -225,11 +225,14 @@ Collect the run's screenshots from `~/.dev-browser/tmp/` into `~/.no-mistakes/$R
 {
   "revision": "<sha + dirty state>",
   "intentSource": "<who supplied the checklist>",
+  "previewUrl": "<preview frontend URL>",
   "cases":    [{"name": "...", "pass": true,  "evidence": "look-foo-desktop.png"}],
   "findings": [{"severity": "high", "screen": "Vendors", "viewport": "mobile", "issue": "..."}]
 }
 ```
-`evidence` = a PNG basename present in `--run-dir`, or `null`.
+`evidence` = a PNG basename present in `--run-dir`, or `null`. `previewUrl` (optional) = the resolved
+preview frontend URL when the run targeted a preview (omit for localhost); it's surfaced as a clickable
+**Open the preview UI →** line in the PR body so a reviewer can open the running app without re-running.
 
 Post:
 
@@ -243,6 +246,8 @@ It posts on **two idempotent surfaces** for the best reviewer UX:
    `<!-- no-mistakes-frontend:start -->`/`<!-- no-mistakes-frontend:end -->` markers; the author's existing body is
    preserved (an existing marked region is replaced in place, otherwise the block is prepended). It
    holds the **overall status** header (`### no-mistakes-frontend: ✅ PASS` / `❌ FAIL`), revision + intent,
+   a clickable **Open the preview UI →** link when `previewUrl` is set (so a reviewer can open the
+   running app without re-running),
    the `| Test case | ✅/❌ | Evidence |` table (each Evidence cell a **short `[📸 <name>](…)` link
    to the gallery comment**, or `—`), a one-line visual summary, and a gallery link.
    **No inline images, no presigned/raw URLs** — so the block stays **commit-clean** when GitHub

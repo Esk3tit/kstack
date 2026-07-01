@@ -10,7 +10,7 @@
 // results.json:
 // {
 //   "overall": "PASS|FAIL|BLOCKED",
-//   "preview": { "namespace": "...", "apiHost": "...", "dbBranch": "<preview branch>" },
+//   "preview": { "namespace": "...", "apiHost": "...", "dbBranch": "<preview branch>", "feUrl": "<preview frontend URL>" },
 //   "frontend": { "name": "<frontend app>", "repo": "owner/name", "pr": N, "status": "PASS|FAIL|BLOCKED", "detailUrl": "..." },
 //   "backend":  { "name": "<backend app>", "repo": "owner/name", "pr": M, "status": "PASS|FAIL|BLOCKED", "detailUrl": "..." },
 //   "roundtrip": [ { "name": "...", "pass": true } ]
@@ -61,6 +61,7 @@ function buildHeader() {
   lines.push(MARK_START);
   lines.push(`### no-mistakes: ${badge(overall)}  (FE ${mark(fe.status)} · BE ${mark(be.status)} · round-trip ${rtBadge})`);
   lines.push(`**Preview:** \`${pv.namespace ?? '?'}\`  ·  **API:** \`${pv.apiHost ?? '?'}\`  ·  **DB:** \`${pv.dbBranch ?? '?'}\``);
+  if (pv.feUrl) lines.push(`**Open the preview UI →** ${pv.feUrl}  _(preview target; point-in-time)_`);
   lines.push('');
   lines.push('| Layer | PR | Result | Detail |');
   lines.push('| --- | --- | :---: | --- |');

@@ -36,7 +36,8 @@
 // Usage:
 //   node post-evidence.mjs --pr <N> --run-dir <dir> --results <results.json> [--repo owner/name]
 //
-// results.json: { revision, intentSource, cases:[{name,pass,evidence}], findings:[{severity,screen,viewport,issue}] }
+// results.json: { revision, intentSource, previewUrl?, cases:[{name,pass,evidence}], findings:[{severity,screen,viewport,issue}] }
+//   previewUrl (optional): the resolved preview frontend URL; rendered as a clickable "Open the preview UI →" line so a reviewer can open the running app without re-running.
 //   evidence = PNG basename present in --run-dir, or null.
 //
 // On no-PR / gh failure: writes the assembled markdown to <run-dir>/summary.md,
@@ -392,6 +393,10 @@ function buildBodyBlock(galleryUrl) {
   lines.push(MARKER_START);
   lines.push(`### no-mistakes-frontend: ${badge}`);
   lines.push(`**Revision:** \`${revision}\`  ·  **Intent:** ${intent}`);
+  if (results.previewUrl) {
+    lines.push('');
+    lines.push(`**Open the preview UI →** ${results.previewUrl}  _(preview target; point-in-time)_`);
+  }
   lines.push('');
   lines.push('| Test case | Result | Evidence |');
   lines.push('| --- | :---: | --- |');
