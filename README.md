@@ -44,7 +44,7 @@ All user-authored, plugin-independent (they shell out to `codex` / `gh-axi`, not
 | `/codexloop` | Run `codex exec review` on the current PR/branch, fix **real** findings, loop until clean, push on CLEAN. Claude is the human-in-the-loop reviewing Codex's review. |
 | `/review-spec` | Iterative Codex⇄Claude review loop over a high-level **spec** markdown; edits in place until it converges. |
 | `/review-implementation-plan` | Same loop, for an **implementation plan** markdown. |
-| `/address-pr-comments` | Resolve unresolved PR review-bot comments via parallel subagents. `--loop` gates on **code-review bots + lint/test only** — never CI/CD deploys. |
+| `/address-pr-comments` | Resolve unresolved PR review-bot comments via parallel subagents. **Loops by default** (`--once` for a single pass), gating on **reviewers** — code-review bots + lint/test — never CI/CD deploys. |
 | `/trim-code-comments` | Clean up over-commenting in code just written, per the `CLAUDE.md` comment rules. |
 
 > `/codexloop`, `/review-spec`, `/review-implementation-plan` all defer to the **`codex-cli`** skill

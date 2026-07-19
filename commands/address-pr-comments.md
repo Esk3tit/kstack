@@ -1,159 +1,45 @@
 ---
-description: Address PR comments by reviewing, fixing valid issues, explaining invalid ones, and replying to each comment
-argument-hint: [pr-number] [--loop]
+description: Address unresolved PR review comments — fix the valid ones, push back on the invalid ones, reply and resolve each, looping until every reviewer is green
+argument-hint: [pr-number] [--once]
 ---
 
 # /address-pr-comments
 
-## Purpose
-Address **unresolved** PR comments left on a pull request using parallel subagents for efficient processing. Review each comment to determine if it's a valid issue. Fix valid issues, explain why invalid ones aren't issues. Display a summary table and reply to each PR comment with the action taken, then mark comments as resolved.
+Address **unresolved** review comments on a PR: judge each one, fix what's valid, push back on what isn't, reply to every comment, resolve the thread. Then loop — push, let the reviewers re-review, repeat — until the PR converges.
 
-**Idempotent:** Safe to call multiple times on the same PR - only processes unresolved comments without replies.
+**Idempotent.** Each pass only touches unresolved threads with no reply, so re-running is always safe.
 
-**Loop mode (`--loop`):** Re-runs the full pass after pushing fixes, polling until every **in-scope** check is green AND no unresolved review comments remain. **In scope (gate the loop):** automated code-review bots/agents (Gemini Code Assist, CodeRabbit, Greptile, Codex / cloud PR review, Cursor BugBot, Sentry, etc.) plus lint/format and test check-runs (Prettier, ESLint, Ruff, pytest, vitest, Playwright). **Out of scope (never wait on or gate the loop):** CI/CD pipeline jobs — preview-environment deployments, build/publish steps, Docker image builds, infra provisioning. Each iteration: address comments → push → wait for in-scope bots/checks to re-review → repeat.
+- `$1` — PR number (optional; defaults to the current branch's PR)
+- `--once` — run a single pass and stop, instead of looping to convergence
 
-## Contract
-**Inputs:**
-- `$1` — PR number (optional, defaults to current branch's PR)
-- `--loop` — keep processing comments + pushing + waiting for **in-scope** re-reviews until all in-scope checks are green and no unresolved review comments remain. **Scope — gate the loop on code-review bots/agents ONLY**, plus lint/format and test check-runs (a failing lint or test is a real problem to fix). In-scope sources: Gemini Code Assist, CodeRabbit, Greptile, Codex / cloud PR review, Cursor BugBot, Sentry, and similar; lint/format/test jobs (Prettier, ESLint, Ruff, pytest, vitest, Playwright). **Never watch, wait on, or gate the loop on CI/CD pipeline jobs** — preview-environment deployments, build/publish steps, Docker image builds, infra provisioning. A pending or failing deploy/preview check must not block convergence and is never treated as a finding to fix here. **No iteration cap** — bots like Cursor BugBot routinely take 20–30+ rounds to fully settle. The loop terminates only on convergence (CLEAN), genuine no-progress (FAIL), or user interrupt
+## Reviewers vs. deploys
 
-**Outputs:** Summary table of comments and resolutions per iteration; loop status `LOOP_STATUS=<CLEAN|FAIL> ITERATIONS=<N>` when `--loop` is used
+Classify every check and comment source by name into exactly one bucket — the loop gates on **reviewers** and is blind to **deploys**:
 
-## Instructions
+- **Reviewers** (gate the loop): code-review bots/agents — Gemini Code Assist, CodeRabbit, Greptile, Codex / cloud PR review, Cursor BugBot, Sentry — plus lint/format and test check-runs — Prettier, ESLint, Ruff, pytest, vitest, Playwright. A failing lint or test is a real finding to fix.
+- **Deploys** (never wait on, never gate): CI/CD pipeline jobs — preview-environment deployments, build/publish, Docker image builds, infra provisioning. A pending or red deploy never blocks convergence and is never a finding.
 
-### Phase 1: Gather PR Comments
+## Each pass
 
-1. **Get PR information:**
-   - If no PR number provided, find PR for current branch using `gh pr view --json number`
-   - Fetch all review comments using `gh api repos/{owner}/{repo}/pulls/{pr}/comments`
-   - Fetch review threads to check resolution status using `gh api graphql`
+1. **Fetch & converge.** Find the PR (`gh pr view --json number` if no number given). Pull review comments (`gh api repos/{owner}/{repo}/pulls/{pr}/comments`), thread resolution (`gh api graphql`), and reviewer states (`gh pr checks <pr> --json name,state,conclusion`). Keep only unresolved threads with no reply. **Converged** when no such threads remain AND every reviewer is green (`SUCCESS`; `NEUTRAL`/`SKIPPED` pass; `FAILURE`/`CANCELLED`/`TIMED_OUT` don't). On convergence, emit `LOOP_STATUS=CLEAN ITERATIONS=<N>` and stop. A red reviewer with no comment is still a finding — investigate and fix it.
 
-2. **Filter to unresolved comments only:**
-   - Skip comments where `isResolved: true` in the review thread
-   - Skip comments that already have replies (check if comment is part of a thread with responses)
-   - Only process top-level unresolved comments that need attention
-   - If no unresolved comments remain, report "No unresolved comments to address" and exit
+2. **Partition into clusters.** Holding every comment at once, group them: comments on the same code or that reference each other share a cluster; everything else is a cluster of one. This call is yours to make directly from full context — no line-distance heuristic.
 
-### Phase 2: Analyze Comment Dependencies
+3. **Fan out.** Spawn one general-purpose subagent per cluster, all in parallel, each with this task:
+   > Address these PR comments: {cluster}. Read the code around each. Judge whether each raises a real issue — technically correct, an actual improvement to quality/security/maintainability, consistent with the codebase. Fix the valid ones with Edit; for invalid ones, prepare a respectful explanation of why it isn't one. Do NOT commit, reply, or resolve. Return per comment: `valid` (bool), `action` ("Fixed: …" / "Not an issue: …"), `files` (paths changed), `reply` (message to post).
 
-3. **Classify comments by independence:**
-   For each unresolved comment, determine if it can be fixed in isolation:
+   Reject nitpicks, bikeshedding, and bloated defensive code; never fabricate a fix just to silence a bot.
 
-   **Independent comments** (can be processed in parallel):
-   - Comments on different files
-   - Comments on the same file but different non-overlapping code sections (>20 lines apart)
-   - Comments that don't reference each other
-   - Style/formatting issues
-   - Documentation fixes
-   - Simple bug fixes with clear scope
+4. **Finalize (parent only).** Collect results. Print a table (Comment | File | Valid? | Action). Reply to each comment and resolve its thread via `gh api` / `gh api graphql`. Commit any fixes with a message naming the count addressed.
 
-   **Dependent comments** (must be processed sequentially):
-   - Multiple comments on the same code block or adjacent lines (<20 lines apart in same file)
-   - Comments that reference each other ("see my other comment", "related to above")
-   - Architectural concerns that affect multiple files
-   - Comments requiring coordinated refactoring
+**If `--once`: stop here.**
 
-### Phase 3: Parallel Processing with Subagents
+## Loop
 
-4. **Launch subagents for independent comments:**
-   For each independent comment, spawn a subagent using the Task tool with this prompt template:
+5. **Push** — only if this pass committed. Never force-push; never push to `master`/`main`. If the remote diverged, stop with `LOOP_STATUS=FAIL ERROR="remote diverged"`.
 
-   ```
-   You are addressing a single PR comment. Your task:
+6. **Let reviewers re-review.** Poll `gh pr checks` every 60–120s until every reviewer reaches a final state — ignore deploys, pending or red. Once they settle, wait ~45s for bots to post. Per-pass timeout 30 min → `LOOP_STATUS=FAIL ERROR="reviewer timeout"`.
 
-   **PR Comment Details:**
-   - File: {file_path}
-   - Line(s): {line_number}
-   - Comment: "{comment_body}"
-   - Author: {comment_author}
-   - Comment ID: {comment_id}
-   - Thread ID: {thread_id}
+7. **Repeat** from step 1 — its convergence test decides when to stop. **No iteration cap**: bots like Cursor BugBot routinely take 20–30+ passes to settle, so print the pass count and remaining items each round for interruptibility. **No-progress guard:** track addressed comment IDs across passes in `/tmp/address-pr-comments-history.txt`; if one ID is re-flagged 3 passes running with no fix landing, stop with `LOOP_STATUS=FAIL ERROR="no progress on comment <id>"`.
 
-   **Instructions:**
-   1. Read the referenced file and understand the context around the commented line(s)
-   2. Analyze if the comment raises a valid issue:
-      - Is the concern technically correct?
-      - Does it improve code quality, security, or maintainability?
-      - Is it consistent with the codebase patterns?
-   3. If VALID: Make the fix in the codebase using the Edit tool
-   4. If NOT VALID: Prepare a clear, respectful explanation why
-   5. Do NOT commit changes, reply to the comment, or mark as resolved
-
-   **Return your result as structured output:**
-   - valid: true/false
-   - action_taken: "Fixed: <description>" or "Not an issue: <explanation>"
-   - files_modified: [list of files changed, if any]
-   - reply_message: <message to post as reply to the PR comment>
-   ```
-
-   **Important:** Launch all independent comment subagents in parallel using a single message with multiple Task tool calls.
-
-5. **Process dependent comments sequentially:**
-   - Group dependent comments by their dependency clusters
-   - Process each cluster one at a time in the main agent
-   - For each comment in a cluster: read, analyze, fix if valid, prepare reply
-
-### Phase 4: Collect Results and Finalize
-
-6. **Collect all subagent results:**
-   - Wait for all parallel subagents to complete
-   - Gather the structured output from each subagent
-   - Merge with results from sequentially-processed dependent comments
-
-7. **Display summary table:**
-   | Comment | File | Valid? | Action Taken | Processed By |
-   |---------|------|--------|--------------|--------------|
-   | ... | ... | Yes/No | Fixed: ... / Not an issue: ... | Subagent / Main |
-
-8. **Reply to PR comments:**
-   - Use `gh api` to reply to each comment with the prepared reply message
-   - Mark each comment thread as resolved using `gh api graphql` mutation
-
-9. **Commit fixes (if any):**
-   - Stage and commit all fixes with descriptive message
-   - Include count of comments addressed in commit message
-   - Do NOT push unless explicitly requested (or `--loop` is set — see Phase 5)
-
-### Phase 5: Loop Mode (only when `--loop` is set)
-
-10. **Push fixes for this iteration:**
-    - If commits were made this iteration, push to the PR branch: `git push`
-    - Never force-push. If remote diverged, abort the loop with `LOOP_STATUS=FAIL ERROR="remote diverged"`
-
-11. **Wait for in-scope bots/checks to re-review:**
-    - **First classify checks by name** from `gh pr checks <pr> --json name,state,conclusion`. **In scope:** code-review bot/agent checks (Gemini Code Assist, CodeRabbit, Greptile, Codex, Cursor BugBot, Sentry, etc.) and lint/format/test jobs (Prettier, ESLint, Ruff, pytest, vitest, Playwright). **Out of scope:** CI/CD jobs — preview-environment deployments, build/publish, Docker image builds, infra provisioning.
-    - Poll only until the **in-scope** checks reach a final status (no `pending`/`in_progress`/`queued`). **Do NOT wait on out-of-scope CI/CD checks** — they may still be deploying or even failing; that never blocks this loop.
-    - Use a sensible cadence (e.g., 60–120s between polls). **Hard timeout per iteration: 30 minutes** — if exceeded, abort with `LOOP_STATUS=FAIL ERROR="bot review timeout"`
-    - Allow a brief settle period (~45s) after in-scope checks complete so bots can post their review comments
-
-12. **Re-fetch PR state and decide:**
-    - Re-run Phase 1 (fetch comments + review threads) and Phase 1's filter for unresolved comments
-    - Run `gh pr checks <pr> --json name,state,conclusion` and evaluate **in-scope checks only** (code-review bots/agents + lint/format/test). **Exclude CI/CD jobs** (preview-env deploys, build/publish, Docker, infra) from this evaluation entirely.
-    - **Exit `LOOP_STATUS=CLEAN`** when BOTH conditions hold:
-      - No unresolved review comments remain (every comment thread has `isResolved: true`)
-      - Every **in-scope** check has `conclusion: SUCCESS` (treat `NEUTRAL`/`SKIPPED` as pass; `FAILURE`/`CANCELLED`/`TIMED_OUT` is not pass). **Out-of-scope CI/CD checks are not consulted** — a red preview-deploy does not prevent CLEAN
-    - **No iteration cap.** Bots like Cursor BugBot routinely take 20–30+ rounds to fully settle, so the loop keeps going as long as it's making progress. Print iteration count + remaining items at the end of each round so the user can interrupt if desired
-    - **Track convergence across iterations.** Maintain `/tmp/address-pr-comments-history.txt` with one line per iteration listing the comment IDs addressed and which were rejected vs fixed. **No-progress detection:** if the same comment ID appears in 3 consecutive iterations with no fix landing (bot keeps re-flagging the same line and your fix isn't sticking), STOP with `LOOP_STATUS=FAIL ERROR="no progress on comment <id>"` and surface to the user. The 3-strike rule (instead of 2) gives flaky/slow bots room to acknowledge a fix that just hasn't propagated yet
-    - Otherwise increment iteration counter and return to Phase 1
-
-13. **Loop-mode constraints:**
-    - Only push when at least one commit was made this iteration (don't push empty)
-    - Never force-push, never push to `master`/`main`
-    - Same rules from the non-loop path apply per iteration: reject nitpicks/bikeshedding/bloated defensive code, don't fabricate fixes to silence comments, push back on Claude's own judgment when bot suggestions are wrong
-
-## Subagent Configuration
-
-When launching subagents, use these parameters:
-- `subagent_type`: "general-purpose"
-- `description`: "Fix PR comment on {filename}"
-- `model`: "sonnet" (for efficiency; use "opus" only for complex architectural comments)
-
-## Constraints
-- Requires `gh` CLI to be authenticated
-- Does not push changes automatically (except in `--loop` mode, which pushes per iteration)
-- Reviews comments objectively - not all comments require code changes
-- Skips already-resolved comments for efficient re-runs
-- Maximum 10 parallel subagents at once (batch if more comments)
-- Subagents do NOT commit, reply, or resolve - only the main agent does this
-- **Loop mode watches code-review bots + lint/test ONLY** — gate the loop solely on automated code-review bot/agent feedback (Gemini Code Assist, CodeRabbit, Greptile, Codex, Cursor BugBot, Sentry, etc.) and lint/format + test check-runs. NEVER watch, wait on, or gate the loop on CI/CD jobs like preview-environment deployments, builds, image publishes, or infra — ignore those entirely for loop control
-- **Loop mode** exit conditions: all **in-scope** checks green (code-review bots/agents + lint/format/test) AND zero unresolved review comments. **No iteration cap** — bots like Cursor BugBot can take 20–30+ rounds. Abort with `LOOP_STATUS=FAIL` only on: no-progress (same comment ID flagged 3 consecutive iterations), bot timeout (>30min wait per iteration), or remote divergence. User can interrupt at any iteration boundary
+**Requires** an authenticated `gh` CLI.
