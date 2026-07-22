@@ -4,9 +4,9 @@
 // LOW = env/host alone). Auto-pick only when exactly one platform is HIGH and strictly ahead.
 // Importable: `import { detect } from './detect.mjs'`. CLI: node detect.mjs [--cwd <dir>] [--json]
 
-import { readFileSync, existsSync, statSync } from 'node:fs'
+import { readFileSync, existsSync, statSync, realpathSync } from 'node:fs'
 import { dirname, join, resolve, basename } from 'node:path'
-import { pathToFileURL } from 'node:url'
+import { pathToFileURL, fileURLToPath } from 'node:url'
 
 const RANK = { HIGH: 3, MED: 2, LOW: 1 }
 
@@ -213,7 +213,19 @@ export function detect(cwd = process.cwd()) {
   }
 }
 
-const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href
+// The skill dir is often a symlink (~/.claude/skills/... → real checkout), so
+// argv[1] (the link path) and import.meta.url (the resolved real path) differ.
+// Compare realpaths so the CLI still runs when invoked through the symlink.
+const isMain = (() => {
+  if (!process.argv[1]) return false
+  try {
+    return (
+      realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1])
+    )
+  } catch {
+    return import.meta.url === pathToFileURL(process.argv[1]).href
+  }
+})()
 if (isMain) {
   const args = process.argv.slice(2)
   const i = args.indexOf('--cwd')
