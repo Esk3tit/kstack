@@ -46,9 +46,14 @@ they are verified-live and parameterized by the app's config fields. Never hardc
 
 ## 1. Preflight (gate)
 
-1. **dev-browser installed.** `command -v dev-browser` — if missing, emit
+1. **Browser driver installed.** Either **dev-browser** (default) or **chrome-devtools-axi** on PATH
+   (`command -v dev-browser || command -v chrome-devtools-axi`; chrome-devtools-axi also runs
+   on-demand via `npx -y chrome-devtools-axi`). If neither, emit
    `NOMISTAKES_FRONTEND_STATUS=BLOCKED reason=needs-setup` and tell the user to run `$H/scripts/setup.sh`.
-   Confirm chromium is ready (the daemon can launch a page).
+   Confirm the driver can launch a page (dev-browser: chromium ready; chrome-devtools-axi:
+   `chrome-devtools-axi open <url>` returns a snapshot). The `snippets.md` templates are written for
+   dev-browser; its **Browser drivers** section maps each operation to the chrome-devtools-axi
+   command form.
 2. **Target in-scope (only production is refused).** In-scope = a **localhost dev server** OR a
    **dev/preview env backed by a redacted preview DB branch** (the configured DB platform
    `$NM_DB_PLATFORM`; dev-equivalent data, no production customer data — so previews are

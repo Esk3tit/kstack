@@ -233,7 +233,7 @@
           "repoPath": { "type": "string", "description": "Local checkout path. If omitted, derived from checkoutBase + repo basename. Supports ~." },
           "devUrl": { "type": "string", "description": "Local dev URL (e.g. http://localhost:5173 or :8090)." },
           "devCommand": { "type": "string", "description": "Command to start it locally (e.g. pnpm run dev, make api)." },
-          "browserProfile": { "type": "string", "description": "dev-browser profile name (frontend)." },
+          "browserProfile": { "type": "string", "description": "dev-browser profile name (frontend); ignored by the chrome-devtools-axi driver, which has no cross-session named profiles." },
           "auth": { "type": "string", "description": "Key into auth.profiles. Omit/none for no auth." },
           "noLogin": { "type": "boolean", "default": false },
           "previewService": { "type": "string", "description": "Preview-platform service name (e.g. Porter service)." },
