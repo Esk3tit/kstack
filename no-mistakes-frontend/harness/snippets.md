@@ -37,6 +37,46 @@ Key facts learned live:
 
 ---
 
+## Browser drivers (dev-browser · chrome-devtools-axi)
+
+The templates below are **dev-browser** (the default). The other supported driver is
+[`chrome-devtools-axi`](https://github.com/kunchenguid/chrome-devtools-axi) — a command-based CLI
+(`npx -y chrome-devtools-axi …`, or a global install) that wraps chrome-devtools-mcp. Same job,
+different shape: instead of one QuickJS Playwright script, you issue discrete commands against a
+**persistent bridge** (Chrome stays alive between commands), acting on elements by the `@uid` refs a
+snapshot returns.
+
+Operation map — translate any template step to the chrome-devtools-axi form:
+
+| Need | dev-browser | chrome-devtools-axi |
+| --- | --- | --- |
+| Navigate + see the page | `page.goto(url)` then `page.snapshotForAI()` | `chrome-devtools-axi open <url>` (navigates **and** snapshots; refs like `@g1:1`) |
+| Re-read current state | `page.snapshotForAI()` | `chrome-devtools-axi snapshot` |
+| Locate + click | `getByRole(...).click()` | `chrome-devtools-axi click @<uid>` |
+| Fill a field | `getByLabel(...).fill(v)` | `chrome-devtools-axi fill @<uid> <v>` (or `fillform @a=v @b=v`) |
+| Key / type | `page.press` / `type` | `press <key>` / `type <text>` |
+| Assert via JS (API ground-truth, DOM) | `page.evaluate(fn)` | `chrome-devtools-axi eval "() => (...)"` |
+| Screenshot evidence | `saveScreenshot(path)` | `chrome-devtools-axi screenshot <path> [--full-page]` (path resolves against CWD) |
+| Multi-step in one shot | one heredoc script | `chrome-devtools-axi run` (script from stdin) |
+| Tiered self-heal | `snapshotForAI` → `domCua` → `cua` | `snapshot`/`open` (refs) → `eval` to inspect the DOM → `screenshot` to eyeball; act by `@uid` |
+
+Driver differences to respect:
+
+- **Session persistence:** dev-browser reuses a named profile across separate runs (`--browser NAME`).
+  chrome-devtools-axi keeps Chrome alive via its bridge, so a login persists **within a bridge
+  session**; there's no cross-session named-profile reuse — log in in the same session you then drive,
+  or re-auth per run.
+- **Secret handling:** dev-browser injects creds via a stdin heredoc as JSON, never on the command
+  line. `fill @uid <secret>` would put the secret in argv (process list / history). For credential
+  entry with chrome-devtools-axi, pass the step through **`run`** (script from stdin) so the value
+  never lands in argv, or prefer the **bearer-token / API-ground-truth** path that needs no browser
+  login at all. **Never** screenshot credential entry; never echo a token.
+- **Verification status:** the dev-browser templates below are verified-live. This chrome-devtools-axi
+  mapping is derived from its CLI reference — confirm the exact `@uid`/selector behavior on first live
+  use for a given app, then treat it as verified for that app.
+
+---
+
 ## A. Login (hosted-login auth profile — PropelAuth example)
 
 For an app whose auth profile needs an interactive login (`kind: propelauth` /

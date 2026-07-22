@@ -23,12 +23,29 @@ check() {
   fi
 }
 
+# check_any <label> <note> <required|optional> <cmd...> — ok if ANY cmd is on PATH.
+# Used for the browser driver, which can be dev-browser OR chrome-devtools-axi.
+check_any() {
+  local label="$1" note="$2" req="$3"; shift 3
+  local found=""
+  for c in "$@"; do
+    if command -v "$c" >/dev/null 2>&1; then found="$c"; break; fi
+  done
+  if [ -n "$found" ]; then
+    printf '  ok   %-9s %s\n' "$label" "$found"
+  elif [ "$req" = required ]; then
+    printf '  MISS %-9s %s\n' "$label" "$note"; missing=1
+  else
+    printf '  --   %-9s %s\n' "$label" "$note"
+  fi
+}
+
 echo ">> no-mistakes (router) tooling check"
 check node     "install Node 18+ (harness scripts use global fetch)" required
 check porter   "resolve the preview env (porter app manifests / kubectl)" required
 check gh       "post the combined verdict to both PRs" required
 check git      "repo/branch/PR resolution" required
-check dev-browser "drive the frontend UI for round-trip cases" required
+check_any browser "drive the frontend UI — install dev-browser OR chrome-devtools-axi" required dev-browser chrome-devtools-axi
 check neonctl  "optional CLI fallback for preview DB branch resolution; the DB MCP (in-session) is preferred" optional
 check psql     "optional — async DB poll-until tight polling (else the DB MCP run-SQL loop)" optional
 

@@ -1,16 +1,32 @@
 #!/usr/bin/env bash
 # One-time, idempotent setup for the no-mistakes skill.
-# dev-browser IS the browser harness — this just ensures it (and chromium) exist.
+# The browser harness is EITHER dev-browser (default) OR chrome-devtools-axi.
+# Set NM_BROWSER_DRIVER=chrome-devtools-axi to prefer the latter; otherwise an
+# already-installed chrome-devtools-axi is used, else dev-browser is ensured.
 # Portable: resolves nothing from a hardcoded path; safe to re-run.
 set -euo pipefail
 
-if ! command -v dev-browser >/dev/null 2>&1; then
-  echo "no-mistakes: installing dev-browser (global) ..."
-  npm install -g dev-browser
-fi
+have() { command -v "$1" >/dev/null 2>&1; }
+DRIVER="${NM_BROWSER_DRIVER:-}"
 
-echo "no-mistakes: ensuring chromium ..."
-dev-browser install   # idempotent; downloads chromium if missing
+# Pick chrome-devtools-axi when explicitly preferred, or when it's the only
+# driver already present.
+if [ "$DRIVER" = chrome-devtools-axi ] || { [ -z "$DRIVER" ] && have chrome-devtools-axi && ! have dev-browser; }; then
+  if have chrome-devtools-axi; then
+    echo "no-mistakes: browser driver = chrome-devtools-axi ($(chrome-devtools-axi --version 2>/dev/null | head -n1))"
+  else
+    # AXI: no global install needed — it runs on demand via npx.
+    echo "no-mistakes: browser driver = chrome-devtools-axi (on-demand via 'npx -y chrome-devtools-axi')"
+  fi
+else
+  if ! have dev-browser; then
+    echo "no-mistakes: installing dev-browser (global) ..."
+    npm install -g dev-browser
+  fi
+  echo "no-mistakes: ensuring chromium ..."
+  dev-browser install   # idempotent; downloads chromium if missing
+  echo "no-mistakes: browser driver = dev-browser"
+fi
 
 if ! command -v gh >/dev/null 2>&1; then
   echo "no-mistakes: WARNING — gh CLI not found; PR evidence posting will be unavailable until 'gh' is installed and authenticated." >&2

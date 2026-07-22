@@ -69,8 +69,9 @@ Announce the chosen route before proceeding.
 
 ## 2. Shared preflight (gate)
 
-1. **Tooling + sibling skills.** Run `$H/scripts/setup.sh` — checks `porter`, `node`, `gh`,
-   `dev-browser` (required), `neonctl`/`psql` (optional), AND that **both** specialist skills (`$FE`,
+1. **Tooling + sibling skills.** Run `$H/scripts/setup.sh` — checks `porter`, `node`, `gh`, a
+   **browser driver** (`dev-browser` OR `chrome-devtools-axi`, required for FE-involving routes),
+   `neonctl`/`psql` (optional), AND that **both** specialist skills (`$FE`,
    `$BE`, each with a `harness/` dir) are installed.
    - Missing **tool** → `BLOCKED reason=needs-setup`.
    - Missing **specialist skill** → name exactly which one and **ASK the user whether to install it**
