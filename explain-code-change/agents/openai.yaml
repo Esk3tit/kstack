@@ -1,0 +1,4 @@
+interface:
+  display_name: "Explain Code Change"
+  short_description: "Build an ELI5 HTML merge walkthrough"
+  default_prompt: "Use $explain-code-change to explain this branch as a reviewable HTML merge walkthrough."
