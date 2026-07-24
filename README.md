@@ -19,6 +19,7 @@ documents what's third-party (so I know what I'm dropping vs. keeping).
 | `codex-cli/` | The `codex-cli` skill — the reliable `codex exec` recipe these commands depend on. |
 | `no-mistakes/` · `no-mistakes-frontend/` · `no-mistakes-backend/` · `no-mistakes-a11y/` · `no-mistakes-setup/` | The verification skill family (router + three specialists: frontend, backend, deep-a11y) plus the onboarding skill that generates a project's `.no-mistakes.json`. See each `SKILL.md`. |
 | `wide-event-logging/` | Skill — canonical-log-line / wide-event logging for Python/FastAPI (with reference modules). |
+| `explain-code-change/` | Skill — turn a branch, PR, or diff into an ELI5, reviewable HTML merge walkthrough with complete file/function coverage. |
 | `codex/config.toml.example` | My Codex CLI config, **token redacted**. |
 
 ---
@@ -74,10 +75,29 @@ All user-authored, plugin-independent (they shell out to `codex` / `gh-axi`, not
 - **`wide-event-logging/`** — implement wide event logging (canonical log lines) in Python/FastAPI:
   `SKILL.md` + reference modules (`config.py`, `context.py`, `middleware.py`, `security.py`, `usage.py`)
   for TPRM-API observability.
+- **`explain-code-change/`** — storyboard a code change as a Lavish HTML review surface: ELI5
+  before/after, end-to-end flow, scope guardrails, every changed production symbol, test evidence,
+  honest limitations, and local-vs-external merge gates.
 
-Install: copy each dir into `~/.claude/skills/<name>/`. For the no-mistakes family, generate each target
-project's `.no-mistakes.json` with the onboarding wizard — run the **`no-mistakes-setup`** skill in
-Claude Code, or `node ~/.claude/skills/no-mistakes/harness/setup.mjs` (interactive) /
+Install shared skills once under `~/.agents/skills/<name>/`, then link them into Claude Code:
+
+```bash
+mkdir -p ~/.agents/skills ~/.claude/skills
+ln -s /path/to/kstack/explain-code-change ~/.agents/skills/explain-code-change
+ln -s ../../.agents/skills/explain-code-change ~/.claude/skills/explain-code-change
+```
+
+Codex in this setup discovers `~/.agents/skills` directly. For Codex installations that only scan
+`~/.codex/skills`, link the same source there:
+
+```bash
+mkdir -p ~/.codex/skills
+ln -s ../../.agents/skills/explain-code-change ~/.codex/skills/explain-code-change
+```
+
+For the no-mistakes family, generate each target project's `.no-mistakes.json` with the onboarding
+wizard — run the **`no-mistakes-setup`** skill in Claude Code, or
+`node ~/.claude/skills/no-mistakes/harness/setup.mjs` (interactive) /
 `… setup.mjs --yes --preset <neon|supabase|convex|…>` (CI). It autodetects the stack (DB/BaaS, framework,
 package manager, git remote), picks the right ground-truth adapter (`sql`/`convex`/`firestore`), and
 writes a validated starter; verify with `… load-config.mjs --export` from inside the project.
@@ -141,7 +161,9 @@ context-mode and superpowers. (Dropping those plugins drops their hooks too.)
 
 1. `git clone` this repo.
 2. `cp CLAUDE.md ~/.claude/CLAUDE.md` and `ln -s ~/.claude/CLAUDE.md ~/.codex/AGENTS.md`.
-3. `cp -R commands/* ~/.claude/commands/` and each skill dir → `~/.claude/skills/`.
+3. `cp -R commands/* ~/.claude/commands/`; link each shared skill dir into
+   `~/.agents/skills/` and then into `~/.claude/skills/` (plus `~/.codex/skills/` when that Codex
+   installation does not scan `~/.agents/skills/`).
 4. `cp codex/config.toml.example ~/.codex/config.toml` → fill in tokens; `codex login` (ChatGPT mode).
 5. Install CLIs: `codex`, `gh` + the `gh-axi`/`lavish-axi` tooling, `dev-browser`, `doppler`, `porter`,
    `neonctl`, `aws`. Authenticate each (`gh auth`, `doppler login`, `porter auth login`, `aws login`,
