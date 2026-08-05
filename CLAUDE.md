@@ -4,6 +4,12 @@
 
 When making technical decisions, give no weight to development cost or engineering effort by default. **Quality, simplicity, robustness, scalability, and long-term maintainability are the decisive factors** in any technical decision. Give cost/effort weight only when the user signals urgency, and even then very little — never more than that urgency clearly warrants.
 
+## Operational work — simplest direct path first
+
+For one-off or infrequent operational work, start with the **simplest direct end-to-end path**. Do not build wrappers, control planes, policy layers, custom verifiers, or automation unless the direct path exposes a concrete blocker or a repeated need that justifies the added machinery.
+
+This is not a cost argument and does not soften the section above — effort is still not a factor. Unneeded machinery is *worse* on the axes that decide: it adds surface to maintain, more places to be wrong, and indirection between you and the thing you were actually asked to do. Build it when the direct path proves it's needed, not in anticipation.
+
 ## Bug fixes
 
 When doing bug fixes, always start with reproducing the bug in an E2E setting as closely aligned with how an end user would experience it as possible. This makes sure you find the real problem so your fix will actually solve it.
@@ -13,6 +19,12 @@ When doing bug fixes, always start with reproducing the bug in an E2E setting as
 When end-to-end testing a product, be picky about the UI you see and be obsessed with pixel perfection. If something clearly looks off, even if it is not directly related to what you are doing, try to get it fixed along the way.
 
 Apply that same high standard to engineering excellence: lint, test failures, and test flakiness. If you see one, even if it is not caused by what you are working on right now, still get it fixed.
+
+## Auto-generated files — never hand-edit
+
+Never manually modify `CHANGELOG.md` files, or any file marked as auto-generated. If the content is wrong, fix the generator or the source it reads, then regenerate — a hand-edit is silently reverted on the next run and shows up as noise in the diff.
+
+Look for the signals before editing any file you did not write: a `@generated` / "DO NOT EDIT" header, a `.lock` extension, or the file being listed as generated output in the repo's docs or build config.
 
 ## Code comments — sparse by default
 
@@ -57,3 +69,11 @@ Using gpt-5.6-sol (high reasoning) inside workflows and subagents:
 - **Always run long Codex work in the background.** Any Codex job that could plausibly run more than a few minutes must use the plugin's background path (`/codex:review --background`, `/codex:adversarial-review --background`, or `task --background` behind `/codex:rescue`), which spawns a detached worker that survives past Bash's ~10-minute timeout. A synchronous run that trips that timeout tears the call down and we lose all output — never risk that. Launch in the background, then poll `/codex:status` and collect the result with `/codex:result` (or `--wait` only when the work is genuinely small).
 - **Isolate parallel write-capable Codex agents in their own git worktrees.** The Codex plugin runs in the shared checkout — verified: it does NOT create its own worktrees (it resolves to the repo root/cwd and edits in place). So when fanning out multiple `--write` implementation agents over GPT in parallel, give each one an isolated worktree (e.g. Workflow's `isolation: 'worktree'`) so their edits don't collide in the shared tree. Serial single-agent runs don't need this. Re-verify the plugin's behavior if its version changes, in case it starts managing worktrees itself.
 - For closed-loop quality assurance, keep the review gate turned on via `/codex:setup --enable-review-gate`. This ensures a stop hook automatically challenges Claude's outputs using Codex before finalizing, preventing broken code or weak design assumptions from reaching the main session unvetted.
+
+## Large subagent fan-outs — ask before spawning
+
+Before using dynamic workflows, ultracode, or any harness feature that immediately spawns a large swarm of subagents, **explain the tradeoffs and get explicit approval first.** Never infer the opt-in from a task that would merely benefit from parallelism.
+
+State three things and then wait: what the fan-out would do, roughly what it costs (agent count and token order-of-magnitude), and what the serial alternative is. Approval for one fan-out does not carry to the next one.
+
+A handful of targeted background subagents for independent work is not a swarm and does not need this — the gate is for the features that spawn dozens at once.

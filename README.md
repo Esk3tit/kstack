@@ -32,9 +32,14 @@ documents what's third-party (so I know what I'm dropping vs. keeping).
   ```bash
   ln -s ~/.claude/CLAUDE.md ~/.codex/AGENTS.md
   ```
-- Contents (4 sections): **Technical decisions** (quality over dev-cost), **Bug fixes** (reproduce E2E
-  first), **Quality bar** (fix what's broken, even if it's not yours; pixel-perfection), **Code
-  comments** (sparse by default, no plan/ticket refs).
+- `~/.claude/CLAUDE.md` is a **copy**, not a link to this repo — edit here, then copy it over
+  (`cp CLAUDE.md ~/.claude/CLAUDE.md`), or the change never reaches either agent.
+- Contents (8 sections): **Technical decisions** (quality over dev-cost), **Operational work**
+  (simplest direct path; no machinery until it's justified), **Bug fixes** (reproduce E2E first),
+  **Quality bar** (fix what's broken, even if it's not yours; pixel-perfection), **Auto-generated
+  files** (never hand-edit; fix the generator), **Code comments** (sparse by default, no plan/ticket
+  refs), **Picking the right models** (per-model cost/intelligence/taste table + routing), **Large
+  subagent fan-outs** (explain tradeoffs and get approval before swarming).
 
 ## 2. Custom slash commands (`commands/`)
 
