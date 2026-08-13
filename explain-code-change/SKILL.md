@@ -46,6 +46,13 @@ in the artifact or explicitly excluded with a reason.
 Read the complete diff and enough surrounding code to follow the changed path
 end-to-end. Inspect callers, trust boundaries, failure paths, and changed tests.
 
+The diff shows what moved; it does not show what the reader is standing on.
+Establish the **baseline** from the codebase rather than the PR: what this system
+is for, what it produces, who reads that output, and what each noun the change
+talks about actually is — where it comes from and what makes it. A reader who
+does not know what the change operates on cannot follow any account of the
+change, however well told.
+
 Inventory every added or materially changed production function, method, class,
 and shared constant. For declarative changes, inventory the equivalent
 behavioral units: prompt sections, schema fields, config keys, migrations, or UI
@@ -65,8 +72,9 @@ Group tests by file and user-visible promise; enumerate individual test function
 only when the user requests that granularity.
 
 **Complete when:** every changed production file and runtime-relevant behavioral
-unit has a role, a part in the fix, and a place in the end-to-end flow, and the
-edge-case list is complete.
+unit has a role, a part in the fix, and a place in the end-to-end flow; the
+edge-case list is complete; and every noun the change depends on can be traced
+to where it comes from.
 
 ## 3. Find the through-line
 
@@ -97,29 +105,33 @@ not the order it shows them in — step 5 sets the visual order, and the
 through-line reaches the reader before the stakes it explains. Each piece opens
 in the through-line and lands in the code:
 
-1. **The stakes** — what this cost someone, in one sentence. Real numbers when
-   the change was motivated by them.
+1. **The world before the change** — what this system does, what it produces, and
+   who reads that output. Then the stakes: what the defect cost someone, in one
+   sentence, with real numbers when they motivated the change.
 2. **The through-line, before and after** — the situation, the pain, the fix.
-3. **The smallest real example** — one concrete input that went wrong before and
+3. **The legend** — every noun in the through-line mapped to the real thing it
+   stands for and the name it carries in the code. An analogy with no decoder
+   ring is a story the reader cannot attach to anything.
+4. **The smallest real example** — one concrete input that went wrong before and
    goes right now. Real values from the codebase or the data, never `foo`.
-4. **What the change actually does** — each moving part named for its job in the
+5. **What the change actually does** — each moving part named for its job in the
    through-line first, its code name second.
-5. **What if…** — the edge cases as questions the reader would ask, each answered
+6. **What if…** — the edge cases as questions the reader would ask, each answered
    in through-line terms, then in one line of mechanism.
-6. **Blast radius and reversibility** — if this is wrong, what breaks, who
+7. **Blast radius and reversibility** — if this is wrong, what breaks, who
    notices first, and how it gets undone.
-7. **Changed and deliberately untouched**, side by side.
-8. **File and function walkthrough** — every production symbol from step 2, each
+8. **Changed and deliberately untouched**, side by side.
+9. **File and function walkthrough** — every production symbol from step 2, each
    entry leading with the part it plays in the through-line, then what it does.
-9. **Tests** — grouped by the promise they keep, stated in the reader's terms.
-10. **Validation and verdict** — what was actually run, and what still gates merge.
+10. **Tests** — grouped by the promise they keep, stated in the reader's terms.
+11. **Validation and verdict** — what was actually run, and what still gates merge.
 
 Every technical term the reader meets is one you chose to teach: introduce it
 inside the through-line, in plain words, at the moment it first matters.
 
 **Complete when:** every inventoried symbol names its part in the through-line
-before it names its mechanics, and a reader who stops after item 5 passes the
-retell test.
+before it names its mechanics, every noun in the through-line appears in the
+legend, and a reader who stops after item 6 passes the retell test.
 
 ## 5. Build the HTML review surface
 
@@ -149,7 +161,9 @@ Hand-author that map as SVG or CSS grid rather than a Mermaid block: Lavish turn
 away from your links. Mermaid stays right for sequence and state diagrams, where
 the click is not doing work.
 
-Give every unavoidable technical term a hover gloss in plain words.
+Keep the legend beside the hero map rather than buried below it, so the reader
+meets the analogy and its decoder in the same screenful, and give every
+unavoidable technical term a hover gloss in plain words.
 
 **Complete when:** every section of the change story is on the page, every
 diagram still makes sense with no codebase behind it, every inventoried file and
