@@ -101,9 +101,10 @@ through-line's own words.
 ## 4. Write the change story
 
 Draft the content before styling it. These are the pieces the page must carry,
-not the order it shows them in — step 5 sets the visual order, and the
-through-line reaches the reader before the stakes it explains. Each piece opens
-in the through-line and lands in the code:
+and this is the order the reader meets them in: oriented in the real system
+first, and only then handed the analogy that stands for it. An analogy that
+arrives before the world it describes reads as a non-sequitur however apt it is.
+Each piece opens in the through-line and lands in the code:
 
 1. **The world before the change** — what this system does, what it produces, and
    who reads that output. Then the stakes: what the defect cost someone, in one
@@ -139,6 +140,11 @@ Open every matching `lavish` playbook — this artifact needs `diagram`, `table`
 and `comparison` at minimum, plus `code` when snippets appear. Follow Lavish's
 design-source priority. Create `.lavish/<change-slug>-explainer.html`.
 
+**Prefer the picture.** Whatever can be shown is shown; prose is the fallback for
+what genuinely has no shape — rationale, tradeoffs, open questions. A paragraph
+that could have been a diagram is a paragraph the reader has to hold in their
+head.
+
 **Draw teaching diagrams** — the kind made to teach a concept to someone who has
 never met it, not to document a system. The test: it still makes sense when the
 codebase does not exist. A picture that only means something to someone who
@@ -157,11 +163,11 @@ rather than describing it in words. One of those pictures is a **you are here**:
 the system at a glance with the changed part marked, so the reader sees both how
 little of it this touches and what it sits between.
 
-Build the through-line's before/after as the hero visual, and make it the **map**:
-it names the through-line so it stands on its own above the written story, and
-every part of it is clickable, jumps to the section explaining that part, and
-offers a way back. Follow the playbook's hybrid shape — overview visual first,
-detail cards beneath it.
+Open the page on the baseline — the you-are-here, then the thing itself. Only
+after that build the through-line's before/after as the **map**, which by then
+lands on a reader who knows what it stands for. Every part of the map is
+clickable, jumps to the section explaining that part, and offers a way back.
+Follow the playbook's hybrid shape — overview visual first, detail cards beneath.
 
 Hand-author that map as SVG or CSS grid rather than a Mermaid block: Lavish turns
 `.mermaid` containers into editable whiteboards on click, which takes the click
