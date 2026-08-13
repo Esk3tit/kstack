@@ -92,8 +92,10 @@ through-line's own words.
 
 ## 4. Write the change story
 
-Draft the content before styling it. Each piece opens in the through-line and
-lands in the code:
+Draft the content before styling it. These are the pieces the page must carry,
+not the order it shows them in — step 5 sets the visual order, and the
+through-line reaches the reader before the stakes it explains. Each piece opens
+in the through-line and lands in the code:
 
 1. **The stakes** — what this cost someone, in one sentence. Real numbers when
    the change was motivated by them.
@@ -137,6 +139,7 @@ change — a bar of what the logs actually looked like beats any drawing. A
 code-flow diagram is one visual among many, never the centerpiece.
 
 Build the through-line's before/after as the hero visual, and make it the **map**:
+it names the through-line so it stands on its own above the written story, and
 every part of it is clickable, jumps to the section explaining that part, and
 offers a way back. Follow the playbook's hybrid shape — overview visual first,
 detail cards beneath it.
@@ -175,6 +178,9 @@ a working review link.
 - List uncommitted files when the artifact includes working-tree changes.
 - State external gates explicitly instead of folding them into a green local
   verdict.
+- Separate what you ran from what you were told. Results the author reported and
+  you did not reproduce are neither observed nor an external gate: attribute them
+  to their source, and keep them out of the block reporting your own.
 - Describe uncertainty through its actual fallback. Prefer "ambiguous evidence
   produces no highlight" over an absolute promise of zero future errors.
 - Keep the through-line out of the evidence sections. An analogy explains what
