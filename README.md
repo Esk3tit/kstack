@@ -19,7 +19,7 @@ documents what's third-party (so I know what I'm dropping vs. keeping).
 | `codex-cli/` | The `codex-cli` skill — the reliable `codex exec` recipe these commands depend on. |
 | `no-mistakes/` · `no-mistakes-frontend/` · `no-mistakes-backend/` · `no-mistakes-a11y/` · `no-mistakes-setup/` | The verification skill family (router + three specialists: frontend, backend, deep-a11y) plus the onboarding skill that generates a project's `.no-mistakes.json`. See each `SKILL.md`. |
 | `wide-event-logging/` | Skill — canonical-log-line / wide-event logging for Python/FastAPI (with reference modules). |
-| `explain-code-change/` | Skill — turn a branch, PR, or diff into an ELI5, reviewable HTML merge walkthrough with complete file/function coverage. |
+| `explain-code-change/` | Skill — turn a branch, PR, or diff into an interactive HTML walkthrough a non-engineer can retell: one carried analogy, teaching diagrams that link to every changed file and function. |
 | `codex/config.toml.example` | My Codex CLI config, **token redacted**. |
 
 ---
@@ -80,9 +80,12 @@ All user-authored, plugin-independent (they shell out to `codex` / `gh-axi`, not
 - **`wide-event-logging/`** — implement wide event logging (canonical log lines) in Python/FastAPI:
   `SKILL.md` + reference modules (`config.py`, `context.py`, `middleware.py`, `security.py`, `usage.py`)
   for TPRM-API observability.
-- **`explain-code-change/`** — storyboard a code change as a Lavish HTML review surface: ELI5
-  before/after, end-to-end flow, scope guardrails, every changed production symbol, test evidence,
-  honest limitations, and local-vs-external merge gates.
+- **`explain-code-change/`** — explain a code change to a non-engineer as a Lavish HTML review
+  surface. Built on one **through-line** (an everyday analogy chosen against the change's real edge
+  cases) carried from the summary down into the per-symbol walkthrough, with **teaching diagrams**
+  that must still make sense with no codebase behind them, and a clickable hero visual that links
+  into the code sections. Also covers stakes, blast radius, reversibility, scope guardrails, test
+  evidence, and local-vs-external merge gates. Bar: the reader can retell the change unprompted.
 
 Install shared skills once under `~/.agents/skills/<name>/`, then link them into Claude Code:
 
