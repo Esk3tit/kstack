@@ -152,6 +152,12 @@ what genuinely has no shape — rationale, tradeoffs, open questions. A paragrap
 that could have been a diagram is a paragraph the reader has to hold in their
 head.
 
+When unsure whether something earns its place, keep it: an explainer fails by
+leaving the reader guessing far more often than by telling them too much. Spend
+the surplus on another picture rather than another paragraph — a diagram buys
+understanding at a fraction of a paragraph's reading cost, so more of them is not
+the same cost as more words.
+
 **Draw teaching diagrams** — the kind made to teach a concept to someone who has
 never met it, not to document a system. The test: it still makes sense when the
 codebase does not exist. A picture that only means something to someone who
