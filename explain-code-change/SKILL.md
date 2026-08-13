@@ -150,6 +150,13 @@ rule and its exceptions. Chart real data whenever real numbers motivated the
 change — a bar of what the logs actually looked like beats any drawing. A
 code-flow diagram is one visual among many, never the centerpiece.
 
+**Draw the baseline too.** The world before the change is what the reader has
+least of and needs first, so it earns pictures rather than prose: show the thing
+being described — the actual boxes, the actual shapes, the actual page — instead
+of describing it. One of those pictures is a **you are here**: the system at a
+glance with the changed part marked, so the reader sees both how little of it
+this touches and what it sits between.
+
 Build the through-line's before/after as the hero visual, and make it the **map**:
 it names the through-line so it stands on its own above the written story, and
 every part of it is clickable, jumps to the section explaining that part, and
