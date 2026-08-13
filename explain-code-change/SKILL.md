@@ -71,6 +71,11 @@ Keep the original feature distinct from later review fixes and uncommitted work.
 Group tests by file and user-visible promise; enumerate individual test functions
 only when the user requests that granularity.
 
+Bulk changes — fixtures, corpora, snapshots, generated result files — earn a
+count and a sentence, never a walkthrough. Read what a result file *says*, not
+the file itself. A diff whose size comes from data is not a change of that size,
+and the artifact's space belongs to what changed behaviour.
+
 **Complete when:** every changed production file and runtime-relevant behavioral
 unit has a role, a part in the fix, and a place in the end-to-end flow; the
 edge-case list is complete; and every noun the change depends on can be traced
@@ -124,7 +129,9 @@ Each piece opens in the through-line and lands in the code:
 8. **Changed and deliberately untouched**, side by side.
 9. **File and function walkthrough** — every production symbol from step 2, each
    entry leading with the part it plays in the through-line, then what it does.
-10. **Tests** — grouped by the promise they keep, stated in the reader's terms.
+10. **Tests and evals** — a table of what each group promises, in the reader's
+    terms, plus the headline number an eval actually produced. The promise and
+    the result, not the harness.
 11. **Validation and verdict** — what was actually run, and what still gates merge.
 
 Every technical term the reader meets is one you chose to teach: introduce it
