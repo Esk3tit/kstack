@@ -60,7 +60,7 @@ How to apply:
 - Anything user-facing (UI, copy, API design) needs taste ≥ 7.
 - Reviews of plans/implementations: fable-5 or opus-4.8, optionally gpt-6-sol (high reasoning) as an extra independent perspective.
 - Never use Haiku.
-- Mechanics: gpt-6-sol (high reasoning) is handled natively via the `openai/codex-plugin-cc` plugin inside Claude Code, automatically adopting your user-level configurations from `~/.codex/config.toml`. Avoid writing custom bash scripts; instead, utilize the plugin's built-in tools and skills:
+- Mechanics: gpt-6-sol (high reasoning) is handled natively via the `openai/codex-plugin-cc` plugin inside Claude Code, which reads your user-level `~/.codex/config.toml`. That config sets no default model, so pass `--model gpt-6-sol` on every Codex call (`/codex:review`, `/codex:adversarial-review`, `/codex:rescue`, or the companion's `review` / `adversarial-review` / `task`); without it Codex runs its own default model. Avoid writing custom bash scripts; instead, utilize the plugin's built-in tools and skills:
     - `/codex:review` - Run non-destructive, read-only code quality assessments. Supports `--base <ref>` for branch analysis.
     - `/codex:adversarial-review` - Perform a skeptical design review to pressure-test tradeoffs, auth, and reliability. Append custom focus text at the end of the command to steer the focus.
     - `/codex:rescue` - Subcontract active debugging, multi-file refactoring, or implementation loops to Codex when a second pass is required.
