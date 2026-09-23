@@ -40,7 +40,7 @@ under test with `node "$H/harness/load-config.mjs" --app <name>` (or `--app-map`
 `auth` fields.
 
 All harness scripts are at `$H/harness/...`. The agent-browser templates (auth / recon / clip /
-capture+audit) live in `$H/harness/snippets.md` — read it and copy the relevant block verbatim;
+capture+audit) live in `$H/harness/snippets.md` — read it, copy the relevant block, and fill its placeholders;
 they are verified-live and parameterized by the app's config fields. Never hardcode
 `/Users/<name>/...`; the only fixed local paths are the apps' `repoPath`s from config.
 
@@ -150,7 +150,7 @@ For each case: drive the flow, assert behavior, capture evidence → PASS/FAIL +
 
 - **Screenshot or clip:** a screenshot for a static result, a **clip** when the claim is an
   interaction (a flow, a transition, a loading or error state). One clip answers one review question
-  in ~10–25s: the action and enough of the result to read it, with login and setup kept out. Recipe:
+  showing the action and enough of the result to read it, with login and setup kept out. Recipe:
   `$H/harness/snippets.md` **D**. No ffmpeg → take screenshots and name the missing clip in
   `gaps`.
 - **Before/After** when the change alters something visible: capture the same screen on the base
@@ -264,14 +264,13 @@ It posts on **two idempotent surfaces**:
    collapsed setup section. **No media or media URLs**, so the squash-merge commit message GitHub
    pre-fills from the description stays clean.
 
-Attachments render inline on the private repo for anyone who can read it, never expire, and never
-touch a branch. Cap: **50 files per run** — capture what answers a review question, not every
-viewport of every screen.
+Cap: **50 files per run** — capture what answers a review question, not every viewport of every
+screen. Name captures plainly (`[A-Za-z0-9_.-]`).
 
-**Read back:** the poster checks that every media reference was rewritten to an uploaded URL.
-`pr_post=partial-media` = some uploads failed, so the poster removed the incomplete gallery and left
-the PR unchanged — re-run the post. `pr_post=failed` / `pr_post=no-pr` → it writes `summary.md` (local media paths)
-into the run dir; the verdict is never lost.
+Posting is all-or-nothing: the poster reads back the gallery to prove every capture uploaded, and on
+any failure removes the new gallery and leaves the PR as it was. `pr_post=spliced` = posted;
+`pr_post=failed` / `pr_post=no-pr` → `summary.md` (local media paths) in the run dir, stderr says why;
+re-run the post. The verdict is never lost.
 
 **Never commit media to the PR branch.**
 
@@ -338,7 +337,7 @@ number (default: current branch's PR).
 
 **Always also report PR-post outcome, separable from the verdict:** if verification ran but
 posting fails (no PR, `gh` denied, upload/comment error), still emit the real `PASS`/`FAIL` plus
-`pr_post=failed`, `pr_post=partial-media`, `pr_post=partial-cleanup`, or `pr_post=no-pr`, and keep evidence locally — the result is never downgraded
+`pr_post=failed` or `pr_post=no-pr`, and keep evidence locally — the result is never downgraded
 because posting failed.
 
 A `VISUAL_FINDINGS:` block is emitted once verification runs (empty if clean). The PR-description block names

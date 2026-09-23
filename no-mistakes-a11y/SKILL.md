@@ -58,22 +58,17 @@ Own harness at `$A/harness/a11y-drive.js` (the in-page collectors). Reuse `$FE/h
 
 1. **Tooling.** Run `$A/scripts/setup.sh` (idempotent — ensures `agent-browser` + its Chrome,
    checks `gh`). Missing a required tool → `BLOCKED reason=needs-setup`.
-2. **Run id + evidence dir.** Composed: take the router's `RUN`. Standalone:
-   `RUN="$(date +%Y%m%d-%H%M%S)-$$"`. Then `EV=~/.no-mistakes-a11y/$RUN; mkdir -p "$EV"` and
+2. **Run id + evidence dir.** `RUN="$(date +%Y%m%d-%H%M%S)-$$"`. Then `EV=~/.no-mistakes-a11y/$RUN; mkdir -p "$EV"` and
    `export AGENT_BROWSER_SESSION="<frontend browserProfile>-$RUN"`.
 3. **Target.** Same resolution as `$FE`: a preview `feUrl` (resolved via the configured preview
    platform, `$NM_PREVIEW_PLATFORM`) or the frontend app's `devUrl` from config. **Only a production
    target is refused** → `BLOCKED reason=out-of-scope-target`.
-4. **Standalone vs composed (ADR-0003).** If the `no-mistakes` router already ran `$FE`, reuse its
-   derived test cases + recon + live session. Otherwise run standalone: this skill does its own auth +
-   light recon below.
+4. **Standalone (ADR-0003).** This skill does its own auth + light recon below, in its own session.
 
 ## 2. Auth + recon + required controls
 
-**Auth — reuse the run's session, never re-login if avoidable.** Use `$FE/harness/snippets.md`
-template **B/C** in the run's session (`AGENT_BROWSER_SESSION="<frontend browserProfile>-$RUN"`); when
-the router already logged in for this run, that session is reused with **no creds**. Standalone, log in
-with template **A** first. Confirm the active **persona/org matches the intended context** (a stale
+**Auth.** In the run's session, log in with `$FE/harness/snippets.md` template **A** (login app) or go
+straight to **B/C** (no-login app), and `agent-browser close` the session when the run ends. Confirm the active **persona/org matches the intended context** (a stale
 persona produces false evidence). **Never** screenshot credential entry or echo a token/key.
 
 **Recon the touched screens** with `agent-browser snapshot -i` (pipe a full `snapshot` through
@@ -177,10 +172,12 @@ Evidence dir default `~/.no-mistakes-a11y/<run>/` (reject any dir inside a produ
 to default). Per screen write: the **focus path** JSON, the **axe** JSON, and the focused-state /
 320px-reflow screenshots that evidence a FAIL or finding (named in that case's or finding's `evidence`
 in `results.json`). **No screenshot of credential entry, tokens,
-or keys.** Post to the frontend repo's PR via `$FE/harness/post-evidence.mjs --marker no-mistakes-a11y`
-(idempotent `<!-- no-mistakes-a11y:start/end -->` block): the status line, the per-axis result (keyboard / focus /
-reflow / axe), the operability blockers, and a severity-grouped findings list. `gh` failure → still
-write `summary.md`, print `pr_post=<repo>#<pr>:failed`. Verdict is never lost.
+or keys.** Build `results.json` in the poster's schema (`$FE/SKILL.md` §8): one case per screen ×
+axis (`"<screen> — keyboard"`, `pass`, `observed`, `evidence`), where an operability blocker is a failed
+case; axe violations and other findings go in `findings`; `revision` = the tested SHA. Post to the
+frontend repo's PR with `$FE/harness/post-evidence.mjs --marker no-mistakes-a11y` (its own
+`<!-- no-mistakes-a11y:start/end -->` block). `pr_post=failed|no-pr` → `summary.md` in the run dir.
+Verdict is never lost.
 
 ## 9. Confidentiality & data handling
 
@@ -203,8 +200,7 @@ write `summary.md`, print `pr_post=<repo>#<pr>:failed`. Verdict is never lost.
 
 **Inputs:** base URL of the running app (or app name → derive URL/port); what to verify
 (intent/checklist/prose); optional evidence dir (default `~/.no-mistakes-a11y/<run>/`); optional PR
-number (default: current branch's PR); optional `$FE` run handoff (derived cases + session) when
-composed by the router.
+number (default: current branch's PR).
 
 **Outputs — emit exactly one status line:**
 

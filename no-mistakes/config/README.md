@@ -54,10 +54,7 @@ and masks freshly-written rows (false negatives).
 
 ## Evidence hosting
 
-Screenshots and clips upload as **native GitHub attachments** (`gh pr comment --attach`, gh ≥ 2.99)
-into the PR's gallery comment. They render inline on private repos for anyone who can read the repo,
-never expire, and never touch a branch. No config and no extra credentials: `gh auth` is enough. With
-no PR, the gallery is written to `<run>/summary.md` next to the local files.
+No evidence config: screenshots and clips post as GitHub attachments (`no-mistakes-frontend` §8).
 
 ## Autodetect & generate (setup wizard)
 

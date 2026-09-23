@@ -13,6 +13,8 @@ agent-browser install $([ "$(uname -s)" = Linux ] && echo --with-deps)   # idemp
 
 if ! command -v gh >/dev/null 2>&1; then
   echo "no-mistakes-a11y: WARNING — gh CLI not found; PR evidence posting will be unavailable until 'gh' is installed and authenticated." >&2
+elif ! gh pr comment --help 2>/dev/null | grep -- '--attach' >/dev/null; then
+  echo "no-mistakes-a11y: WARNING — gh $(gh --version | head -n1 | awk '{print $3}') has no --attach; upgrade to gh >= 2.99 to post screenshots." >&2
 fi
 
 echo "no-mistakes-a11y: ready"

@@ -14,11 +14,12 @@
 //   { revision, intentSource, previewUrl?, gaps?:[string], setup?:markdown,
 //     cases:[{name, pass, observed?, evidence?:file|[file], before?:file|[file]}],
 //     findings:[{severity,screen,viewport,issue,evidence?}], howToTest?:[{action, expect}] }
-//   evidence/before = media basenames (png/jpg/gif/webp/mp4/webm/mov) in --run-dir; only these are
-//   published, and a missing one aborts before anything is posted.
+//   evidence/before = plain media basenames ([A-Za-z0-9_.-], png/jpg/gif/webp/mp4/webm/mov) in --run-dir;
+//   only these are published, and a missing one aborts before anything is posted. PASS = every case passed.
 //
-// On no-PR / gh failure: writes the assembled markdown (local media paths) to <run-dir>/summary.md,
-// prints pr_post=no-pr | pr_post=failed, exits non-zero — the verdict is never lost.
+// Posting is all-or-nothing: on any failure the new gallery is removed and the PR left as it was.
+// Prints pr_post=spliced | failed | no-pr; on failed / no-pr the assembled markdown (local media paths)
+// goes to <run-dir>/summary.md and the exit is non-zero — the verdict is never lost.
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
@@ -55,35 +56,22 @@ function gh(args, opts = {}) {
   return execFileSync('gh', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], ...opts }).trim();
 }
 
-if (!repo) {
-  try { repo = gh(['repo', 'view', '--json', 'nameWithOwner', '-q', '.nameWithOwner']); } catch { /* resolved below */ }
-}
-if (pr && !repo) die('could not determine --repo (owner/name)');
-
 const IMAGE = /\.(png|jpe?g|gif|webp)$/i;
 const VIDEO = /\.(mp4|webm|mov)$/i;
 const cases = Array.isArray(results.cases) ? results.cases : [];
-const declaredStatus = results.status ? String(results.status).toUpperCase() : null;
-if (declaredStatus && !['PASS', 'FAIL', 'BLOCKED'].includes(declaredStatus)) die('results.status must be PASS, FAIL, or BLOCKED');
-if ((!cases.length && declaredStatus !== 'BLOCKED') || cases.some((c) => typeof c.pass !== 'boolean'))
-  die('results.cases must be non-empty (unless status is BLOCKED), each with a boolean "pass"');
-if (declaredStatus === 'PASS' && cases.some((c) => !c.pass)) die('results.status is PASS but a case failed');
-const passing = declaredStatus ? declaredStatus === 'PASS' : cases.every((c) => c.pass);
-if (passing && !/^[0-9a-f]{7,40}\b/i.test(String(results.revision ?? ''))) die('a PASS needs results.revision to start with the tested commit SHA');
+if (!cases.length || cases.some((c) => typeof c.pass !== 'boolean')) die('results.cases must be non-empty, each with a boolean "pass"');
+const status = cases.every((c) => c.pass) ? 'PASS' : 'FAIL';
+if (status === 'PASS' && !/^[0-9a-f]{7,40}\b/i.test(String(results.revision ?? ''))) die('a PASS needs results.revision to start with the tested commit SHA');
 const findings = Array.isArray(results.findings) ? results.findings : [];
 const list = (v) => (Array.isArray(v) ? v : v ? [v] : []);
 // Only captures a case or finding names are published; anything else in the run dir stays local.
 const media = [...new Set([...cases.flatMap((c) => [...list(c.before), ...list(c.evidence)]),
   ...findings.flatMap((f) => list(f.evidence))])];
 const present = new Set(readdirSync(runDir));
-const unusable = media.filter((f) => !present.has(f) || !(IMAGE.test(f) || VIDEO.test(f)));
-if (unusable.length) die(`evidence not found in --run-dir or not an image/video: ${unusable.join(', ')}`);
+// gh --attach reads '#' as the alt-text separator and markdown links break on spaces, so names stay plain.
+const unusable = media.filter((f) => !present.has(f) || !(IMAGE.test(f) || VIDEO.test(f)) || !/^[\w.-]+$/.test(f));
+if (unusable.length) die(`evidence must be a plain-named image/video in --run-dir: ${unusable.join(', ')}`);
 const cell = (s) => String(s ?? '').replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\n/g, ' ');
-
-function overallStatus() {
-  if (results.status) return String(results.status).toUpperCase();
-  return cases.some((c) => c.pass === false) ? 'FAIL' : 'PASS';
-}
 
 function findingsLines() {
   if (findings.length === 0) return ['_clean_'];
@@ -135,8 +123,7 @@ function buildGallery() {
 
 function buildBodyBlock({ galleryUrl, headSha }) {
   const revision = String(results.revision ?? 'unknown');
-  const status = overallStatus();
-  const badge = status === 'PASS' ? '✅ PASS' : status === 'FAIL' ? '❌ FAIL' : status;
+  const badge = status === 'PASS' ? '✅ PASS' : '❌ FAIL';
   const gaps = Array.isArray(results.gaps) ? results.gaps : [];
   const howTo = Array.isArray(results.howToTest) ? results.howToTest : [];
 
@@ -190,6 +177,10 @@ function persistAndExit(status, ctx = {}) {
 }
 
 if (!pr) persistAndExit('no-pr');
+if (!repo) { try { repo = gh(['repo', 'view', '--json', 'nameWithOwner', '-q', '.nameWithOwner']); } catch {} }
+if (!repo) die('could not determine --repo (owner/name)');
+
+const firstLine = (e) => (String(e.stderr || '').trim() || e.message).split('\n')[0];
 
 function galleryComments() {
   const raw = gh(['api', '--paginate', `/repos/${repo}/issues/${pr}/comments`, '-q',
@@ -201,84 +192,54 @@ function galleryComments() {
 function deleteComments(ids) {
   return ids.filter((id) => {
     try { gh(['api', '--method', 'DELETE', `/repos/${repo}/issues/comments/${id}`]); return false; }
-    catch (e) { console.error(`[post-evidence] could not delete gallery comment ${id}: ${e.message.split('\n')[0]}`); return true; }
+    catch (e) { console.error(`[post-evidence] could not delete gallery comment ${id}: ${firstLine(e)}`); return true; }
   });
 }
 
-// gh exits non-zero on a partial upload but still posts the comment and prints its URL.
+// Posts the gallery and proves every ./<file> reference became an uploaded URL; on any failure it removes
+// its own comment and throws. gh exits non-zero on a partial upload but still posts and prints the URL.
 function postGallery() {
-  const previous = galleryComments();
-  if (!galleryBody) return { url: null, id: null, previous, uploadError: null };
   writeFileSync(join(runDir, 'nm-gallery.md'), galleryBody);
-  const attach = media.flatMap((f) => ['--attach', `./${f}`]);
-  let url = null;
-  let uploadError = null;
+  let url;
   try {
-    url = gh(['pr', 'comment', pr, '--repo', repo, '--body-file', 'nm-gallery.md', ...attach], { cwd: runDir });
+    url = gh(['pr', 'comment', pr, '--repo', repo, '--body-file', 'nm-gallery.md',
+      ...media.flatMap((f) => ['--attach', `./${f}`])], { cwd: runDir });
   } catch (e) {
-    uploadError = (e.stderr || e.message || '').toString().split('\n')[0];
-    url = ((e.stdout || '').toString().match(/https:\/\/github\.com\/\S+#issuecomment-\d+/) || [])[0] || null;
-    if (!url) throw new Error(uploadError);
+    const posted = (String(e.stdout || '').match(/issuecomment-(\d+)/) || [])[1];
+    if (posted) deleteComments([posted]);
+    throw new Error(`media upload failed: ${firstLine(e)}`);
   }
-  return { url, id: (url.match(/issuecomment-(\d+)/) || [])[1], previous, uploadError };
-}
-
-// Every ./<file> reference must have been rewritten to an uploaded attachment URL.
-function unresolvedMedia(commentId) {
-  const body = gh(['api', `/repos/${repo}/issues/comments/${commentId}`, '-q', '.body']);
-  return media.filter((f) => body.includes(`(./${f})`));
-}
-
-let gallery;
-try {
-  gallery = postGallery();
-} catch (e) {
-  console.error(`[post-evidence] gallery comment failed: ${e.message.split('\n')[0]}`);
-  persistAndExit('failed');
-}
-
-let mediaOk = !gallery.uploadError;
-if (mediaOk && gallery.id) {
+  const id = (url.match(/issuecomment-(\d+)/) || [])[1];
   try {
-    const missing = unresolvedMedia(gallery.id);
-    if (missing.length) console.error(`[post-evidence] not uploaded: ${missing.join(', ')}`);
-    mediaOk = missing.length === 0;
+    const body = gh(['api', `/repos/${repo}/issues/comments/${id}`, '-q', '.body']);
+    const missing = media.filter((f) => body.includes(`(./${f})`));
+    if (missing.length) throw new Error(`not uploaded: ${missing.join(', ')}`);
   } catch (e) {
-    console.error(`[post-evidence] could not read back the gallery: ${e.message.split('\n')[0]}`);
-    mediaOk = false;
+    deleteComments([id]);
+    throw e;
   }
-}
-// The PR only ever shows fully uploaded evidence: an incomplete gallery is removed and the PR left as it was.
-if (!mediaOk) {
-  const left = gallery.id ? deleteComments([gallery.id]) : [];
-  console.error(left.length
-    ? `[post-evidence] media did not all upload, and the incomplete gallery could not be removed: ${gallery.url}`
-    : '[post-evidence] media did not all upload; the PR is unchanged. Re-run to post.');
-  persistAndExit('partial-media');
+  return { url, id };
 }
 
-// Read the body at the last moment: the upload can take a while and the author may edit meanwhile.
+let previous = [];
+let gallery = null;
 let headSha = null;
 try {
+  previous = galleryComments();
+  if (galleryBody) gallery = postGallery();
+  // Read the body at the last moment: the upload can take a while and the author may edit meanwhile.
   const view = JSON.parse(gh(['pr', 'view', pr, '--repo', repo, '--json', 'body,headRefOid']));
   headSha = view.headRefOid;
   const bodyFile = join(runDir, 'pr-body.md');
-  writeFileSync(bodyFile, spliceIntoBody(view.body, buildBodyBlock({ galleryUrl: gallery.url, headSha })));
+  writeFileSync(bodyFile, spliceIntoBody(view.body, buildBodyBlock({ galleryUrl: gallery?.url, headSha })));
   gh(['pr', 'edit', pr, '--repo', repo, '--body-file', bodyFile]);
 } catch (e) {
-  console.error(`[post-evidence] updating the PR description failed: ${e.message.split('\n')[0]}`);
-  if (gallery.id) deleteComments([gallery.id]);
+  console.error(`[post-evidence] ${firstLine(e)}; the PR is unchanged`);
+  if (gallery) deleteComments([gallery.id]);
   persistAndExit('failed', { headSha });
 }
 
-// A concurrent run may have linked one of the snapshotted galleries since; never delete the linked one.
-let linked = gallery.id;
-try {
-  const block = (gh(['pr', 'view', pr, '--repo', repo, '--json', 'body', '-q', '.body']).match(MARKER_REGION) || [''])[0];
-  linked = (block.match(/Screenshots and clips →\*\* \S*issuecomment-(\d+)/) || [])[1] || linked;
-} catch {}
-const stale = deleteComments(gallery.previous.filter((old) => old !== gallery.id && old !== linked));
-if (stale.length) console.error(`[post-evidence] old galleries left on the PR: ${stale.join(', ')}; re-run to remove them`);
-console.log(`pr_post=${stale.length ? 'partial-cleanup' : 'spliced'}`);
-console.log(`pr=${pr} repo=${repo} media=${media.length} gallery_url=${gallery.url ?? '-'} replaced=${gallery.previous.length - stale.length}`);
-process.exit(stale.length ? 1 : 0);
+const stale = deleteComments(previous);
+if (stale.length) console.error(`[post-evidence] old galleries still on the PR: ${stale.join(', ')}`);
+console.log('pr_post=spliced');
+console.log(`pr=${pr} repo=${repo} media=${media.length} gallery_url=${gallery?.url ?? '-'}`);

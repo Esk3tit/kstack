@@ -43,7 +43,6 @@ else
 fi
 
 check psql "optional — async poll-until.mjs tight polling; without it the skill polls via the DB MCP run-sql tool" optional
-check aws  "optional — only if evidence.backend=s3 (backend evidence is otherwise text)" optional
 
 node_major="$(node -e 'process.stdout.write(String(process.versions.node.split(".")[0]||0))' 2>/dev/null || echo 0)"
 if [ "${node_major:-0}" -lt 18 ]; then

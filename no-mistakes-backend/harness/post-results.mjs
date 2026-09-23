@@ -9,7 +9,7 @@
 //      per-case captured request + response + SQL read-after-write, in collapsible
 //      <details>. Updated in place on re-run (PATCH), else created — never duplicated.
 //
-// Unlike no-mistakes-frontend there are NO screenshots/S3/orphan-branch — backend evidence is
+// Unlike no-mistakes-frontend there is no media — backend evidence is
 // all text, so it goes straight into the comment. The request/response/dbCheck strings
 // are expected to be ALREADY REDACTED by the harness (no Authorization, no secrets).
 //
