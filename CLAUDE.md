@@ -31,8 +31,11 @@ Look for the signals before editing any file you did not write: a `@generated` /
 Default to **NO comments**. Well-named identifiers explain WHAT. Only add a comment when WHY is non-obvious from reading the code: a hidden constraint, subtle invariant, workaround for a specific bug, surprising behavior.
 
 When a comment IS needed:
-- **1 concise line** preferred. **Maximum 2 lines.**
-- No multi-paragraph docstrings. No narrative blocks. No section headers.
+- Inline and block comments beside code should be **1 concise line** when possible,
+  with a **maximum of 2 lines**.
+- Module and function docstrings may exceed 2 lines when needed to document their
+  interface, behavior, invariants, or failure modes.
+- No narrative comment blocks or comment section headers.
 - No explaining what the code already shows ("// loop through users", "// set the value").
 - **NEVER reference phases, tasks, plan steps, Linear issues, ticket IDs, PR numbers, iteration numbers, or code-review findings in comments.** Examples to avoid: `// Phase 2`, `// Step 4`, `// PRO-1158`, `// PR #1234`, `// per code review`, `// addressed in iteration 3`, `// fix for issue X`. These belong in the commit message and rot fast — they look dirty in the codebase.
 - No "// removed X" or "// changed Y" markers — git diff already shows that.
@@ -77,3 +80,13 @@ Before using dynamic workflows, ultracode, or any harness feature that immediate
 State three things and then wait: what the fan-out would do, roughly what it costs (agent count and token order-of-magnitude), and what the serial alternative is. Approval for one fan-out does not carry to the next one.
 
 A handful of targeted background subagents for independent work is not a swarm and does not need this — the gate is for the features that spawn dozens at once.
+
+## Browser Automation
+
+Use `agent-browser` for web automation. Run `agent-browser --help` for all commands.
+
+Core workflow:
+1. `agent-browser open <url>` - Navigate to page
+2. `agent-browser snapshot -i` - Get interactive elements with refs (@e1, @e2)
+3. `agent-browser click @e1` / `fill @e2 "text"` - Interact using refs
+4. Re-snapshot after page changes

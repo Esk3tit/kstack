@@ -32,14 +32,17 @@ documents what's third-party (so I know what I'm dropping vs. keeping).
   ```bash
   ln -s ~/.claude/CLAUDE.md ~/.codex/AGENTS.md
   ```
-- `~/.claude/CLAUDE.md` is a **copy**, not a link to this repo — edit here, then copy it over
-  (`cp CLAUDE.md ~/.claude/CLAUDE.md`), or the change never reaches either agent.
-- Contents (8 sections): **Technical decisions** (quality over dev-cost), **Operational work**
+- This repo's `CLAUDE.md` is the **source of truth**. `~/.claude/CLAUDE.md` is a **copy** that may carry
+  machine-local additions that stay out of the repo (e.g. pointers to private local guidance). Make
+  shared changes here, then bring them into the local copy without dropping those additions; never
+  `cp` over it blindly.
+- Contents (9 sections): **Technical decisions** (quality over dev-cost), **Operational work**
   (simplest direct path; no machinery until it's justified), **Bug fixes** (reproduce E2E first),
   **Quality bar** (fix what's broken, even if it's not yours; pixel-perfection), **Auto-generated
   files** (never hand-edit; fix the generator), **Code comments** (sparse by default, no plan/ticket
   refs), **Picking the right models** (per-model cost/intelligence/taste table + routing), **Large
-  subagent fan-outs** (explain tradeoffs and get approval before swarming).
+  subagent fan-outs** (explain tradeoffs and get approval before swarming), **Browser automation**
+  (`agent-browser`: open → `snapshot -i` → act on `@eN` refs → re-snapshot).
 
 ## 2. Custom slash commands (`commands/`)
 
