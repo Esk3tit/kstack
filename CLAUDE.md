@@ -48,7 +48,7 @@ Rankings, higher = better. Cost reflects what I actually pay (OpenAI has really 
 
 | model | cost | intelligence | taste |
 |---|---|---|---|
-| gpt-6-sol (high reasoning) | 10 | 8 | 5 |
+| gpt-6-sol (high reasoning) | 10 | 8 | 6 |
 | sonnet-5 | 3 | 5 | 7 |
 | opus-5.5 | 6 | 7 | 8 |
 | fable-5.1 | 3 | 9 | 9 |
