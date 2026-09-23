@@ -24,7 +24,7 @@ check() {
 }
 
 echo ">> no-mistakes (router) tooling check"
-check node     "install Node 18+ (harness scripts use global fetch)" required
+check node     "install Node 24+ (agent-browser requires it)" required
 check porter   "resolve the preview env (porter app manifests / kubectl)" required
 check gh       "post the combined verdict to both PRs (>= 2.99 for --attach media)" required
 if command -v gh >/dev/null 2>&1 && ! gh pr comment --help 2>/dev/null | grep -- '--attach' >/dev/null; then

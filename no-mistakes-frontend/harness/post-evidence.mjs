@@ -63,6 +63,11 @@ if (pr && !repo) die('could not determine --repo (owner/name)');
 const IMAGE = /\.(png|jpe?g|gif|webp)$/i;
 const VIDEO = /\.(mp4|webm|mov)$/i;
 const cases = Array.isArray(results.cases) ? results.cases : [];
+const declaredStatus = results.status ? String(results.status).toUpperCase() : null;
+if (declaredStatus && !['PASS', 'FAIL', 'BLOCKED'].includes(declaredStatus)) die('results.status must be PASS, FAIL, or BLOCKED');
+if ((!cases.length && declaredStatus !== 'BLOCKED') || cases.some((c) => typeof c.pass !== 'boolean'))
+  die('results.cases must be non-empty (unless status is BLOCKED), each with a boolean "pass"');
+if (declaredStatus === 'PASS' && cases.some((c) => !c.pass)) die('results.status is PASS but a case failed');
 const findings = Array.isArray(results.findings) ? results.findings : [];
 const list = (v) => (Array.isArray(v) ? v : v ? [v] : []);
 // Only captures a case or finding names are published; anything else in the run dir stays local.
@@ -190,11 +195,12 @@ function galleryComments() {
   return raw ? raw.split('\n').filter(Boolean) : [];
 }
 
+// Returns the ids it could not delete.
 function deleteComments(ids) {
-  for (const id of ids) {
-    try { gh(['api', '--method', 'DELETE', `/repos/${repo}/issues/comments/${id}`]); }
-    catch (e) { console.error(`[post-evidence] could not delete old gallery ${id}: ${e.message.split('\n')[0]}`); }
-  }
+  return ids.filter((id) => {
+    try { gh(['api', '--method', 'DELETE', `/repos/${repo}/issues/comments/${id}`]); return false; }
+    catch (e) { console.error(`[post-evidence] could not delete gallery comment ${id}: ${e.message.split('\n')[0]}`); return true; }
+  });
 }
 
 // gh exits non-zero on a partial upload but still posts the comment and prints its URL.
@@ -242,8 +248,10 @@ if (mediaOk && gallery.id) {
 }
 // The PR only ever shows fully uploaded evidence: an incomplete gallery is removed and the PR left as it was.
 if (!mediaOk) {
-  if (gallery.id) deleteComments([gallery.id]);
-  console.error('[post-evidence] media did not all upload; the PR is unchanged. Re-run to post.');
+  const left = gallery.id ? deleteComments([gallery.id]) : [];
+  console.error(left.length
+    ? `[post-evidence] media did not all upload, and the incomplete gallery could not be removed: ${gallery.url}`
+    : '[post-evidence] media did not all upload; the PR is unchanged. Re-run to post.');
   persistAndExit('partial-media');
 }
 
@@ -257,9 +265,11 @@ try {
   gh(['pr', 'edit', pr, '--repo', repo, '--body-file', bodyFile]);
 } catch (e) {
   console.error(`[post-evidence] updating the PR description failed: ${e.message.split('\n')[0]}`);
-  persistAndExit('failed', { galleryUrl: gallery.url, headSha });
+  if (gallery.id) deleteComments([gallery.id]);
+  persistAndExit('failed', { headSha });
 }
 
-deleteComments(gallery.previous.filter((old) => old !== gallery.id));
+const stale = deleteComments(gallery.previous.filter((old) => old !== gallery.id));
+if (stale.length) console.error(`[post-evidence] old galleries left on the PR: ${stale.join(', ')}`);
 console.log('pr_post=spliced');
 console.log(`pr=${pr} repo=${repo} media=${media.length} gallery_url=${gallery.url ?? '-'} replaced=${gallery.previous.length}`);
