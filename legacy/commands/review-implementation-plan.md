@@ -33,6 +33,8 @@ Run an **iterative review loop** between Codex CLI and Claude on an **implementa
 
 ## Instructions
 
+**First, invoke the `codex-cli` skill** (via the Skill tool) — it is the source of truth for the reliable Codex CLI invocation recipe. Follow it for every `codex` call below; if its guidance ever conflicts with this command, the skill wins.
+
 1. **Resolve the plan path:**
    - If `$1` is provided, use it directly. Skip to validation
    - If `$1` is omitted, **resolve the most recent implementation plan from the current session's context/history**, prioritizing the superpowers `writing-plans` / `executing-plans` skill output:
