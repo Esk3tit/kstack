@@ -26,10 +26,6 @@
     "platform": "vercel",
     "fePort": 3000
   },
-  "evidence": {
-    "backend": "git-branch",
-    "prefix": "no-mistakes"
-  },
   "auth": {
     "profiles": {
       "convex": {

@@ -74,7 +74,7 @@ All user-authored, plugin-independent (they shell out to `codex` / `gh-axi`, not
   else `~/.no-mistakes/<project>.json`); no config → `BLOCKED reason=needs-config`. Schema, docs, and
   examples live in `no-mistakes/config/` — `examples/promptarmor.no-mistakes.json` reproduces the
   original PromptArmor setup (Neon project `round-unit-34763685`, Porter project 8417 / cluster 3429,
-  PropelAuth/MOFFITT, S3 evidence), `examples/supabase.no-mistakes.json` proves multi-BaaS generality.
+  PropelAuth/MOFFITT), `examples/supabase.no-mistakes.json` proves multi-BaaS generality.
   Each `SKILL.md` is the runtime playbook; `scripts/setup.sh` checks tooling.
 
 - **`wide-event-logging/`** — implement wide event logging (canonical log lines) in Python/FastAPI:
@@ -125,7 +125,7 @@ Documented so I know what each provides when deciding keep/drop. Reinstall from 
 |-------|--------------|-------|
 | `gh-axi` | GitHub via the `gh-axi` CLI (issues, PRs, runs, releases, raw API). | keep — commands lean on it |
 | `lavish` | Rich reviewable HTML artifacts via `lavish-axi` CLI (annotate + send feedback). | keep — used for spec review |
-| `dev-browser` | Persistent-state browser automation. **Powers the no-mistakes UI driving.** | keep — required by no-mistakes |
+| `dev-browser` | Persistent-state browser automation (Playwright scripts). | optional — no-mistakes drives `agent-browser` |
 | `browser-use` | Browser-Use SDK / library reference. | optional |
 | `excalidraw-diagram-generator` | Excalidraw diagrams from NL. | optional |
 | `find-skills` | Discover/install agent skills. | optional |
@@ -144,7 +144,7 @@ the rest are default-on when installed.
 | **context-mode** (1.0.168) | Context-window protection (`ctx_*` tools), session memory, SessionStart guidance. | **Keep** — context-window protection + session memory across compaction. |
 | **claude-code-builder** | `/create-skill`, `/create-plugin` (how the no-mistakes skills were scaffolded). | Keep for authoring skills. |
 | **claude-code-warp** | `warp`. | Optional. |
-| **claude-plugins-official** | `context7` (live docs), `playwright` (MCP browser), `pyright-lsp`, `typescript-lsp`, `sentry`, `linear`. | Keep LSPs + context7 + linear/sentry MCP; playwright is superseded by dev-browser for my use. |
+| **claude-plugins-official** | `context7` (live docs), `playwright` (MCP browser), `pyright-lsp`, `typescript-lsp`, `sentry`, `linear`. | Keep LSPs + context7 + linear/sentry MCP; playwright is superseded by agent-browser for my use. |
 
 Marketplaces: `superpowers-marketplace`, `superpowers-extended-cc-marketplace`, `claude-code-builder`,
 `claude-code-warp`, `claude-plugins-official`, `context-mode`.
@@ -156,9 +156,9 @@ Marketplaces: `superpowers-marketplace`, `superpowers-extended-cc-marketplace`, 
 
 ## 8. Tooling (CLIs)
 
-`codex`, `gh` (+ `gh-axi`), `lavish-axi` (npx), `dev-browser` (nvm node v24.10.0), `doppler` (secrets
-for all repos), `porter` (preview envs), `neonctl`/`neon` (Neon branches), `aws` (S3 evidence + report
-gen), `psql`.
+`codex`, `gh` >= 2.99 (+ `gh-axi`; `--attach` posts no-mistakes screenshots and clips), `lavish-axi` (npx),
+`agent-browser` (drives no-mistakes; `agent-browser install` for its Chrome) + `ffmpeg` (clips), `doppler` (secrets
+for all repos), `porter` (preview envs), `neonctl`/`neon` (Neon branches), `aws` (report gen), `psql`.
 
 ## 9. Hooks
 
@@ -173,7 +173,7 @@ context-mode and superpowers. (Dropping those plugins drops their hooks too.)
    `~/.agents/skills/` and then into `~/.claude/skills/` (plus `~/.codex/skills/` when that Codex
    installation does not scan `~/.agents/skills/`).
 4. `cp codex/config.toml.example ~/.codex/config.toml` → fill in tokens; `codex login` (ChatGPT mode).
-5. Install CLIs: `codex`, `gh` + the `gh-axi`/`lavish-axi` tooling, `dev-browser`, `doppler`, `porter`,
+5. Install CLIs: `codex`, `gh` + the `gh-axi`/`lavish-axi` tooling, `agent-browser`, `ffmpeg`, `doppler`, `porter`,
    `neonctl`, `aws`. Authenticate each (`gh auth`, `doppler login`, `porter auth login`, `aws login`,
    `neonctl auth`).
 6. Wire MCP servers (Linear, Neon, …) into Claude Code and `~/.codex/config.toml`.

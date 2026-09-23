@@ -128,55 +128,8 @@
       }
     },
     "evidence": {
-      "type": "object",
-      "description": "Where screenshot evidence is hosted so it can be embedded inline in a PR comment. Evidence is ALWAYS posted to a PR comment + (for git-branch) a separate orphan branch — never committed to the PR branch / merged history. Prefer an external host; git-branch is the free fallback.",
-      "additionalProperties": false,
-      "properties": {
-        "backend": {
-          "type": "string",
-          "description": "Primary host. External hosts (s3/gdrive/imgur/cmd) give inline images on private repos too; git-branch renders inline only on PUBLIC repos.",
-          "enum": ["s3", "gdrive", "imgur", "cmd", "git-branch", "local"],
-          "default": "local"
-        },
-        "fallback": {
-          "type": "string",
-          "description": "Used when the primary host fails or isn't configured. 'none' disables fallback.",
-          "enum": ["git-branch", "local", "none"],
-          "default": "git-branch"
-        },
-        "bucket": { "type": "string", "description": "s3 bucket." },
-        "region": { "type": "string", "description": "s3 region." },
-        "prefix": { "type": "string", "default": "no-mistakes" },
-        "expiresIn": { "type": "integer", "description": "s3 presign TTL (seconds).", "default": 604800 },
-        "expireDays": { "type": "integer", "description": "s3 lifecycle expiry (days).", "default": 30 },
-        "gdrive": {
-          "type": "object",
-          "description": "Google Drive host via rclone. Uploads the PNG, shares it 'anyone with the link', and embeds the direct lh3.googleusercontent.com/d/<id> URL (Camo-friendly for small images).",
-          "additionalProperties": false,
-          "properties": {
-            "remote": { "type": "string", "description": "rclone remote name for your Drive.", "default": "gdrive" },
-            "folder": { "type": "string", "description": "Drive folder to upload evidence into.", "default": "no-mistakes-evidence" }
-          }
-        },
-        "imgur": {
-          "type": "object",
-          "description": "imgur anonymous host. Direct i.imgur.com links render inline reliably. Anonymous uploads are PUBLIC and may be pruned by imgur after long inactivity — fine for ephemeral PR evidence.",
-          "additionalProperties": false,
-          "properties": {
-            "clientIdEnv": { "type": "string", "description": "Env var holding your imgur API Client-ID.", "default": "IMGUR_CLIENT_ID" }
-          }
-        },
-        "uploadCmd": { "type": "string", "description": "For backend=cmd: a command template uploading $NM_FILE and printing a public URL to stdout (the 'anywhere' escape hatch)." },
-        "cleanup": {
-          "type": "object",
-          "description": "How git-branch evidence is reclaimed (external hosts manage their own retention via expiresIn / lifecycle).",
-          "additionalProperties": false,
-          "properties": {
-            "onMerge": { "type": "boolean", "description": "Delete this PR's evidence from the orphan branch when the PR is merged/closed.", "default": true },
-            "keepDays": { "type": "integer", "description": "Prune orphan-branch evidence older than this many days.", "default": 14 }
-          }
-        }
-      }
+      "deprecated": true,
+      "description": "Ignored. Screenshots and clips upload as GitHub attachments; remove this key."
     },
     "auth": {
       "type": "object",
@@ -233,7 +186,7 @@
           "repoPath": { "type": "string", "description": "Local checkout path. If omitted, derived from checkoutBase + repo basename. Supports ~." },
           "devUrl": { "type": "string", "description": "Local dev URL (e.g. http://localhost:5173 or :8090)." },
           "devCommand": { "type": "string", "description": "Command to start it locally (e.g. pnpm run dev, make api)." },
-          "browserProfile": { "type": "string", "description": "dev-browser profile name (frontend); ignored by the chrome-devtools-axi driver, which has no cross-session named profiles." },
+          "browserProfile": { "type": "string", "description": "agent-browser session name prefix (frontend); each run appends its run id." },
           "auth": { "type": "string", "description": "Key into auth.profiles. Omit/none for no auth." },
           "noLogin": { "type": "boolean", "default": false },
           "previewService": { "type": "string", "description": "Preview-platform service name (e.g. Porter service)." },

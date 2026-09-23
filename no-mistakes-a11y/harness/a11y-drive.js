@@ -1,7 +1,7 @@
 // no-mistakes-a11y harness: in-page collectors for the deep-a11y interaction axes.
-// Run each via dev-browser page.evaluate(<fn>). Plain JS, NO closures/imports, so they
-// serialize into the QuickJS->page bridge (same constraint as -frontend/audit-metrics.js).
-// The OUTER dev-browser script drives the keyboard (page.keyboard.press('Tab')) and calls
+// Run each in the page via agent-browser eval (-frontend snippets.md `in_page`). Plain JS, no
+// imports, so the file inlines into one eval (same as -frontend/audit-metrics.js).
+// The caller drives the keyboard (agent-browser press Tab) and calls
 // readActiveFocus after each press; these functions only READ/TAG, they encode no verdict.
 
 const FOCUS_PROPS = [
@@ -31,6 +31,8 @@ const accName = (e) => (e.getAttribute('aria-label') || e.textContent || e.getAt
 // 1. Pre-pass: tag every visible+enabled interactive control with a stable idx and record its
 //    BLURRED focus-relevant computed style. Returns the baseline keyed by idx for the style diff.
 const tagInteractiveCandidates = () => {
+  // Start unfocused so every baseline style is the blurred one and the first Tab starts at the top.
+  if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
   const els = [...document.querySelectorAll(INTERACTIVE_SEL)].filter((e) => isVisible(e) && isEnabled(e));
   const baseline = {};
   els.forEach((e, i) => {

@@ -1,0 +1,4 @@
+interface:
+  display_name: "No-Mistakes Frontend"
+  short_description: "Drive + assert a UI change with agent-browser, post screenshots and clips"
+  default_prompt: "Verify this UI change against the running app: drive the expected flow, assert behavior with API ground-truth, check the look, and post screenshot and clip evidence to the PR."

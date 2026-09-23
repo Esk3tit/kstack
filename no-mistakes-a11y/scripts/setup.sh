@@ -1,32 +1,20 @@
 #!/usr/bin/env bash
-# One-time, idempotent setup for the no-mistakes-a11y skill.
-# Ensures dev-browser (the interaction harness) + chromium exist, vendors axe-core, and
-# checks gh for PR posting. Portable: resolves nothing from a hardcoded path; safe to re-run.
+# One-time, idempotent setup for the no-mistakes-a11y skill: agent-browser (the interaction harness,
+# with axe-core built in) + its Chrome, and gh for PR posting. Portable; safe to re-run.
 set -euo pipefail
 
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-
-if ! command -v dev-browser >/dev/null 2>&1; then
-  echo "no-mistakes-a11y: installing dev-browser (global) ..."
-  npm install -g dev-browser
+ab_current() { command -v agent-browser >/dev/null 2>&1 && node -e 'const [a, b] = process.argv[1].split(".").map(Number); process.exit(a > 0 || b >= 37 ? 0 : 1)' "$(agent-browser --version | awk '{print $2}')"; }
+node -e 'process.exit(Number(process.versions.node.split(".")[0]) >= 24 ? 0 : 1)' || { echo "no-mistakes-a11y: agent-browser needs Node 24+ (found $(node --version))" >&2; exit 1; }
+if ! ab_current; then
+  echo "no-mistakes-a11y: installing agent-browser >= 0.37 (global) ..."
+  npm install -g agent-browser@latest
 fi
-
-echo "no-mistakes-a11y: ensuring chromium ..."
-dev-browser install   # idempotent; downloads chromium if missing
-
-# Static WCAG layer — vendor the pinned axe-core bundle. Non-fatal: the interaction axes
-# (keyboard / focus / reflow) are the headline and run without it (skill notes axe=skipped).
-if [ -s "$DIR/harness/axe.min.js" ]; then
-  echo "no-mistakes-a11y: axe-core already vendored"
-else
-  echo "no-mistakes-a11y: vendoring axe-core ..."
-  if ! bash "$DIR/scripts/vendor-axe.sh"; then
-    echo "no-mistakes-a11y: WARNING — could not vendor axe-core (offline?); the static WCAG layer will be skipped at run time." >&2
-  fi
-fi
+agent-browser install $([ "$(uname -s)" = Linux ] && echo --with-deps)   # idempotent; Linux also gets Chrome's system libraries
 
 if ! command -v gh >/dev/null 2>&1; then
   echo "no-mistakes-a11y: WARNING — gh CLI not found; PR evidence posting will be unavailable until 'gh' is installed and authenticated." >&2
+elif ! gh pr comment --help 2>/dev/null | grep -- '--attach' >/dev/null; then
+  echo "no-mistakes-a11y: WARNING — gh $(gh --version | head -n1 | awk '{print $3}') has no --attach; upgrade to gh >= 2.99 to post screenshots." >&2
 fi
 
 echo "no-mistakes-a11y: ready"

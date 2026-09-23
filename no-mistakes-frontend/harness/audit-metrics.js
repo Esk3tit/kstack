@@ -1,6 +1,6 @@
-// no-mistakes harness: taste-NEUTRAL rendered design-system measurement, run in the
-// browser via dev-browser page.evaluate(collectMetrics). Plain JS (no closure) so it
-// serializes into the QuickJS->page bridge. Emits measurements + objective a11y flags +
+// no-mistakes harness: taste-NEUTRAL rendered design-system measurement, run in the page
+// via agent-browser eval (snippets.md `in_page`). Plain JS, no imports, so the file can be
+// inlined into one eval. Emits measurements + objective a11y flags +
 // "slop" signals; encodes NO aesthetic opinion (the judge decides vs the app's own baseline).
 const collectMetrics = () => {
   const els = [...document.querySelectorAll('*')].slice(0, 1500);

@@ -151,7 +151,8 @@ into the consuming command. How a token is obtained is set by the backend app's 
 and running under its `secretsTool` (`doppler run --` when `secretsTool=doppler`).
 
 **`kind: propelauth`** (mint a Bearer — no browser, no password) — from the profile's secrets scope.
-Export the test email into `UI_VERIFY_EMAIL` from the profile's `testEmailEnv` first:
+Export the test email into `UI_VERIFY_EMAIL` from the profile's `testEmailEnv` first. The email is not a secret; when this scope lacks it, read it where it lives (e.g.
+`doppler secrets get <testEmailEnv> --plain` in the frontend login profile's `secretsScopeDir`).
 ```bash
 cd "<profile secretsScopeDir>"          # e.g. the backend app's repoPath
 export UI_VERIFY_EMAIL="<value of the profile's testEmailEnv>"

@@ -19,7 +19,7 @@ scripts already read:
 
 ```bash
 H="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/<skill>}"
-eval "$(node "$H/harness/load-config.mjs" --export)"   # NM_*, PORTER_*, NMF_*, AWS_REGION, …
+eval "$(node "$H/harness/load-config.mjs" --export)"   # NM_*, PORTER_*, NMF_*, …
 ```
 
 Loader modes: `--export` (shell `export` lines, default), `--json` (normalized config), `--get
@@ -35,7 +35,6 @@ Loader modes: `--export` (shell `export` lines, default), `--json` (normalized c
 | `project` / `org` / `repoOwner` / `checkoutBase` | identity + where repos are checked out |
 | `db` | the BaaS/DB: `platform`, `projectId`, `localBranch`, `previewBranchPattern` (`{pr}`), `connStringEnv`, `migrations`, `mcp` tool names |
 | `preview` | per-PR preview env: `platform`, `apiPort`, `fePort`, platform block (e.g. `porter.project/cluster`) |
-| `evidence` | where screenshot/SQL evidence is uploaded (`s3` / `git-branch` / `local` / `cmd`) |
 | `auth` | `apiKeyHeader` + named `profiles` (`propelauth` / `bearer-env` / `supabase-jwt` / …) |
 | `apps[]` | the deployables: `name`, `kind`, `repo`, `repoPath`, `devUrl`, `devCommand`, `browserProfile`, `auth`, `previewService`, `previewSlug`, `errorEnvelope` |
 
@@ -53,42 +52,9 @@ omitted:
 For **Supabase**, read with the service-role / direct-postgres connection — the anon key is RLS-gated
 and masks freshly-written rows (false negatives).
 
-## Evidence hosting (`evidence`)
+## Evidence hosting
 
-Screenshot evidence is embedded inline in the PR comment. It is **never committed to the PR branch /
-merged diff** — external hosts live off-repo; the `git-branch` fallback uses a *separate* orphan
-branch. Configure a **primary host** and a **fallback**:
-
-| `evidence.backend` | What it does | Inline on private repos? | Setup |
-|--------------------|--------------|--------------------------|-------|
-| `s3` | aws cp + presigned URL | yes | `no-mistakes-frontend/scripts/s3-evidence-setup.sh` |
-| `gdrive` | rclone upload, anyone-with-link, `lh3.googleusercontent.com/d/<id>` | yes (small imgs) | `gdrive-evidence-setup.sh` |
-| `imgur` | anonymous upload, `i.imgur.com` link | yes | `imgur-evidence-setup.sh` |
-| `cmd` | `evidence.uploadCmd` per PNG, stdout = URL (anywhere) | depends | — |
-| `git-branch` | orphan `no-mistakes-evidence` branch, raw URLs | **no** (public repos only) | none |
-| `local` | no upload; gallery written to `<run>/summary.md` | n/a | none |
-
-`evidence.fallback` (default `git-branch`) kicks in when the primary fails or is `local`/unset, so a
-verdict is never lost over an upload hiccup. **`gdrive` and `imgur` are PUBLIC hosts** — dev/test
-screenshots only, never customer data; use `s3`/`cmd` (org-trusted) or `git-branch` (stays in the
-private repo) for sensitive data.
-
-**Cleanup** (`evidence.cleanup`, git-branch only — external hosts self-expire via `expiresIn`/lifecycle):
-reclaim orphan-branch evidence with
-`node no-mistakes-frontend/harness/evidence-cleanup.mjs --pr <N>` (on PR merge/close), `--prune-days <N>`,
-or `--all`. Automate on merge with a GitHub Action:
-
-```yaml
-# .github/workflows/no-mistakes-evidence-cleanup.yml
-on:
-  pull_request: { types: [closed] }
-jobs:
-  cleanup:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - run: node no-mistakes-frontend/harness/evidence-cleanup.mjs --pr ${{ github.event.pull_request.number }} --repo ${{ github.repository }}
-```
+No evidence config: screenshots and clips post as GitHub attachments (`no-mistakes-frontend` §8).
 
 ## Autodetect & generate (setup wizard)
 
@@ -109,7 +75,7 @@ and refuses to overwrite an existing config without `--force` (idempotent).
 ## Examples
 
 - `examples/promptarmor.no-mistakes.json` — the original PromptArmor setup (Neon + Porter + PropelAuth/
-  MOFFITT + S3 evidence), exactly reproducing prior behavior. Drop it in as `.no-mistakes.json` (or
+  MOFFITT). Drop it in as `.no-mistakes.json` (or
   `~/.no-mistakes/promptarmor.json`) to run against PromptArmor.
 - `examples/supabase.no-mistakes.json` — a Supabase + Vercel project (SQL adapter).
 - `examples/convex.no-mistakes.json` — a Convex project (non-SQL `convex` adapter), proving the skills

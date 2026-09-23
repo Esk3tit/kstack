@@ -25,14 +25,6 @@
     "fePort": 3000,
     "porter": { "project": "8417", "cluster": "3429" }
   },
-  "evidence": {
-    "backend": "s3",
-    "bucket": "no-mistakes",
-    "region": "us-west-2",
-    "prefix": "no-mistakes",
-    "expiresIn": 604800,
-    "expireDays": 30
-  },
   "auth": {
     "apiKeyHeader": "X-PromptArmor-API-Key",
     "profiles": {
@@ -50,6 +42,13 @@
           "email": "/api/backend/v1/user/email",
           "accessToken": "/api/backend/v1/access_token"
         }
+      },
+      "propelauth-login": {
+        "kind": "browser-login",
+        "secretsTool": "doppler",
+        "dopplerProject": "tprm-app",
+        "secretsScopeDir": "~/PromptArmor/AI-TPRM",
+        "env": { "email": "PLAYWRIGHT_USER_EMAIL", "password": "PLAYWRIGHT_USER_PASSWORD" }
       },
       "moffitt": {
         "kind": "bearer-env",
@@ -69,7 +68,7 @@
       "devUrl": "http://localhost:5173",
       "devCommand": "pnpm run dev",
       "browserProfile": "no-mistakes-tprm",
-      "auth": "propelauth",
+      "auth": "propelauth-login",
       "previewService": "ai-tprm-v2-ai-tprm-v2",
       "previewSlug": "ai-tprm-v2"
     },

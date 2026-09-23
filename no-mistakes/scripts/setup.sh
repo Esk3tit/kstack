@@ -23,30 +23,27 @@ check() {
   fi
 }
 
-# check_any <label> <note> <required|optional> <cmd...> — ok if ANY cmd is on PATH.
-# Used for the browser driver, which can be dev-browser OR chrome-devtools-axi.
-check_any() {
-  local label="$1" note="$2" req="$3"; shift 3
-  local found=""
-  for c in "$@"; do
-    if command -v "$c" >/dev/null 2>&1; then found="$c"; break; fi
-  done
-  if [ -n "$found" ]; then
-    printf '  ok   %-9s %s\n' "$label" "$found"
-  elif [ "$req" = required ]; then
-    printf '  MISS %-9s %s\n' "$label" "$note"; missing=1
-  else
-    printf '  --   %-9s %s\n' "$label" "$note"
-  fi
-}
-
 echo ">> no-mistakes (router) tooling check"
-check node     "install Node 18+ (harness scripts use global fetch)" required
+check node     "install Node 18+ (24+ for frontend routes)" required
 check porter   "resolve the preview env (porter app manifests / kubectl)" required
-check gh       "post the combined verdict to both PRs" required
+check gh       "post the combined verdict to both PRs (>= 2.99 for --attach media)" required
+if command -v gh >/dev/null 2>&1 && ! gh pr comment --help 2>/dev/null | grep -- '--attach' >/dev/null; then
+  printf '  --   %-9s %s\n' "gh-attach" "gh is too old for --attach: screenshots and clips stay local (upgrade to gh >= 2.99)"
+fi
 check git      "repo/branch/PR resolution" required
-check_any browser "drive the frontend UI — install dev-browser OR chrome-devtools-axi" required dev-browser chrome-devtools-axi
+# Frontend-involving routes also need Node 24+ and agent-browser >= 0.37; backend-only routes do not.
+fe_missing=0
+fe_need() { printf '  FE   %-9s %s\n' "$1" "$2"; fe_missing=1; }
+node -e 'process.exit(Number(process.versions.node.split(".")[0]) >= 24 ? 0 : 1)' 2>/dev/null || fe_need node-24 "$(node --version 2>/dev/null) is older than 24 (agent-browser requires it)"
+if ! command -v agent-browser >/dev/null 2>&1; then
+  fe_need agent-browser "npm i -g agent-browser && agent-browser install"
+elif ! node -e 'const [a, b] = process.argv[1].split(".").map(Number); process.exit(a > 0 || b >= 37 ? 0 : 1)' "$(agent-browser --version | awk '{print $2}')"; then
+  fe_need agent-browser "older than 0.37; npm i -g agent-browser@latest"
+else
+  check agent-browser "" required
+fi
 check neonctl  "optional CLI fallback for preview DB branch resolution; the DB MCP (in-session) is preferred" optional
+check ffmpeg   "optional — encodes agent-browser clips" optional
 check psql     "optional — async DB poll-until tight polling (else the DB MCP run-SQL loop)" optional
 
 echo
@@ -79,5 +76,6 @@ else
   echo "   For a missing sibling, the skill's preflight will offer to install it from"
   echo "   the kstack skills repo (clone it first if you don't have a checkout)."
 fi
+[ "$fe_missing" -eq 1 ] && echo ">> frontend and full-stack routes are blocked until the FE lines above are fixed; backend-only routes can run."
 echo ">> Reminder: preview ClusterIPs need the un-sandboxed VPN network; the DB MCP must be reachable in the Claude session."
 exit "$missing"

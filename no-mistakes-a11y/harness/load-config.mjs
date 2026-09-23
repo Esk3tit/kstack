@@ -6,10 +6,10 @@
 // Also importable: `import { discover, validate, withDefaults, exportLines } from './load-config.mjs'`.
 // Zero-dependency. The skills supply the method; this file supplies the targets.
 
-import { readFileSync, existsSync } from 'node:fs'
+import { readFileSync, existsSync, realpathSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { homedir } from 'node:os'
-import { pathToFileURL } from 'node:url'
+import { pathToFileURL, fileURLToPath } from 'node:url'
 
 export const expandHome = (p) => (typeof p === 'string' && p.startsWith('~') ? join(homedir(), p.slice(1)) : p)
 
@@ -81,16 +81,6 @@ export function withDefaults(cfg) {
   pv.apiPort ??= 8090
   pv.fePort ??= 3000
   cfg.preview = pv
-  const ev = cfg.evidence || {}
-  ev.backend ||= 'local'
-  ev.fallback ||= 'git-branch'
-  ev.prefix ||= 'no-mistakes'
-  ev.expiresIn ??= 604800
-  ev.expireDays ??= 30
-  if (ev.backend === 'gdrive' || ev.gdrive) ev.gdrive = { remote: 'gdrive', folder: 'no-mistakes-evidence', ...(ev.gdrive || {}) }
-  if (ev.backend === 'imgur' || ev.imgur) ev.imgur = { clientIdEnv: 'IMGUR_CLIENT_ID', ...(ev.imgur || {}) }
-  ev.cleanup = { onMerge: true, keepDays: 14, ...(ev.cleanup || {}) }
-  cfg.evidence = ev
   cfg.apps = (cfg.apps || []).map((a) => {
     const repoBase = a.repo ? a.repo.split('/').pop() : a.name
     a.repoPath ||= cfg.checkoutBase ? join(expandHome(cfg.checkoutBase), repoBase) : undefined
@@ -153,18 +143,6 @@ export function exportLines(cfg, cfgPath) {
   }
   const backendApp = cfg.apps.find((a) => a.kind === 'backend')
   if (backendApp) set('NMF_API_SVC', backendApp.previewService)
-  // evidence (names existing scripts already read)
-  set('NM_EVIDENCE_BACKEND', cfg.evidence.backend)
-  set('NM_EVIDENCE_FALLBACK', cfg.evidence.fallback)
-  set('NM_EVIDENCE_BUCKET', cfg.evidence.bucket)
-  set('AWS_REGION', cfg.evidence.region)
-  set('NM_EVIDENCE_PREFIX', cfg.evidence.prefix)
-  set('NM_EVIDENCE_EXPIRES_IN', cfg.evidence.expiresIn)
-  set('NM_EVIDENCE_EXPIRE_DAYS', cfg.evidence.expireDays)
-  set('NOMISTAKES_EVIDENCE_UPLOAD_CMD', cfg.evidence.uploadCmd)
-  if (cfg.evidence.gdrive) { set('NM_EVIDENCE_GDRIVE_REMOTE', cfg.evidence.gdrive.remote); set('NM_EVIDENCE_GDRIVE_FOLDER', cfg.evidence.gdrive.folder) }
-  if (cfg.evidence.imgur) set('NM_EVIDENCE_IMGUR_CLIENT_ID_ENV', cfg.evidence.imgur.clientIdEnv)
-  if (cfg.evidence.cleanup) { set('NM_EVIDENCE_CLEANUP_ON_MERGE', String(cfg.evidence.cleanup.onMerge)); set('NM_EVIDENCE_KEEP_DAYS', cfg.evidence.cleanup.keepDays) }
   // auth
   set('NM_API_KEY_HEADER', cfg.auth?.apiKeyHeader)
   return out.join('\n')
@@ -215,5 +193,16 @@ function runCli() {
   process.stdout.write(exportLines(cfg, path) + '\n')
 }
 
-const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href
+// Skills are usually symlinked into ~/.claude/skills, so argv[1] is the link path while
+// import.meta.url is the real path; compare realpaths.
+const isMain = (() => {
+  if (!process.argv[1]) return false
+  try {
+    return (
+      realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1])
+    )
+  } catch {
+    return import.meta.url === pathToFileURL(process.argv[1]).href
+  }
+})()
 if (isMain) runCli()
