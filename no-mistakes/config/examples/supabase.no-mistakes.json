@@ -24,10 +24,6 @@
     "apiPort": 3000,
     "fePort": 3000
   },
-  "evidence": {
-    "backend": "git-branch",
-    "prefix": "no-mistakes"
-  },
   "auth": {
     "apiKeyHeader": "X-Acme-Api-Key",
     "profiles": {

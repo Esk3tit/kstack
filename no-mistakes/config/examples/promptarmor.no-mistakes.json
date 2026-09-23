@@ -25,14 +25,6 @@
     "fePort": 3000,
     "porter": { "project": "8417", "cluster": "3429" }
   },
-  "evidence": {
-    "backend": "s3",
-    "bucket": "no-mistakes",
-    "region": "us-west-2",
-    "prefix": "no-mistakes",
-    "expiresIn": 604800,
-    "expireDays": 30
-  },
   "auth": {
     "apiKeyHeader": "X-PromptArmor-API-Key",
     "profiles": {

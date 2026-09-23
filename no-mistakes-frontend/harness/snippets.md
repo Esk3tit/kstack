@@ -186,6 +186,46 @@ cd "$APP_DIR" && doppler run -- bash -lc 'printenv "$KEY_ENV"'   # pipe into the
 
 ---
 
+## D. Record a clip (agent-browser records, dev-browser drives)
+
+dev-browser cannot record video (its sandbox disables Playwright video and screencast). So
+**agent-browser** (>= 0.37, with ffmpeg) opens the browser and records it, and dev-browser drives
+that same browser over CDP with `--connect`. One browser, one login, the same dev-browser scripts.
+
+```bash
+S="nm-$RUN"; CLIP=~/.no-mistakes/$RUN/<case-slug>.mp4
+agent-browser --session "$S" set viewport 1280 800
+agent-browser --session "$S" open "$APP_URL"
+export CDP=$(agent-browser --session "$S" get cdp-url)
+```
+
+Log in and set up **before** recording. For a login app, run template **A** with
+`dev-browser --connect "$CDP"` in place of `--browser "$APP_PROFILE" --headless`, and take the tab
+below in place of `browser.getPage("app")`. A no-login app needs nothing here.
+
+```bash
+agent-browser --session "$S" record start "$CLIP"
+dev-browser --connect "$CDP" <<EOF
+const tab = (await browser.listPages()).find((p) => p.url.startsWith("$APP_URL"));
+const page = await browser.getPage(tab.id);
+// the action under review + its outcome assertion, with state-based waits
+EOF
+agent-browser --session "$S" record stop --json
+agent-browser --session "$S" close
+```
+
+- Always `record stop` before `close`, even on failure, or ffmpeg never flushes the file. Close only
+  your own session (never `close --all`).
+- Use the agent-browser tab by id. `browser.getPage("<name>")` opens a new tab that the recorder does
+  not follow.
+- The clip may span several dev-browser scripts (the ~30s cap is per script, recording keeps going).
+- Stretches with no repaint can be shortened, so a clip does not prove timing. Measure timing claims
+  separately.
+- Check the clip: `ffprobe -v error -show_entries format=duration -of compact "$CLIP"`, then pull
+  frames (`ffmpeg -ss <t> -i "$CLIP" -frames:v 1 f.png`) across the whole clip and look at them.
+
+---
+
 ## Capture + audit
 
 The visual harness: multi-viewport `fullPage` screenshots + a taste-NEUTRAL

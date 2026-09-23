@@ -3,7 +3,7 @@ name: no-mistakes-frontend
 description: >-
   Agentically verify a configured frontend app's UI change against the running app with dev-browser:
   drive the expected flow, assert behavior (with API ground-truth), check the look, and post
-  screenshot evidence + a test-case checklist to the PR so you can judge production-readiness,
+  screenshot + clip evidence and a test-case checklist to the PR so you can judge production-readiness,
   review code, and merge. Report-only, ephemeral. Use for "verify the UI", "does this screen
   work", "is this production ready", "dogfood this flow".
 user-invocable: true
@@ -12,7 +12,7 @@ user-invocable: true
 # no-mistakes-frontend — agentic UI verification
 
 Drive the **running** configured frontend app with **dev-browser**, prove a frontend change works
-(functional + visual) against **API ground-truth**, capture screenshot evidence, and post a
+(functional + visual) against **API ground-truth**, capture screenshot and clip evidence, and post a
 test-case checklist to the PR. **Report-only:** never edit product code, never merge — you
 produce evidence; the human reviews code and merges. **Ephemeral:** nothing lands in the product
 branch or its history.
@@ -24,12 +24,12 @@ This file is the runtime playbook. Follow the steps in order. Stop and emit the 
 
 ```bash
 H="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/no-mistakes-frontend}"
-eval "$(node "$H/harness/load-config.mjs" --export)"   # NM_*, NMF_*, PORTER_*, AWS_REGION, NM_API_KEY_HEADER, …
+eval "$(node "$H/harness/load-config.mjs" --export)"   # NM_*, NMF_*, PORTER_*, NM_API_KEY_HEADER, …
 ```
 
 The loader **discovers** `.no-mistakes.json` by walking up from CWD, else
 `~/.no-mistakes/<project>.json`, and exports the project's targets (apps, DB, preview platform,
-evidence, auth) as env vars. **If it exits non-zero** (no config, or invalid) → emit
+auth) as env vars. **If it exits non-zero** (no config, or invalid) → emit
 `NOMISTAKES_FRONTEND_STATUS=BLOCKED reason=needs-config` and point the user at
 `no-mistakes/config/README.md` + the examples under `no-mistakes/config/examples/`. **Do not proceed.**
 
@@ -83,19 +83,6 @@ they are verified-live and parameterized by the app's config fields. Never hardc
    `Date`), e.g. `RUN="$(date +%Y%m%d-%H%M%S)-$$"`. Evidence dir = `~/.no-mistakes/$RUN/`. Reject
    any caller-supplied evidence dir that resolves **inside a product checkout** (fall back to the
    default). `mkdir -p ~/.no-mistakes/$RUN`.
-7. **Evidence host reachable (SOFT pre-check — never a gate).** Resolve the primary evidence host
-   `$NM_EVIDENCE_BACKEND`. If it's an **external host**, sanity-check it's reachable/authed **before**
-   capture so evidence renders inline rather than silently falling back:
-   - `s3` → AWS session live (`aws sts get-caller-identity`);
-   - `gdrive` → the rclone remote `$NM_EVIDENCE_GDRIVE_REMOTE` reachable (`rclone lsd <remote>:`);
-   - `imgur` → the Client-ID env named by `$NM_EVIDENCE_IMGUR_CLIENT_ID_ENV` is set;
-   - `cmd` → the `$NOMISTAKES_EVIDENCE_UPLOAD_CMD` command is present.
-
-   If the check fails, **WARN** that evidence will fall back to `$NM_EVIDENCE_FALLBACK` (default
-   `git-branch`) and recommend fixing auth (e.g. `aws login` / `aws sso login`, `rclone config`),
-   then **proceed** — do NOT block capture and do NOT lose the verdict. Host health is a
-   recommendation, never a gate.
-
 ## 2. Derive test cases (gate)
 
 Turn the change's intent into a behavioral checklist. **Intent-source precedence:**
@@ -161,8 +148,20 @@ Drive via dev-browser using tiered locators (self-heal mechanism — escalate, n
 3. **Fallback 2** — `page.cua.*` (pixel/vision; coords map 1:1 to CSS px). Never derive coords from
    a fullPage capture — scroll, re-screenshot.
 
-For each case: drive the flow, assert behavior, screenshot before/after key states → PASS/FAIL +
-evidence path. **No screenshot of credential entry, tokens, or keys.**
+For each case: drive the flow, assert behavior, capture evidence → PASS/FAIL + evidence files.
+**No screenshot or clip of credential entry, tokens, or keys.**
+
+- **Screenshot or clip:** a screenshot for a static result, a **clip** when the claim is an
+  interaction (a flow, a transition, a loading or error state). One clip answers one review question
+  in ~10–25s: the action and enough of the result to read it, with login and setup kept out. Recipe:
+  `$H/harness/snippets.md` **D**. No agent-browser/ffmpeg → take screenshots and name the missing
+  clip in `gaps`.
+- **Before/After** when the change alters something visible: capture the same screen on the base
+  revision with the same viewport, data, and persona, as the case's `before`. For a **bug fix**,
+  reproduce the bug on base first, then show it gone on the PR head. No runnable base target → name
+  that in `gaps`.
+- **Inspect every capture before posting** — every screenshot, and frames across each whole clip.
+  Drop one that shows setup noise, a secret, or not the claim.
 
 - **API ground-truth applicability:** mandatory when asserting a *backend-sourced rendered value is
   correct* (numbers, names, statuses, counts); optional for pure UI-state/presence/navigation; not
@@ -223,21 +222,30 @@ Never an infinite loop.
 
 ## 8. Evidence + PR post
 
-Collect the run's screenshots from `~/.dev-browser/tmp/` into `~/.no-mistakes/$RUN/`. Build
+Collect the run's screenshots (`~/.dev-browser/tmp/`) and clips into `~/.no-mistakes/$RUN/`. Build
 `results.json`:
 
 ```json
 {
-  "revision": "<sha + dirty state>",
+  "revision": "<tested sha + dirty state>",
   "intentSource": "<who supplied the checklist>",
   "previewUrl": "<preview frontend URL>",
-  "cases":    [{"name": "...", "pass": true,  "evidence": "look-foo-desktop.png"}],
-  "findings": [{"severity": "high", "screen": "Vendors", "viewport": "mobile", "issue": "..."}]
+  "gaps": ["role matrix: only the tprm_editor persona (needs-persona)"],
+  "cases": [{"name": "...", "pass": true, "observed": "toast 'Saved', row shows 3 vendors",
+             "evidence": ["save-flow.mp4", "after.png"], "before": "before.png"}],
+  "findings": [{"severity": "high", "screen": "Vendors", "viewport": "mobile", "issue": "..."}],
+  "howToTest": [{"action": "As an org admin, archive a vendor on the preview", "expect": "it leaves the list"}],
+  "setup": "<markdown: target, persona, commands>"
 }
 ```
-`evidence` = a PNG basename present in `--run-dir`, or `null`. `previewUrl` (optional) = the resolved
-preview frontend URL when the run targeted a preview (omit for localhost); it's surfaced as a clickable
-**Open the preview UI →** line in the PR body so a reviewer can open the running app without re-running.
+
+- `revision` — the block shows it and warns when the PR head has moved past it.
+- `gaps` — everything this run did NOT verify and why. Shown above the table.
+- `observed` — what you saw in one line (a value, message, or state), not "passed".
+- `evidence` / `before` — media basenames in `--run-dir` (one or a list); omit when there is none.
+- `howToTest` — 1–4 checks only a human can do or should eyeball, each an action + expected result
+  with its persona/data. Never a repeat of the automated cases.
+- `setup` — rendered collapsed. `previewUrl` (preview runs only) — rendered as **Open the preview UI →**.
 
 Post:
 
@@ -245,84 +253,37 @@ Post:
 node "$H/harness/post-evidence.mjs" --pr <N> --run-dir ~/.no-mistakes/$RUN --results ~/.no-mistakes/$RUN/results.json --repo <owner/name>
 ```
 
-It posts on **two idempotent surfaces** for the best reviewer UX:
+It posts on **two idempotent surfaces**:
 
-1. **Compact body block** spliced into the **PR description** at the top, via
-   `<!-- no-mistakes-frontend:start -->`/`<!-- no-mistakes-frontend:end -->` markers; the author's existing body is
-   preserved (an existing marked region is replaced in place, otherwise the block is prepended). It
-   holds the **overall status** header (`### no-mistakes-frontend: ✅ PASS` / `❌ FAIL`), revision + intent,
-   a clickable **Open the preview UI →** link when `previewUrl` is set (so a reviewer can open the
-   running app without re-running),
-   the `| Test case | ✅/❌ | Evidence |` table (each Evidence cell a **short `[📸 <name>](…)` link
-   to the gallery comment**, or `—`), a one-line visual summary, and a gallery link.
-   **No inline images, no presigned/raw URLs** — so the block stays **commit-clean** when GitHub
-   pre-fills a **squash-merge commit message** from the PR description.
-2. **Gallery comment** — one idempotent PR comment (marker `<!-- no-mistakes-frontend:gallery -->` on its
-   first line) holding the **inline screenshot gallery** (`![<name>](<url>)`) + the **visual-findings**
-   detail. Found-and-updated in place on re-run (PATCH `/repos/<repo>/issues/comments/<id>` parsed
-   from the comment URL), else created — never duplicated. Posted **first**, so its URL is what the
-   body's evidence cells + gallery link point at. **No screenshots at all → the gallery comment is
-   skipped** and the body's evidence links degrade to `—`.
+1. **Gallery comment** (marker `<!-- no-mistakes-frontend:gallery -->`) — every screenshot and clip
+   uploads as a **native GitHub attachment** (`gh pr comment --attach`), grouped per case: Before/After
+   images side by side, each clip in its own paragraph so it plays inline, then the visual findings.
+   A re-run posts a new gallery, then deletes the old one. Posted **first**, so the body links to it.
+2. **Compact body block** at the top of the **PR description** (`<!-- no-mistakes-frontend:start/end -->`,
+   author body preserved, replaced in place on re-run): the verdict, the tested revision (+ a
+   warning if the PR head moved), **Not covered** gaps, the `| Scenario | Result | Observed | Evidence |`
+   table, the visual summary, a **How to test** checklist left unchecked for the human, and a
+   collapsed setup section. **No media or media URLs**, so the squash-merge commit message GitHub
+   pre-fills from the description stays clean.
 
-**Rationale:** the reviewer sees the verdict + test-case table at the top of the PR instantly; the
-bulky screenshots live in the comment so they don't pollute the PR body or the squash-merge commit
-message. Order per run: upload evidence → post/update gallery comment (get URL) → splice the compact
-body block. A `gh` failure on either surface still writes `summary.md` and prints `pr_post=failed`,
-attempting both surfaces so one failing doesn't skip the other.
+Attachments render inline on the private repo for anyone who can read it, never expire, and never
+touch a branch. Cap: **50 files per run** — capture what answers a review question, not every
+viewport of every screen.
 
-**Evidence model = a PRIMARY host + a FALLBACK.** The primary host (`evidence.backend`, exported
-`$NM_EVIDENCE_BACKEND`) uploads each PNG and yields a URL that GitHub renders **inline** as a real
-`![](url)` thumbnail. External hosts serve public/signed bytes, so the gallery renders inline **even
-on private repos**. Primary hosts:
+**Read back:** the poster checks that every media reference was rewritten to an uploaded URL.
+`pr_post=partial-media` = the comment posted but some uploads failed — open the gallery, see what's
+missing, then re-run. `pr_post=failed` / `pr_post=no-pr` → it writes `summary.md` (local media paths)
+into the run dir; the verdict is never lost.
 
-- **`cmd`** — runs `$NOMISTAKES_EVIDENCE_UPLOAD_CMD` once per PNG via `sh -c` with `NM_FILE` (absolute
-  local path) and `NM_NAME` (`<pr>/<run>/<basename>`); the trimmed stdout is the image URL. Plug in
-  your own uploader. Setup: `$H/scripts/s3-evidence-setup.sh` (when wrapping aws) or none.
-- **`s3`** — `aws s3 cp` (`--content-type image/png`, key `<prefix>/<pr|no-pr>/<run>/<basename>`) then
-  `aws s3 presign`, from `$NM_EVIDENCE_BUCKET`/`$AWS_REGION`/`$NM_EVIDENCE_PREFIX`/`$NM_EVIDENCE_EXPIRES_IN`
-  (else legacy `~/.no-mistakes/evidence.json`); fully-private bucket, signed time-limited URLs. Setup:
-  `$H/scripts/s3-evidence-setup.sh`.
-- **`gdrive`** — rclone upload to `$NM_EVIDENCE_GDRIVE_REMOTE:$NM_EVIDENCE_GDRIVE_FOLDER`, shared
-  anyone-with-link, embeds the direct `https://lh3.googleusercontent.com/d/<id>` URL. Setup:
-  `$H/scripts/gdrive-evidence-setup.sh`.
-- **`imgur`** — anonymous upload via curl (Client-ID from `$NM_EVIDENCE_IMGUR_CLIENT_ID_ENV`), direct
-  `i.imgur.com` link. Setup: `$H/scripts/imgur-evidence-setup.sh`.
-
-**Fallback (`evidence.fallback`, exported `$NM_EVIDENCE_FALLBACK`, default `git-branch`)** kicks in
-when the primary fails OR is local/unset:
-
-- **`git-branch`** — pushes PNGs to an orphan `no-mistakes-evidence` branch via git plumbing (a temp
-  index — **NEVER** the PR working tree or PR branch, so evidence is never in the merged diff) and
-  embeds `raw.githubusercontent` URLs. These render **inline on PUBLIC repos**; on **private** repos
-  GitHub's camo proxy fetches anonymously and 404s, so they degrade to **click-through links** (a
-  limitation note is included) that still resolve for any repo-authenticated viewer.
-- **`local` / `none`** — no upload; the gallery is still written to `<run-dir>/summary.md`.
-
-**Cleanup:** orphan-branch evidence is reclaimed with `$H/harness/evidence-cleanup.mjs` —
-`--pr <N>` on merge/close, `--prune-days <N>`, or `--all`.
-
-**Fail-soft:** if the primary host errors / yields an empty URL for any screenshot, the run **logs a
-warning and falls back** to `$NM_EVIDENCE_FALLBACK` — it never hard-stops and the verdict is never
-lost. **Confidentiality:** `gdrive` (anyone-with-link) and `imgur` (anonymous) are **PUBLIC** hosts —
-use for **dev/test screenshots only**, never customer data. For private customer data use `s3`/`cmd`
-(org-trusted) or `git-branch` (stays in the private repo). Either way the skill never runs against
-prod and never captures secrets (§9).
-
-**Do NOT commit images to the PR branch.** No-PR / `gh` failure → it writes `summary.md` locally and
-prints `pr_post=no-pr` / `pr_post=failed`; the verdict is never lost.
+**Never commit media to the PR branch.**
 
 ## 9. Confidentiality & data handling
 
 - **Non-production data only** — localhost dev OR redacted preview-DB dev/preview envs (incl. same-PR previews are dev-equivalent). Never pointed at production.
-- **Trust boundary = the private repo / the chosen host.** Evidence always lives in
-  `~/.no-mistakes/$RUN/` (local); beyond that it goes to the configured primary host or the
-  `git-branch` fallback (orphan `no-mistakes-evidence` branch of the **same private repo**). Match the
-  host to the data classification: `s3`/`cmd` (org-trusted, signed/private) and `git-branch` (stays in
-  the private repo) are in-boundary for private customer data; `gdrive` (anyone-with-link) and `imgur`
-  (anonymous) are **PUBLIC** hosts — **dev/test screenshots only, never customer data**. Whatever the
-  host, it holds **only dev/test screenshots** (no secrets, no prod data — the skill never runs against
-  prod). Never point a host at data classified above what it can hold.
-- **Never publish secrets — across ALL artifacts** (screenshots, console, AI snapshots, findings,
+- **Trust boundary = the private repo.** Evidence lives in `~/.no-mistakes/$RUN/` (local) and as
+  GitHub attachments on the same private repo's PR, readable only by people with repo access. It
+  holds **only dev/test captures** (no secrets, no prod data — the skill never runs against prod).
+- **Never publish secrets — across ALL artifacts** (screenshots, clips, console, AI snapshots, findings,
   quoted PR/page text). Never capture credential entry, bearer tokens / API keys, or Doppler/`.auth`
   values; redact if they appear. When redaction confidence is low on a frame/log, **drop it** rather
   than publish. Local-only diagnostics may retain fuller detail — but credential entry is never
@@ -379,7 +340,7 @@ number (default: current branch's PR).
 
 **Always also report PR-post outcome, separable from the verdict:** if verification ran but
 posting fails (no PR, `gh` denied, upload/comment error), still emit the real `PASS`/`FAIL` plus
-`pr_post=failed` or `pr_post=no-pr`, and keep evidence locally — the result is never downgraded
+`pr_post=failed`, `pr_post=partial-media`, or `pr_post=no-pr`, and keep evidence locally — the result is never downgraded
 because posting failed.
 
 A `VISUAL_FINDINGS:` block is emitted once verification runs (empty if clean). The PR-description block names

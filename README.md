@@ -74,7 +74,7 @@ All user-authored, plugin-independent (they shell out to `codex` / `gh-axi`, not
   else `~/.no-mistakes/<project>.json`); no config → `BLOCKED reason=needs-config`. Schema, docs, and
   examples live in `no-mistakes/config/` — `examples/promptarmor.no-mistakes.json` reproduces the
   original PromptArmor setup (Neon project `round-unit-34763685`, Porter project 8417 / cluster 3429,
-  PropelAuth/MOFFITT, S3 evidence), `examples/supabase.no-mistakes.json` proves multi-BaaS generality.
+  PropelAuth/MOFFITT), `examples/supabase.no-mistakes.json` proves multi-BaaS generality.
   Each `SKILL.md` is the runtime playbook; `scripts/setup.sh` checks tooling.
 
 - **`wide-event-logging/`** — implement wide event logging (canonical log lines) in Python/FastAPI:
@@ -156,9 +156,9 @@ Marketplaces: `superpowers-marketplace`, `superpowers-extended-cc-marketplace`, 
 
 ## 8. Tooling (CLIs)
 
-`codex`, `gh` (+ `gh-axi`), `lavish-axi` (npx), `dev-browser` (nvm node v24.10.0), `doppler` (secrets
-for all repos), `porter` (preview envs), `neonctl`/`neon` (Neon branches), `aws` (S3 evidence + report
-gen), `psql`.
+`codex`, `gh` >= 2.99 (+ `gh-axi`; `--attach` posts no-mistakes screenshots and clips), `lavish-axi` (npx),
+`dev-browser` (nvm node v24.10.0), `agent-browser` + `ffmpeg` (no-mistakes clips), `doppler` (secrets
+for all repos), `porter` (preview envs), `neonctl`/`neon` (Neon branches), `aws` (report gen), `psql`.
 
 ## 9. Hooks
 
@@ -173,7 +173,7 @@ context-mode and superpowers. (Dropping those plugins drops their hooks too.)
    `~/.agents/skills/` and then into `~/.claude/skills/` (plus `~/.codex/skills/` when that Codex
    installation does not scan `~/.agents/skills/`).
 4. `cp codex/config.toml.example ~/.codex/config.toml` → fill in tokens; `codex login` (ChatGPT mode).
-5. Install CLIs: `codex`, `gh` + the `gh-axi`/`lavish-axi` tooling, `dev-browser`, `doppler`, `porter`,
+5. Install CLIs: `codex`, `gh` + the `gh-axi`/`lavish-axi` tooling, `dev-browser`, `agent-browser`, `ffmpeg`, `doppler`, `porter`,
    `neonctl`, `aws`. Authenticate each (`gh auth`, `doppler login`, `porter auth login`, `aws login`,
    `neonctl auth`).
 6. Wire MCP servers (Linear, Neon, …) into Claude Code and `~/.codex/config.toml`.

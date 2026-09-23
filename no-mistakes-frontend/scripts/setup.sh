@@ -28,8 +28,14 @@ else
   echo "no-mistakes: browser driver = dev-browser"
 fi
 
-if ! command -v gh >/dev/null 2>&1; then
+if ! have gh; then
   echo "no-mistakes: WARNING — gh CLI not found; PR evidence posting will be unavailable until 'gh' is installed and authenticated." >&2
+elif ! gh pr comment --help 2>/dev/null | grep -- '--attach' >/dev/null; then
+  echo "no-mistakes: WARNING — gh $(gh --version | head -n1 | awk '{print $3}') has no --attach; upgrade to gh >= 2.99 to post screenshots and clips." >&2
+fi
+
+if ! have agent-browser || ! have ffmpeg; then
+  echo "no-mistakes: NOTE — video clips need agent-browser (>= 0.37) and ffmpeg: npm i -g agent-browser && brew install ffmpeg. Screenshots work without them." >&2
 fi
 
 echo "no-mistakes: ready"

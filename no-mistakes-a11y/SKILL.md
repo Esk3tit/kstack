@@ -172,8 +172,8 @@ screen: **FAIL** only with positive evidence of an a11y defect; else
 Evidence dir default `~/.no-mistakes-a11y/<run>/` (reject any dir inside a product checkout → fall back
 to default). Per screen write: the **focus path** JSON, the **axe** JSON, and the focused-state /
 320px-reflow screenshots that evidence a FAIL or finding. **No screenshot of credential entry, tokens,
-or keys.** Post to the frontend repo's PR via `$FE/harness/post-evidence.mjs` (idempotent
-`<!-- no-mistakes-a11y:start/end -->` block): the status line, the per-axis result (keyboard / focus /
+or keys.** Post to the frontend repo's PR via `$FE/harness/post-evidence.mjs --marker no-mistakes-a11y`
+(idempotent `<!-- no-mistakes-a11y:start/end -->` block): the status line, the per-axis result (keyboard / focus /
 reflow / axe), the operability blockers, and a severity-grouped findings list. `gh` failure → still
 write `summary.md`, print `pr_post=<repo>#<pr>:failed`. Verdict is never lost.
 

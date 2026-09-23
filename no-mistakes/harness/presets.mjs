@@ -78,7 +78,7 @@ export function presetFor(platform) {
 }
 
 // Build a complete starter config from a chosen platform + answers. Deep-merges preset.db under base.
-export function buildConfig({ platform, project, org, repoOwner, checkoutBase, apps, authProfiles, evidence }) {
+export function buildConfig({ platform, project, org, repoOwner, checkoutBase, apps, authProfiles }) {
   const preset = presetFor(platform)
   const cfg = {
     $schema: 'https://raw.githubusercontent.com/promptarmor/kstack/master/no-mistakes/config/no-mistakes.schema.json',
@@ -88,7 +88,6 @@ export function buildConfig({ platform, project, org, repoOwner, checkoutBase, a
   if (org) cfg.org = org
   if (repoOwner) cfg.repoOwner = repoOwner
   if (checkoutBase) cfg.checkoutBase = checkoutBase
-  cfg.evidence = evidence || { backend: 'local' }
   if (authProfiles && Object.keys(authProfiles).length) cfg.auth = { profiles: authProfiles }
   cfg.apps = apps && apps.length ? apps : [{ name: project, kind: 'frontend' }]
   return cfg

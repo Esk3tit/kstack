@@ -43,10 +43,15 @@ check_any() {
 echo ">> no-mistakes (router) tooling check"
 check node     "install Node 18+ (harness scripts use global fetch)" required
 check porter   "resolve the preview env (porter app manifests / kubectl)" required
-check gh       "post the combined verdict to both PRs" required
+check gh       "post the combined verdict to both PRs (>= 2.99 for --attach media)" required
+if command -v gh >/dev/null 2>&1 && ! gh pr comment --help 2>/dev/null | grep -- '--attach' >/dev/null; then
+  printf '  MISS %-9s %s\n' "gh-attach" "gh is too old for --attach; upgrade to gh >= 2.99"; missing=1
+fi
 check git      "repo/branch/PR resolution" required
 check_any browser "drive the frontend UI — install dev-browser OR chrome-devtools-axi" required dev-browser chrome-devtools-axi
 check neonctl  "optional CLI fallback for preview DB branch resolution; the DB MCP (in-session) is preferred" optional
+check agent-browser "optional — records interaction clips (>= 0.37)" optional
+check ffmpeg   "optional — encodes agent-browser clips" optional
 check psql     "optional — async DB poll-until tight polling (else the DB MCP run-SQL loop)" optional
 
 echo
