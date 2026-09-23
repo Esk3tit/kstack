@@ -337,7 +337,7 @@ number (default: current branch's PR).
 
 **Always also report PR-post outcome, separable from the verdict:** if verification ran but
 posting fails (no PR, `gh` denied, upload/comment error), still emit the real `PASS`/`FAIL` plus
-`pr_post=failed`, `pr_post=partial-media`, or `pr_post=no-pr`, and keep evidence locally — the result is never downgraded
+`pr_post=failed`, `pr_post=partial-media`, `pr_post=partial-cleanup`, or `pr_post=no-pr`, and keep evidence locally — the result is never downgraded
 because posting failed.
 
 A `VISUAL_FINDINGS:` block is emitted once verification runs (empty if clean). The PR-description block names

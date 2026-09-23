@@ -68,6 +68,8 @@ if (declaredStatus && !['PASS', 'FAIL', 'BLOCKED'].includes(declaredStatus)) die
 if ((!cases.length && declaredStatus !== 'BLOCKED') || cases.some((c) => typeof c.pass !== 'boolean'))
   die('results.cases must be non-empty (unless status is BLOCKED), each with a boolean "pass"');
 if (declaredStatus === 'PASS' && cases.some((c) => !c.pass)) die('results.status is PASS but a case failed');
+const passing = declaredStatus ? declaredStatus === 'PASS' : cases.every((c) => c.pass);
+if (passing && !/^[0-9a-f]{7,40}\b/i.test(String(results.revision ?? ''))) die('a PASS needs results.revision to start with the tested commit SHA');
 const findings = Array.isArray(results.findings) ? results.findings : [];
 const list = (v) => (Array.isArray(v) ? v : v ? [v] : []);
 // Only captures a case or finding names are published; anything else in the run dir stays local.
@@ -270,6 +272,7 @@ try {
 }
 
 const stale = deleteComments(gallery.previous.filter((old) => old !== gallery.id));
-if (stale.length) console.error(`[post-evidence] old galleries left on the PR: ${stale.join(', ')}`);
-console.log('pr_post=spliced');
-console.log(`pr=${pr} repo=${repo} media=${media.length} gallery_url=${gallery.url ?? '-'} replaced=${gallery.previous.length}`);
+if (stale.length) console.error(`[post-evidence] old galleries left on the PR: ${stale.join(', ')}; re-run to remove them`);
+console.log(`pr_post=${stale.length ? 'partial-cleanup' : 'spliced'}`);
+console.log(`pr=${pr} repo=${repo} media=${media.length} gallery_url=${gallery.url ?? '-'} replaced=${gallery.previous.length - stale.length}`);
+process.exit(stale.length ? 1 : 0);
