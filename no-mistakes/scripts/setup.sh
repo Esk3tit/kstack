@@ -28,7 +28,7 @@ check node     "install Node 18+ (harness scripts use global fetch)" required
 check porter   "resolve the preview env (porter app manifests / kubectl)" required
 check gh       "post the combined verdict to both PRs (>= 2.99 for --attach media)" required
 if command -v gh >/dev/null 2>&1 && ! gh pr comment --help 2>/dev/null | grep -- '--attach' >/dev/null; then
-  printf '  MISS %-9s %s\n' "gh-attach" "gh is too old for --attach; upgrade to gh >= 2.99"; missing=1
+  printf '  --   %-9s %s\n' "gh-attach" "gh is too old for --attach: screenshots and clips stay local (upgrade to gh >= 2.99)"
 fi
 check git      "repo/branch/PR resolution" required
 check agent-browser "drive the frontend UI (npm i -g agent-browser && agent-browser install)" required
