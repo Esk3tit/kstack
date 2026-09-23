@@ -102,7 +102,8 @@ writes a validated starter; verify with `… load-config.mjs --export` from insi
 
 ## 4. Codex CLI setup (`codex/config.toml.example`)
 
-`~/.codex/config.toml` — model `gpt-5.5`, `model_reasoning_effort = "xhigh"`, `[features] multi_agent`.
+`~/.codex/config.toml` — no `model` line, so Codex always runs its newest default model;
+`model_reasoning_effort = "xhigh"`, `[features] multi_agent`.
 MCP servers wired into Codex: **Linear** (`mcp.linear.app`), **Neon** (`mcp.neon.tech`, token redacted
 in the example), and Codex.app's `node_repl` (computer-use). Auth is ChatGPT-mode (`~/.codex/auth.json`).
 Copy `config.toml.example` → `~/.codex/config.toml` and fill in your own tokens.

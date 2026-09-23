@@ -1,4 +1,3 @@
-model = "gpt-5.5"
 model_reasoning_effort = "xhigh"
 
 
@@ -106,9 +105,6 @@ source = "/Users/khaiphan/.codex/.tmp/bundled-marketplaces/openai-bundled"
 last_updated = "2026-06-24T06:11:12Z"
 source_type = "local"
 source = "/Users/khaiphan/.cache/codex-runtimes/codex-primary-runtime/plugins/openai-primary-runtime"
-
-[tui.model_availability_nux]
-"gpt-5.5" = 4
 
 [notice]
 fast_default_opt_out = true
