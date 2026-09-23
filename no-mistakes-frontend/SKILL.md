@@ -192,6 +192,7 @@ evidence dir (`look-<SLUG>-*.png`, `audit-<SLUG>.json`).
   below **2.0:1** (text effectively illegible) is a usability-breaking **FAIL**. Undersized tap
   targets and overflow stay findings unless overflow blocks the interaction under test.
 - Findings carry severity (high / medium / low-cosmetic), distinct from the usability-breaking FAIL bar.
+  A usability-breaking visual issue goes into `results.json` as a failed case, not only a finding.
 - **Baseline (per app):** diff tokens vs an existing, untouched, **analogous list/detail page in
   the same app area** — the caller supplies it. If the screen is net-new with no analogue, fall
   back to the **app shell + a couple of representative existing pages** and lean on universal facts

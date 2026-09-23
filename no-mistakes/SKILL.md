@@ -73,7 +73,8 @@ Announce the chosen route before proceeding.
    `agent-browser` (the browser driver, required for FE-involving routes), `neonctl`/`psql`/`ffmpeg`
    (optional), AND that **both** specialist skills (`$FE`,
    `$BE`, each with a `harness/` dir) are installed.
-   - Missing **tool** → `BLOCKED reason=needs-setup`.
+   - Missing **tool** → `BLOCKED reason=needs-setup`. An `FE` line (Node < 24, missing or old
+     `agent-browser`) blocks only frontend-involving routes.
    - Missing **specialist skill** → name exactly which one and **ASK the user whether to install it**
      from the kstack skills repo: `cp -R <kstack-checkout>/<skill> ~/.claude/skills/` (offer to clone
      the skills repo first if the checkout is absent). **Do not

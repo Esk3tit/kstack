@@ -11,7 +11,7 @@ if ! ab_current; then
   echo "no-mistakes: installing agent-browser >= 0.37 (global) ..."
   npm install -g agent-browser@latest
 fi
-agent-browser install   # idempotent; downloads Chrome if missing
+agent-browser install $([ "$(uname -s)" = Linux ] && echo --with-deps)   # idempotent; Linux also gets Chrome's system libraries
 echo "no-mistakes: browser driver = agent-browser $(agent-browser --version | awk '{print $2}')"
 
 if ! have gh; then

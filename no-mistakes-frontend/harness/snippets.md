@@ -42,7 +42,7 @@ appear in argv, shell history, or a file. Prints `login-ok` or the failing step.
 cd <auth profile secretsScopeDir>
 doppler run -- python3 - <<'PY' | agent-browser batch --bail --json | python3 -c 'import json,sys; r=json.load(sys.stdin); bad=[i for i,x in enumerate(r) if not x["success"]]; print(f"login-FAILED at step {bad[0]}" if bad else "login-ok")'
 import json, os
-url = os.environ["APP_URL"]
+url = os.environ["APP_URL"].rstrip("/")
 print(json.dumps([
     ["open", url],
     ["wait", "--url", "**/login**"],
