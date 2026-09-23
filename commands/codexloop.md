@@ -14,7 +14,7 @@ Run Codex (state-of-the-art GPT model) against the current PR or branch to perfo
 
 ## Mechanism — use the Codex plugin (openai-codex/codex) primitives, NOT a hand-rolled `codex exec` call
 
-This command drives Codex **exclusively through the installed `openai-codex/codex` plugin's companion runtime** (`scripts/codex-companion.mjs`). Do **not** shell out to `codex exec` / `codex exec review` directly, and do **not** invoke the local `codex-cli` skill — the plugin primitives take priority and are the source of truth for how Codex is invoked here.
+This command drives Codex **exclusively through the installed `openai-codex/codex` plugin's companion runtime** (`scripts/codex-companion.mjs`). Do **not** shell out to `codex exec` / `codex exec review` directly — the plugin primitives take priority and are the source of truth for how Codex is invoked here.
 
 The review step calls the companion's **`adversarial-review`** subcommand (the same engine `/codex:adversarial-review` and the stop-time review gate use). It is the right primitive for this loop because, unlike the native `review`, it:
 - returns **structured JSON** — `{verdict, summary, findings[], next_steps[]}`, each finding `{severity, title, body, file, line_start, line_end, recommendation}` — so CLEAN detection and finding extraction are exact, not prose-scraped;
@@ -126,7 +126,7 @@ The companion runs the review **foreground/blocking** (no background path for re
    - If pushed: print the remote URL and any associated PR URL.
 
 ## Constraints
-- **Drive Codex only through the openai-codex plugin companion** (`codex-companion.mjs adversarial-review` for review, optionally `task --write` for escalated fixes). Do not call `codex exec`/`codex exec review` directly and do not use the `codex-cli` skill — the plugin primitives take priority.
+- **Drive Codex only through the openai-codex plugin companion** (`codex-companion.mjs adversarial-review` for review, optionally `task --write` for escalated fixes). Do not call `codex exec`/`codex exec review` directly — the plugin primitives take priority.
 - **Review for real problems first** — logical errors, bugs, broken edge cases, security/race issues. Nits welcome only when they meaningfully improve quality. Reject formatting churn, bikeshedding, and unnecessary extra tests.
 - **Keep it simple** — reject any suggestion that adds complexity, abstractions, bloated fallbacks, or defensive checks for impossible states without fixing a real problem.
 - **Push back on Codex** — Claude is the human-in-the-loop, not a rubber stamp. Skip findings that aren't necessary and note the rejection. Don't fabricate changes to silence findings.

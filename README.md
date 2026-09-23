@@ -16,7 +16,6 @@ documents what's third-party (so I know what I'm dropping vs. keeping).
 |------|------------|
 | `CLAUDE.md` | Global instructions for Claude Code. **Shared with Codex** via a symlink (below). |
 | `commands/` | Custom slash commands (Codex-driven review loops + PR hygiene). |
-| `codex-cli/` | The `codex-cli` skill — the reliable `codex exec` recipe these commands depend on. |
 | `no-mistakes/` · `no-mistakes-frontend/` · `no-mistakes-backend/` · `no-mistakes-a11y/` · `no-mistakes-setup/` | The verification skill family (router + three specialists: frontend, backend, deep-a11y) plus the onboarding skill that generates a project's `.no-mistakes.json`. See each `SKILL.md`. |
 | `wide-event-logging/` | Skill — canonical-log-line / wide-event logging for Python/FastAPI (with reference modules). |
 | `explain-code-change/` | Skill — turn a branch, PR, or diff into an interactive HTML walkthrough a non-engineer can retell: one carried analogy, teaching diagrams that link to every changed file and function. |
@@ -53,16 +52,12 @@ All user-authored, plugin-independent (they shell out to `codex` / `gh-axi`, not
 | `/address-pr-comments` | Resolve unresolved PR review-bot comments via parallel subagents. **Loops by default** (`--once` for a single pass), gating on **reviewers** — code-review bots + lint/test — never CI/CD deploys. |
 | `/trim-code-comments` | Clean up over-commenting in code just written, per the `CLAUDE.md` comment rules. |
 
-> `/codexloop`, `/review-spec`, `/review-implementation-plan` all defer to the **`codex-cli`** skill
-> for the reliable invocation recipe (see below). Key gotcha baked in: `codex exec review` takes **no
-> custom prompt** and **ignores `--output-schema`** (emits prose) — only plain `codex exec` honors a
-> schema.
+> `/codexloop` drives Codex through the openai-codex Claude Code plugin. `/review-spec` and
+> `/review-implementation-plan` call plain `codex exec` with an output schema: `codex exec review`
+> takes **no custom prompt** and **ignores `--output-schema`** (emits prose).
 
 ## 3. Custom skills (mine)
 
-- **`codex-cli/`** — the source-of-truth recipe for calling `codex exec` reliably (consults, code
-  review, web-search research) and avoiding the common failure modes (hangs, empty output, JSONL
-  parsing, diff-piping killed by MCP churn). Every command/skill that shells out to Codex follows it.
 - **`no-mistakes/` (router) + `no-mistakes-frontend/` + `no-mistakes-backend/` + `no-mistakes-a11y/`** — agentic verification
   for app changes against a running app + its database. The router classifies a request and runs
   frontend-only / backend-only / **fullstack round-trip** (drive a UI action → assert the UI → read the
