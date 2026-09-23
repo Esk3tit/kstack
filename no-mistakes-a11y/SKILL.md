@@ -67,10 +67,10 @@ Own harness at `$A/harness/a11y-drive.js` (the in-page collectors). Reuse `$FE/h
 
 ## 2. Auth + recon + required controls
 
-**Auth — reuse the persistent session, never re-login if avoidable.** Use `$FE/harness/snippets.md`
-template **B/C** with `AGENT_BROWSER_SESSION` and `AGENT_BROWSER_RESTORE` set to the frontend app's
-`browserProfile` from config, so the existing authed session is reused with **no creds**. Only fall back to template **A** (full login) if
-no session is persisted. Confirm the active **persona/org matches the intended context** (a stale
+**Auth — reuse the run's session, never re-login if avoidable.** Use `$FE/harness/snippets.md`
+template **B/C** in the run's session (`AGENT_BROWSER_SESSION="<frontend browserProfile>-$RUN"`); when
+the router already logged in for this run, that session is reused with **no creds**. Standalone, log in
+with template **A** first. Confirm the active **persona/org matches the intended context** (a stale
 persona produces false evidence). **Never** screenshot credential entry or echo a token/key.
 
 **Recon the touched screens** with `agent-browser snapshot -i` (pipe a full `snapshot` through

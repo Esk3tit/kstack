@@ -97,13 +97,13 @@ the untrusted-content rule.
 
 Read `$H/harness/snippets.md` and use the matching template. Creds reach the browser only through
 `batch` stdin; **never put them in argv or a file, never echo them, never snapshot, screenshot, or
-record while they sit in the form.** Set `AGENT_BROWSER_SESSION` and `AGENT_BROWSER_RESTORE` to the
-app's `browserProfile` so every command shares one session that survives across runs.
+record while they sit in the form.** Set `AGENT_BROWSER_SESSION="<app.browserProfile>-$RUN"` so the run
+owns its browser, and `agent-browser close` it when the run ends, even on BLOCKED or FAIL.
 
 **A login app** (auth profile `kind: propelauth` / `browser-login`) — snippet **A**. Run from the
 auth profile's `secretsScopeDir` (the secrets scope; worktrees aren't scoped), with `APP_URL` set to
 the target (the app's `devUrl`, or the preview `feUrl`; never an inherited `PLAYWRIGHT_BASE_URL`).
-Log in once; the restored session carries later runs. Logged-in marker = the app's authenticated
+Log in once per run. Logged-in marker = the app's authenticated
 marker (PropelAuth example: the "My Organization" nav link). On failure: snapshot + screenshot the
 (credential-free) page for calibration, then `NOMISTAKES_FRONTEND_STATUS=BLOCKED reason=login-failed`.
 

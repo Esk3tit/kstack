@@ -1,7 +1,7 @@
 # agent-browser templates
 
 Verified-live templates for driving the **configured frontend app(s)** with the
-`agent-browser` CLI: one command per action against a persistent browser session,
+`agent-browser` CLI: one command per action against the run's own browser session,
 elements addressed by the `@eN` refs a snapshot returns. The full command
 reference is `agent-browser skills get core`.
 
@@ -13,15 +13,15 @@ profile (`auth.profiles[app.auth]`: `kind`, `secretsTool`, `secretsScopeDir`,
 ```bash
 APP_DIR=<app.repoPath>                  # local checkout
 export APP_URL=<app.devUrl>             # e.g. http://localhost:5173
-export AGENT_BROWSER_SESSION=<app.browserProfile> AGENT_BROWSER_RESTORE=<app.browserProfile>
+export AGENT_BROWSER_SESSION="<app.browserProfile>-$RUN"   # one browser per run; `agent-browser close` at the end
 EV=~/.no-mistakes/$RUN                  # evidence dir
 # Run a function from a harness file in the page; prints its JSON result.
 in_page() { { echo '(() => {'; cat "$1"; echo "return $2;"; echo '})()'; } | agent-browser eval --stdin; }
 ```
 
 Key facts learned live:
-- `AGENT_BROWSER_RESTORE` saves cookies + storage under the app's `browserProfile` and restores
-  them on the next launch. Log in ONCE (A), then later runs start logged in.
+- Each run owns its browser session, so parallel runs never drive each other's page. A login app
+  logs in once per run (A); the login lasts for the whole run.
 - A hosted login (e.g. PropelAuth) redirects client-side a moment after `open`, then back to the app
   origin (which may be a preview URL in dev). Wait on the URL or text you expect, never a fixed delay.
 - Refs go stale after the page changes: `snapshot -i` again, then act. `find role|label|text …`
@@ -66,7 +66,7 @@ agent-browser wait --text "My Organization"   # the app's logged-in marker
 
 ---
 
-## B. Recon (session already restored — no login, no creds)
+## B. Recon (after A, or a no-login app — no creds)
 
 ```bash
 agent-browser open "$APP_URL/<path>"          # e.g. /organization, /vendors/123

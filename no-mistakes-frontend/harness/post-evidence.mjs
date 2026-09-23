@@ -194,14 +194,10 @@ function deleteComments(ids) {
   }
 }
 
-// Posts the new gallery first and deletes the old one only after a clean upload, so the last good
-// gallery survives a failure. gh exits non-zero on a partial upload but still posts and prints the URL.
+// gh exits non-zero on a partial upload but still posts the comment and prints its URL.
 function postGallery() {
   const previous = galleryComments();
-  if (!galleryBody) {
-    deleteComments(previous);
-    return { url: null, action: previous.length ? 'removed-stale' : 'skipped-no-media', uploadError: null };
-  }
+  if (!galleryBody) return { url: null, id: null, previous, uploadError: null };
   writeFileSync(join(runDir, 'nm-gallery.md'), galleryBody);
   const attach = media.flatMap((f) => ['--attach', `./${f}`]);
   let url = null;
@@ -213,9 +209,7 @@ function postGallery() {
     url = ((e.stdout || '').toString().match(/https:\/\/github\.com\/\S+#issuecomment-\d+/) || [])[0] || null;
     if (!url) throw new Error(uploadError);
   }
-  const id = (url.match(/issuecomment-(\d+)/) || [])[1];
-  if (!uploadError) deleteComments(previous.filter((old) => old !== id));
-  return { url, id, action: previous.length ? 'replaced' : 'created', uploadError };
+  return { url, id: (url.match(/issuecomment-(\d+)/) || [])[1], previous, uploadError };
 }
 
 // Every ./<file> reference must have been rewritten to an uploaded attachment URL.
@@ -224,18 +218,7 @@ function unresolvedMedia(commentId) {
   return media.filter((f) => body.includes(`(./${f})`));
 }
 
-let headSha = null;
-let currentBody = '';
-try {
-  const view = JSON.parse(gh(['pr', 'view', pr, '--repo', repo, '--json', 'body,headRefOid']));
-  headSha = view.headRefOid;
-  currentBody = view.body;
-} catch (e) {
-  console.error(`[post-evidence] could not read PR #${pr}: ${e.message.split('\n')[0]}`);
-  persistAndExit('failed');
-}
-
-let gallery = { url: null, action: 'failed', uploadError: null };
+let gallery = { url: null, id: null, previous: [], uploadError: null };
 let galleryOk = false;
 try {
   gallery = postGallery();
@@ -244,31 +227,39 @@ try {
   console.error(`[post-evidence] gallery comment failed: ${e.message.split('\n')[0]}`);
 }
 
-let missing = [];
-if (gallery.id) {
-  try { missing = unresolvedMedia(gallery.id); }
-  catch (e) { console.error(`[post-evidence] could not read back the gallery: ${e.message.split('\n')[0]}`); }
+let mediaOk = galleryOk && !gallery.uploadError;
+if (mediaOk && gallery.id) {
+  try {
+    const missing = unresolvedMedia(gallery.id);
+    if (missing.length) console.error(`[post-evidence] not uploaded: ${missing.join(', ')}`);
+    mediaOk = missing.length === 0;
+  } catch (e) {
+    console.error(`[post-evidence] could not read back the gallery: ${e.message.split('\n')[0]}`);
+    mediaOk = false;
+  }
 }
-if (gallery.uploadError || missing.length) {
-  console.error(`[post-evidence] media did not all upload (${missing.join(', ') || gallery.uploadError}); inspect the gallery before retrying.`);
-}
+if (galleryOk && !mediaOk) console.error('[post-evidence] media not verified; the previous gallery is kept. Inspect the new one before retrying.');
 
+// Read the body at the last moment: the upload can take a while and the author may edit meanwhile.
 let bodyOk = false;
+let headSha = null;
 try {
+  const view = JSON.parse(gh(['pr', 'view', pr, '--repo', repo, '--json', 'body,headRefOid']));
+  headSha = view.headRefOid;
   const bodyFile = join(runDir, 'pr-body.md');
-  writeFileSync(bodyFile, spliceIntoBody(currentBody, buildBodyBlock({ galleryUrl: gallery.url, headSha })));
+  writeFileSync(bodyFile, spliceIntoBody(view.body, buildBodyBlock({ galleryUrl: gallery.url, headSha })));
   gh(['pr', 'edit', pr, '--repo', repo, '--body-file', bodyFile]);
   bodyOk = true;
 } catch (e) {
-  console.error(`[post-evidence] gh pr edit failed: ${e.message.split('\n')[0]}`);
+  console.error(`[post-evidence] updating the PR description failed: ${e.message.split('\n')[0]}`);
 }
 
 if (bodyOk && galleryOk) {
-  const mediaOk = !gallery.uploadError && missing.length === 0;
+  if (mediaOk) deleteComments(gallery.previous.filter((old) => old !== gallery.id));
   console.log(`pr_post=${mediaOk ? 'spliced' : 'partial-media'}`);
-  console.log(`pr=${pr} repo=${repo} media=${media.length} missing=${missing.length} gallery=${gallery.action} gallery_url=${gallery.url ?? '-'}`);
+  console.log(`pr=${pr} repo=${repo} media=${media.length} gallery_url=${gallery.url ?? '-'} replaced=${mediaOk ? gallery.previous.length : 0}`);
   process.exit(mediaOk ? 0 : 1);
 }
 
-console.error(`[post-evidence] surfaces: body=${bodyOk ? 'ok' : 'failed'} gallery=${galleryOk ? gallery.action : 'failed'}`);
+console.error(`[post-evidence] surfaces: body=${bodyOk ? 'ok' : 'failed'} gallery=${galleryOk ? 'ok' : 'failed'}`);
 persistAndExit('failed', { galleryUrl: gallery.url, headSha });

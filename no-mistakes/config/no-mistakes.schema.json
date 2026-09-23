@@ -182,7 +182,7 @@
           "repoPath": { "type": "string", "description": "Local checkout path. If omitted, derived from checkoutBase + repo basename. Supports ~." },
           "devUrl": { "type": "string", "description": "Local dev URL (e.g. http://localhost:5173 or :8090)." },
           "devCommand": { "type": "string", "description": "Command to start it locally (e.g. pnpm run dev, make api)." },
-          "browserProfile": { "type": "string", "description": "agent-browser session name (frontend); also the restore key that keeps the login across runs." },
+          "browserProfile": { "type": "string", "description": "agent-browser session name prefix (frontend); each run appends its run id." },
           "auth": { "type": "string", "description": "Key into auth.profiles. Omit/none for no auth." },
           "noLogin": { "type": "boolean", "default": false },
           "previewService": { "type": "string", "description": "Preview-platform service name (e.g. Porter service)." },
