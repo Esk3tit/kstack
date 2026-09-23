@@ -16,11 +16,11 @@ documents what's third-party (so I know what I'm dropping vs. keeping).
 |------|------------|
 | `CLAUDE.md` | Global instructions for Claude Code. **Shared with Codex** via a symlink (below). |
 | `commands/` | Custom slash commands (Codex-driven review loops + PR hygiene). |
-| `codex-cli/` | The `codex-cli` skill — the reliable `codex exec` recipe these commands depend on. |
 | `no-mistakes/` · `no-mistakes-frontend/` · `no-mistakes-backend/` · `no-mistakes-a11y/` · `no-mistakes-setup/` | The verification skill family (router + three specialists: frontend, backend, deep-a11y) plus the onboarding skill that generates a project's `.no-mistakes.json`. See each `SKILL.md`. |
 | `wide-event-logging/` | Skill — canonical-log-line / wide-event logging for Python/FastAPI (with reference modules). |
 | `explain-code-change/` | Skill — turn a branch, PR, or diff into an interactive HTML walkthrough a non-engineer can retell: one carried analogy, teaching diagrams that link to every changed file and function. |
 | `codex/config.toml.example` | My Codex CLI config, **token redacted**. |
+| `legacy/` | Retired commands and skills kept for reference, not installed: `/review-spec`, `/review-implementation-plan`, and the `codex-cli` recipe they used. |
 
 ---
 
@@ -43,26 +43,16 @@ documents what's third-party (so I know what I'm dropping vs. keeping).
 
 ## 2. Custom slash commands (`commands/`)
 
-All user-authored, plugin-independent (they shell out to `codex` / `gh-axi`, not Superpowers).
+All user-authored. `/codexloop` drives Codex through the openai-codex Claude Code plugin; `/address-pr-comments` uses `gh-axi`.
 
 | Command | Purpose |
 |---------|---------|
-| `/codexloop` | Run `codex exec review` on the current PR/branch, fix **real** findings, loop until clean, push on CLEAN. Claude is the human-in-the-loop reviewing Codex's review. |
-| `/review-spec` | Iterative Codex⇄Claude review loop over a high-level **spec** markdown; edits in place until it converges. |
-| `/review-implementation-plan` | Same loop, for an **implementation plan** markdown. |
+| `/codexloop` | Run a Codex adversarial review on the current PR/branch, fix **real** findings, loop until clean, push on CLEAN. Claude is the human-in-the-loop reviewing Codex's review. |
 | `/address-pr-comments` | Resolve unresolved PR review-bot comments via parallel subagents. **Loops by default** (`--once` for a single pass), gating on **reviewers** — code-review bots + lint/test — never CI/CD deploys. |
 | `/trim-code-comments` | Clean up over-commenting in code just written, per the `CLAUDE.md` comment rules. |
 
-> `/codexloop`, `/review-spec`, `/review-implementation-plan` all defer to the **`codex-cli`** skill
-> for the reliable invocation recipe (see below). Key gotcha baked in: `codex exec review` takes **no
-> custom prompt** and **ignores `--output-schema`** (emits prose) — only plain `codex exec` honors a
-> schema.
-
 ## 3. Custom skills (mine)
 
-- **`codex-cli/`** — the source-of-truth recipe for calling `codex exec` reliably (consults, code
-  review, web-search research) and avoiding the common failure modes (hangs, empty output, JSONL
-  parsing, diff-piping killed by MCP churn). Every command/skill that shells out to Codex follows it.
 - **`no-mistakes/` (router) + `no-mistakes-frontend/` + `no-mistakes-backend/` + `no-mistakes-a11y/`** — agentic verification
   for app changes against a running app + its database. The router classifies a request and runs
   frontend-only / backend-only / **fullstack round-trip** (drive a UI action → assert the UI → read the
@@ -124,8 +114,8 @@ Documented so I know what each provides when deciding keep/drop. Reinstall from 
 | Skill | What it does | Keep? |
 |-------|--------------|-------|
 | `gh-axi` | GitHub via the `gh-axi` CLI (issues, PRs, runs, releases, raw API). | keep — commands lean on it |
-| `lavish` | Rich reviewable HTML artifacts via `lavish-axi` CLI (annotate + send feedback). | keep — used for spec review |
-| `dev-browser` | Persistent-state browser automation (Playwright scripts). | optional — no-mistakes drives `agent-browser` |
+| `lavish` | Rich reviewable HTML artifacts via `lavish-axi` CLI (annotate + send feedback). | keep |
+| `agent-browser` | Discovery stub from [vercel-labs/agent-browser](https://github.com/vercel-labs/agent-browser/tree/main/skills/agent-browser); points agents at `agent-browser skills get core`. The only browser driver. | keep — required by no-mistakes |
 | `browser-use` | Browser-Use SDK / library reference. | optional |
 | `excalidraw-diagram-generator` | Excalidraw diagrams from NL. | optional |
 | `find-skills` | Discover/install agent skills. | optional |
