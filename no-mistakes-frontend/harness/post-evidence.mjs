@@ -271,7 +271,13 @@ try {
   persistAndExit('failed', { headSha });
 }
 
-const stale = deleteComments(gallery.previous.filter((old) => old !== gallery.id));
+// A concurrent run may have linked one of the snapshotted galleries since; never delete the linked one.
+let linked = gallery.id;
+try {
+  const block = (gh(['pr', 'view', pr, '--repo', repo, '--json', 'body', '-q', '.body']).match(MARKER_REGION) || [''])[0];
+  linked = (block.match(/Screenshots and clips →\*\* \S*issuecomment-(\d+)/) || [])[1] || linked;
+} catch {}
+const stale = deleteComments(gallery.previous.filter((old) => old !== gallery.id && old !== linked));
 if (stale.length) console.error(`[post-evidence] old galleries left on the PR: ${stale.join(', ')}; re-run to remove them`);
 console.log(`pr_post=${stale.length ? 'partial-cleanup' : 'spliced'}`);
 console.log(`pr=${pr} repo=${repo} media=${media.length} gallery_url=${gallery.url ?? '-'} replaced=${gallery.previous.length - stale.length}`);

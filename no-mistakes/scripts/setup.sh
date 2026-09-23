@@ -25,6 +25,9 @@ check() {
 
 echo ">> no-mistakes (router) tooling check"
 check node     "install Node 24+ (agent-browser requires it)" required
+if command -v node >/dev/null 2>&1 && ! node -e 'process.exit(Number(process.versions.node.split(".")[0]) >= 24 ? 0 : 1)'; then
+  printf '  MISS %-9s %s\n' "node-version" "$(node --version) is older than 24 (agent-browser requires it)"; missing=1
+fi
 check porter   "resolve the preview env (porter app manifests / kubectl)" required
 check gh       "post the combined verdict to both PRs (>= 2.99 for --attach media)" required
 if command -v gh >/dev/null 2>&1 && ! gh pr comment --help 2>/dev/null | grep -- '--attach' >/dev/null; then

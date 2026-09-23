@@ -127,6 +127,10 @@
         }
       }
     },
+    "evidence": {
+      "deprecated": true,
+      "description": "Ignored. Screenshots and clips upload as GitHub attachments; remove this key."
+    },
     "auth": {
       "type": "object",
       "description": "Auth surfaces the harness mints/uses. Each app references a profile by key.",
