@@ -50,8 +50,8 @@ Rankings, higher = better. Cost reflects what I actually pay (OpenAI has really 
 |---|---|---|---|
 | gpt-6-sol (high reasoning) | 10 | 8 | 5 |
 | sonnet-5 | 3 | 5 | 7 |
-| opus-5.5 | 4 | 7 | 8 |
-| fable-5.1 | 2 | 9 | 9 |
+| opus-5.5 | 6 | 7 | 8 |
+| fable-5.1 | 3 | 9 | 9 |
 
 How to apply:
 - These are defaults, not limits. You have standing permission to override them: if a cheaper model's output doesn't meet the bar, rerun or redo the work with a smarter model without asking. Judge the output, not the price tag. Escalating costs less than shipping mediocre work.
