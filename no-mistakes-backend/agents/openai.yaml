@@ -1,0 +1,4 @@
+interface:
+  display_name: "No-Mistakes Backend"
+  short_description: "Drive an API change, prove the DB read-after-write"
+  default_prompt: "Verify this backend change: mint real auth, drive the changed endpoints, then read the database after the write to prove it persisted, and post the evidence to the PR."

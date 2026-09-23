@@ -6,10 +6,10 @@
 // Also importable: `import { discover, validate, withDefaults, exportLines } from './load-config.mjs'`.
 // Zero-dependency. The skills supply the method; this file supplies the targets.
 
-import { readFileSync, existsSync } from 'node:fs'
+import { readFileSync, existsSync, realpathSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { homedir } from 'node:os'
-import { pathToFileURL } from 'node:url'
+import { pathToFileURL, fileURLToPath } from 'node:url'
 
 export const expandHome = (p) => (typeof p === 'string' && p.startsWith('~') ? join(homedir(), p.slice(1)) : p)
 
@@ -193,5 +193,17 @@ function runCli() {
   process.stdout.write(exportLines(cfg, path) + '\n')
 }
 
-const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href
+// The skill dir is often a symlink (~/.claude/skills/... → real checkout), so
+// argv[1] (the link path) and import.meta.url (the resolved real path) differ.
+// Compare realpaths so the CLI still runs when invoked through the symlink.
+const isMain = (() => {
+  if (!process.argv[1]) return false
+  try {
+    return (
+      realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1])
+    )
+  } catch {
+    return import.meta.url === pathToFileURL(process.argv[1]).href
+  }
+})()
 if (isMain) runCli()

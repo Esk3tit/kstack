@@ -1,0 +1,4 @@
+interface:
+  display_name: "No-Mistakes (router)"
+  short_description: "Verify a change end-to-end against the running app + DB"
+  default_prompt: "Verify this change end-to-end: classify the route (frontend / backend / fullstack), drive the flow, prove it against the database, and post the verdict to the PR."

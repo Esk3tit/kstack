@@ -1,0 +1,4 @@
+interface:
+  display_name: "No-Mistakes Deep A11y"
+  short_description: "Keyboard / focus / reflow accessibility verification"
+  default_prompt: "Run the deep-accessibility pass on this UI change: keyboard operability, focus order and visibility, and 320px reflow; report operability blockers as FAIL and post findings to the PR."

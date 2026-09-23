@@ -1,0 +1,4 @@
+interface:
+  display_name: "No-Mistakes Setup"
+  short_description: "Generate a project's .no-mistakes.json config"
+  default_prompt: "Onboard this project to no-mistakes: autodetect the stack and write a validated .no-mistakes.json targeting its app(s), database, auth, and preview platform."
