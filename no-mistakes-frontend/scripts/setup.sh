@@ -4,10 +4,11 @@
 set -euo pipefail
 
 have() { command -v "$1" >/dev/null 2>&1; }
+ab_current() { command -v agent-browser >/dev/null 2>&1 && node -e 'const [a, b] = process.argv[1].split(".").map(Number); process.exit(a > 0 || b >= 37 ? 0 : 1)' "$(agent-browser --version | awk '{print $2}')"; }
 
-if ! have agent-browser; then
-  echo "no-mistakes: installing agent-browser (global) ..."
-  npm install -g agent-browser
+if ! ab_current; then
+  echo "no-mistakes: installing agent-browser >= 0.37 (global) ..."
+  npm install -g agent-browser@latest
 fi
 agent-browser install   # idempotent; downloads Chrome if missing
 echo "no-mistakes: browser driver = agent-browser $(agent-browser --version | awk '{print $2}')"

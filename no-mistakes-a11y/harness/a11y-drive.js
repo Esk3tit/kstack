@@ -31,6 +31,8 @@ const accName = (e) => (e.getAttribute('aria-label') || e.textContent || e.getAt
 // 1. Pre-pass: tag every visible+enabled interactive control with a stable idx and record its
 //    BLURRED focus-relevant computed style. Returns the baseline keyed by idx for the style diff.
 const tagInteractiveCandidates = () => {
+  // Start unfocused so every baseline style is the blurred one and the first Tab starts at the top.
+  if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
   const els = [...document.querySelectorAll(INTERACTIVE_SEL)].filter((e) => isVisible(e) && isEnabled(e));
   const baseline = {};
   els.forEach((e, i) => {

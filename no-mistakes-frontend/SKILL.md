@@ -228,7 +228,7 @@ Screenshots and clips are already in `~/.no-mistakes/$RUN/`. Build `results.json
   "gaps": ["role matrix: only the tprm_editor persona (needs-persona)"],
   "cases": [{"name": "...", "pass": true, "observed": "toast 'Saved', row shows 3 vendors",
              "evidence": ["save-flow.mp4", "after.png"], "before": "before.png"}],
-  "findings": [{"severity": "high", "screen": "Vendors", "viewport": "mobile", "issue": "..."}],
+  "findings": [{"severity": "high", "screen": "Vendors", "viewport": "mobile", "issue": "...", "evidence": "vendors-mobile.png"}],
   "howToTest": [{"action": "As an org admin, archive a vendor on the preview", "expect": "it leaves the list"}],
   "setup": "<markdown: target, persona, commands>"
 }
@@ -237,7 +237,8 @@ Screenshots and clips are already in `~/.no-mistakes/$RUN/`. Build `results.json
 - `revision` — the block shows it and warns when the PR head has moved past it.
 - `gaps` — everything this run did NOT verify and why. Shown above the table.
 - `observed` — what you saw in one line (a value, message, or state), not "passed".
-- `evidence` / `before` — media basenames in `--run-dir` (one or a list); omit when there is none.
+- `evidence` / `before` (and a finding's `evidence`) — media basenames in `--run-dir` (one or a list);
+  omit when there is none.
   Only these files are published; everything else in the run dir stays local.
 - `howToTest` — 1–4 checks only a human can do or should eyeball, each an action + expected result
   with its persona/data. Never a repeat of the automated cases.

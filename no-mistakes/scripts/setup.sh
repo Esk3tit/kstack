@@ -32,6 +32,10 @@ if command -v gh >/dev/null 2>&1 && ! gh pr comment --help 2>/dev/null | grep --
 fi
 check git      "repo/branch/PR resolution" required
 check agent-browser "drive the frontend UI (npm i -g agent-browser && agent-browser install)" required
+ab_current() { command -v agent-browser >/dev/null 2>&1 && node -e 'const [a, b] = process.argv[1].split(".").map(Number); process.exit(a > 0 || b >= 37 ? 0 : 1)' "$(agent-browser --version | awk '{print $2}')"; }
+if command -v agent-browser >/dev/null 2>&1 && ! ab_current; then
+  printf '  MISS %-9s %s\n' "agent-browser-version" "older than 0.37; npm i -g agent-browser@latest"; missing=1
+fi
 check neonctl  "optional CLI fallback for preview DB branch resolution; the DB MCP (in-session) is preferred" optional
 check ffmpeg   "optional — encodes agent-browser clips" optional
 check psql     "optional — async DB poll-until tight polling (else the DB MCP run-SQL loop)" optional

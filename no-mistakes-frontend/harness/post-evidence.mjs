@@ -13,7 +13,7 @@
 // results.json:
 //   { revision, intentSource, previewUrl?, gaps?:[string], setup?:markdown,
 //     cases:[{name, pass, observed?, evidence?:file|[file], before?:file|[file]}],
-//     findings:[{severity,screen,viewport,issue}], howToTest?:[{action, expect}] }
+//     findings:[{severity,screen,viewport,issue,evidence?}], howToTest?:[{action, expect}] }
 //   evidence/before = media basenames (png/jpg/gif/webp/mp4/webm/mov) in --run-dir; only these are
 //   published, and a missing one aborts before anything is posted.
 //
@@ -63,13 +63,14 @@ if (pr && !repo) die('could not determine --repo (owner/name)');
 const IMAGE = /\.(png|jpe?g|gif|webp)$/i;
 const VIDEO = /\.(mp4|webm|mov)$/i;
 const cases = Array.isArray(results.cases) ? results.cases : [];
+const findings = Array.isArray(results.findings) ? results.findings : [];
 const list = (v) => (Array.isArray(v) ? v : v ? [v] : []);
-// Only captures a case names are published; anything else in the run dir stays local.
-const media = [...new Set(cases.flatMap((c) => [...list(c.before), ...list(c.evidence)]))];
+// Only captures a case or finding names are published; anything else in the run dir stays local.
+const media = [...new Set([...cases.flatMap((c) => [...list(c.before), ...list(c.evidence)]),
+  ...findings.flatMap((f) => list(f.evidence))])];
 const present = new Set(readdirSync(runDir));
 const unusable = media.filter((f) => !present.has(f) || !(IMAGE.test(f) || VIDEO.test(f)));
 if (unusable.length) die(`evidence not found in --run-dir or not an image/video: ${unusable.join(', ')}`);
-const findings = Array.isArray(results.findings) ? results.findings : [];
 const cell = (s) => String(s ?? '').replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\n/g, ' ');
 
 function overallStatus() {
@@ -79,9 +80,10 @@ function overallStatus() {
 
 function findingsLines() {
   if (findings.length === 0) return ['_clean_'];
-  return findings.map((f) => {
+  return findings.flatMap((f) => {
     const where = [f.screen, f.viewport].filter(Boolean).join(' / ');
-    return `- **${f.severity ?? 'info'}**${where ? ` (${where})` : ''}: ${f.issue ?? ''}`;
+    const line = `- **${f.severity ?? 'info'}**${where ? ` (${where})` : ''}: ${f.issue ?? ''}`;
+    return list(f.evidence).length ? [line, '', ...mediaBlock(list(f.evidence))] : [line];
   });
 }
 
@@ -120,7 +122,7 @@ function buildGallery() {
       lines.push(...mediaBlock(after));
     }
   }
-  lines.push('**Visual findings:**', ...findingsLines(), '');
+  lines.push('**Findings:**', ...findingsLines(), '');
   return lines.join('\n');
 }
 
@@ -168,7 +170,7 @@ function spliceIntoBody(currentBody, block) {
   return body ? `${block}\n\n${body}` : block;
 }
 
-const galleryBody = media.length ? buildGallery() : null;
+const galleryBody = media.length || findings.length ? buildGallery() : null;
 
 const summaryFile = join(runDir, 'summary.md');
 function persistAndExit(status, ctx = {}) {
