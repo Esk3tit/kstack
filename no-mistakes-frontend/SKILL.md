@@ -159,7 +159,7 @@ For each case: drive the flow, assert behavior, capture evidence → PASS/FAIL +
   port). For a **bug fix**, reproduce the bug on base first, then show it gone on the PR head. No
   runnable base target → name that in `gaps`.
 - **Inspect every capture before posting** — every screenshot, and frames across each whole clip.
-  Drop one that shows setup noise, a secret, or not the claim.
+  Leave one out of `results.json` if it shows setup noise, a secret, or not the claim.
 
 - **API ground-truth applicability:** mandatory when asserting a *backend-sourced rendered value is
   correct* (numbers, names, statuses, counts); optional for pure UI-state/presence/navigation; not
@@ -238,6 +238,7 @@ Screenshots and clips are already in `~/.no-mistakes/$RUN/`. Build `results.json
 - `gaps` — everything this run did NOT verify and why. Shown above the table.
 - `observed` — what you saw in one line (a value, message, or state), not "passed".
 - `evidence` / `before` — media basenames in `--run-dir` (one or a list); omit when there is none.
+  Only these files are published; everything else in the run dir stays local.
 - `howToTest` — 1–4 checks only a human can do or should eyeball, each an action + expected result
   with its persona/data. Never a repeat of the automated cases.
 - `setup` — rendered collapsed. `previewUrl` (preview runs only) — rendered as **Open the preview UI →**.

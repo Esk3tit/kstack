@@ -14,7 +14,8 @@
 //   { revision, intentSource, previewUrl?, gaps?:[string], setup?:markdown,
 //     cases:[{name, pass, observed?, evidence?:file|[file], before?:file|[file]}],
 //     findings:[{severity,screen,viewport,issue}], howToTest?:[{action, expect}] }
-//   evidence/before = media basenames (png/jpg/gif/webp/mp4/webm/mov) present in --run-dir.
+//   evidence/before = media basenames (png/jpg/gif/webp/mp4/webm/mov) in --run-dir; only these are
+//   published, and a missing one aborts before anything is posted.
 //
 // On no-PR / gh failure: writes the assembled markdown (local media paths) to <run-dir>/summary.md,
 // prints pr_post=no-pr | pr_post=failed, exits non-zero — the verdict is never lost.
@@ -61,9 +62,13 @@ if (pr && !repo) die('could not determine --repo (owner/name)');
 
 const IMAGE = /\.(png|jpe?g|gif|webp)$/i;
 const VIDEO = /\.(mp4|webm|mov)$/i;
-const media = readdirSync(runDir).filter((f) => IMAGE.test(f) || VIDEO.test(f)).sort();
-const list = (v) => (Array.isArray(v) ? v : v ? [v] : []).filter((f) => media.includes(f));
 const cases = Array.isArray(results.cases) ? results.cases : [];
+const list = (v) => (Array.isArray(v) ? v : v ? [v] : []);
+// Only captures a case names are published; anything else in the run dir stays local.
+const media = [...new Set(cases.flatMap((c) => [...list(c.before), ...list(c.evidence)]))];
+const present = new Set(readdirSync(runDir));
+const unusable = media.filter((f) => !present.has(f) || !(IMAGE.test(f) || VIDEO.test(f)));
+if (unusable.length) die(`evidence not found in --run-dir or not an image/video: ${unusable.join(', ')}`);
 const findings = Array.isArray(results.findings) ? results.findings : [];
 const cell = (s) => String(s ?? '').replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\n/g, ' ');
 
@@ -90,7 +95,6 @@ function mediaBlock(files) {
 
 function buildGallery() {
   const lines = [MARKER_GALLERY, `### ${marker} — screenshots and clips`, ''];
-  const shown = new Set();
   for (const c of cases) {
     const after = list(c.evidence);
     const before = list(c.before);
@@ -115,15 +119,12 @@ function buildGallery() {
       if (before.length && after.length) lines.push('**After**', '');
       lines.push(...mediaBlock(after));
     }
-    for (const f of [...before, ...after]) shown.add(f);
   }
-  const rest = media.filter((f) => !shown.has(f));
-  if (rest.length) lines.push('#### Other captures', '', ...mediaBlock(rest));
   lines.push('**Visual findings:**', ...findingsLines(), '');
   return lines.join('\n');
 }
 
-function buildBodyBlock({ galleryUrl, headSha }) {
+function buildBodyBlock({ galleryUrl, headSha, mediaOk = true }) {
   const revision = String(results.revision ?? 'unknown');
   const status = overallStatus();
   const badge = status === 'PASS' ? '✅ PASS' : status === 'FAIL' ? '❌ FAIL' : status;
@@ -137,6 +138,7 @@ function buildBodyBlock({ galleryUrl, headSha }) {
     lines.push('', '> [!WARNING]', `> The PR head is now \`${headSha.slice(0, 7)}\`. This verdict is for \`${testedSha.slice(0, 7)}\`. Re-run to refresh it.`);
   }
   if (gaps.length) lines.push('', '**Not covered:**', ...gaps.map((g) => `- ${g}`));
+  if (!mediaOk) lines.push('', '> [!WARNING]', '> Some screenshots or clips failed to upload. The gallery is incomplete.');
   if (results.previewUrl) lines.push('', `**Open the preview UI →** ${results.previewUrl}  _(preview target; point-in-time)_`);
 
   const hasObserved = cases.some((c) => c.observed);
@@ -247,7 +249,7 @@ try {
   const view = JSON.parse(gh(['pr', 'view', pr, '--repo', repo, '--json', 'body,headRefOid']));
   headSha = view.headRefOid;
   const bodyFile = join(runDir, 'pr-body.md');
-  writeFileSync(bodyFile, spliceIntoBody(view.body, buildBodyBlock({ galleryUrl: gallery.url, headSha })));
+  writeFileSync(bodyFile, spliceIntoBody(view.body, buildBodyBlock({ galleryUrl: gallery.url, headSha, mediaOk })));
   gh(['pr', 'edit', pr, '--repo', repo, '--body-file', bodyFile]);
   bodyOk = true;
 } catch (e) {
