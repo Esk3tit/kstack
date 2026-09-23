@@ -268,8 +268,8 @@ touch a branch. Cap: **50 files per run** — capture what answers a review ques
 viewport of every screen.
 
 **Read back:** the poster checks that every media reference was rewritten to an uploaded URL.
-`pr_post=partial-media` = the comment posted but some uploads failed — open the gallery, see what's
-missing, then re-run. `pr_post=failed` / `pr_post=no-pr` → it writes `summary.md` (local media paths)
+`pr_post=partial-media` = some uploads failed, so the poster removed the incomplete gallery and left
+the PR unchanged — re-run the post. `pr_post=failed` / `pr_post=no-pr` → it writes `summary.md` (local media paths)
 into the run dir; the verdict is never lost.
 
 **Never commit media to the PR branch.**

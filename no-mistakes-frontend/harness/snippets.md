@@ -89,11 +89,12 @@ start it and use B directly:
 cd "$APP_DIR" && doppler run -- <app.devCommand>   # e.g. "npm run dev"; Vite default port 5173
 ```
 
-For API ground-truth, read the Bearer from the profile's `keyEnv` and pipe it straight into the
-consuming command; never echo it:
+For API ground-truth, send the profile's `keyEnv` as the Bearer. The header goes to curl on stdin
+(`-H @-`), so the token never reaches argv or output:
 
 ```bash
-cd "$APP_DIR" && doppler run -- bash -lc 'printenv "$KEY_ENV"'   # pipe into the consumer, do not print
+export KEY_ENV=<profile keyEnv> API_URL=<backend devUrl or preview apiUrl>
+cd "$APP_DIR" && doppler run -- bash -c 'printf "Authorization: Bearer %s" "${!KEY_ENV}" | curl -sf -H @- "$API_URL/<path>"'
 ```
 
 ---

@@ -58,10 +58,13 @@ Own harness at `$A/harness/a11y-drive.js` (the in-page collectors). Reuse `$FE/h
 
 1. **Tooling.** Run `$A/scripts/setup.sh` (idempotent — ensures `agent-browser` + its Chrome,
    checks `gh`). Missing a required tool → `BLOCKED reason=needs-setup`.
-2. **Target.** Same resolution as `$FE`: a preview `feUrl` (resolved via the configured preview
+2. **Run id + evidence dir.** Composed: take the router's `RUN`. Standalone:
+   `RUN="$(date +%Y%m%d-%H%M%S)-$$"`. Then `EV=~/.no-mistakes-a11y/$RUN; mkdir -p "$EV"` and
+   `export AGENT_BROWSER_SESSION="<frontend browserProfile>-$RUN"`.
+3. **Target.** Same resolution as `$FE`: a preview `feUrl` (resolved via the configured preview
    platform, `$NM_PREVIEW_PLATFORM`) or the frontend app's `devUrl` from config. **Only a production
    target is refused** → `BLOCKED reason=out-of-scope-target`.
-3. **Standalone vs composed (ADR-0003).** If the `no-mistakes` router already ran `$FE`, reuse its
+4. **Standalone vs composed (ADR-0003).** If the `no-mistakes` router already ran `$FE`, reuse its
    derived test cases + recon + live session. Otherwise run standalone: this skill does its own auth +
    light recon below.
 

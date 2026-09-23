@@ -126,21 +126,20 @@ function buildGallery() {
   return lines.join('\n');
 }
 
-function buildBodyBlock({ galleryUrl, headSha, mediaOk = true }) {
+function buildBodyBlock({ galleryUrl, headSha }) {
   const revision = String(results.revision ?? 'unknown');
   const status = overallStatus();
   const badge = status === 'PASS' ? '✅ PASS' : status === 'FAIL' ? '❌ FAIL' : status;
   const gaps = Array.isArray(results.gaps) ? results.gaps : [];
   const howTo = Array.isArray(results.howToTest) ? results.howToTest : [];
 
-  const lines = [MARKER_START, `### ${marker}: ${badge}`];
+  const lines = [`### ${marker}: ${badge}`];
   lines.push(`**Verified at:** \`${revision}\`  ·  **Intent:** ${results.intentSource ?? 'unknown'}`);
   const testedSha = (revision.match(/^[0-9a-f]{7,40}/i) || [])[0];
   if (headSha && testedSha && !headSha.startsWith(testedSha.toLowerCase())) {
     lines.push('', '> [!WARNING]', `> The PR head is now \`${headSha.slice(0, 7)}\`. This verdict is for \`${testedSha.slice(0, 7)}\`. Re-run to refresh it.`);
   }
   if (gaps.length) lines.push('', '**Not covered:**', ...gaps.map((g) => `- ${g}`));
-  if (!mediaOk) lines.push('', '> [!WARNING]', '> Some screenshots or clips failed to upload. The gallery is incomplete.');
   if (results.previewUrl) lines.push('', `**Open the preview UI →** ${results.previewUrl}  _(preview target; point-in-time)_`);
 
   const hasObserved = cases.some((c) => c.observed);
@@ -160,8 +159,8 @@ function buildBodyBlock({ galleryUrl, headSha, mediaOk = true }) {
   }
   if (results.setup) lines.push('', '<details><summary>Setup and commands</summary>', '', String(results.setup), '', '</details>');
   if (galleryUrl) lines.push('', `🖼 **Screenshots and clips →** ${galleryUrl}`);
-  lines.push(MARKER_END);
-  return lines.join('\n');
+  // Escaped so no result text can forge the end marker the next splice looks for.
+  return `${MARKER_START}\n${lines.join('\n').replace(/<!--/g, '&lt;!--')}\n${MARKER_END}`;
 }
 
 function spliceIntoBody(currentBody, block) {
@@ -222,16 +221,15 @@ function unresolvedMedia(commentId) {
   return media.filter((f) => body.includes(`(./${f})`));
 }
 
-let gallery = { url: null, id: null, previous: [], uploadError: null };
-let galleryOk = false;
+let gallery;
 try {
   gallery = postGallery();
-  galleryOk = true;
 } catch (e) {
   console.error(`[post-evidence] gallery comment failed: ${e.message.split('\n')[0]}`);
+  persistAndExit('failed');
 }
 
-let mediaOk = galleryOk && !gallery.uploadError;
+let mediaOk = !gallery.uploadError;
 if (mediaOk && gallery.id) {
   try {
     const missing = unresolvedMedia(gallery.id);
@@ -242,28 +240,26 @@ if (mediaOk && gallery.id) {
     mediaOk = false;
   }
 }
-if (galleryOk && !mediaOk) console.error('[post-evidence] media not verified; the previous gallery is kept. Inspect the new one before retrying.');
+// The PR only ever shows fully uploaded evidence: an incomplete gallery is removed and the PR left as it was.
+if (!mediaOk) {
+  if (gallery.id) deleteComments([gallery.id]);
+  console.error('[post-evidence] media did not all upload; the PR is unchanged. Re-run to post.');
+  persistAndExit('partial-media');
+}
 
 // Read the body at the last moment: the upload can take a while and the author may edit meanwhile.
-let bodyOk = false;
 let headSha = null;
 try {
   const view = JSON.parse(gh(['pr', 'view', pr, '--repo', repo, '--json', 'body,headRefOid']));
   headSha = view.headRefOid;
   const bodyFile = join(runDir, 'pr-body.md');
-  writeFileSync(bodyFile, spliceIntoBody(view.body, buildBodyBlock({ galleryUrl: gallery.url, headSha, mediaOk })));
+  writeFileSync(bodyFile, spliceIntoBody(view.body, buildBodyBlock({ galleryUrl: gallery.url, headSha })));
   gh(['pr', 'edit', pr, '--repo', repo, '--body-file', bodyFile]);
-  bodyOk = true;
 } catch (e) {
   console.error(`[post-evidence] updating the PR description failed: ${e.message.split('\n')[0]}`);
+  persistAndExit('failed', { galleryUrl: gallery.url, headSha });
 }
 
-if (bodyOk && galleryOk) {
-  if (mediaOk) deleteComments(gallery.previous.filter((old) => old !== gallery.id));
-  console.log(`pr_post=${mediaOk ? 'spliced' : 'partial-media'}`);
-  console.log(`pr=${pr} repo=${repo} media=${media.length} gallery_url=${gallery.url ?? '-'} replaced=${mediaOk ? gallery.previous.length : 0}`);
-  process.exit(mediaOk ? 0 : 1);
-}
-
-console.error(`[post-evidence] surfaces: body=${bodyOk ? 'ok' : 'failed'} gallery=${galleryOk ? 'ok' : 'failed'}`);
-persistAndExit('failed', { galleryUrl: gallery.url, headSha });
+deleteComments(gallery.previous.filter((old) => old !== gallery.id));
+console.log('pr_post=spliced');
+console.log(`pr=${pr} repo=${repo} media=${media.length} gallery_url=${gallery.url ?? '-'} replaced=${gallery.previous.length}`);
