@@ -237,6 +237,8 @@ Screenshots and clips are already in `~/.no-mistakes/$RUN/`. Build `results.json
 
 - `revision` — the block shows it and warns when the PR head has moved past it.
 - `gaps` — everything this run did NOT verify and why. Shown above the table.
+- `status` — omit it; PASS/FAIL come from the cases. Set `"BLOCKED"` (reason in `gaps`) when the run
+  ends BLOCKED after capturing evidence, so passing cases never read as a green PASS.
 - `observed` — what you saw in one line (a value, message, or state), not "passed".
 - `evidence` / `before` (and a finding's `evidence`) — media basenames in `--run-dir` (one or a list);
   omit when there is none.

@@ -11,11 +11,12 @@
 //   node post-evidence.mjs --pr <N> --run-dir <dir> --results <results.json> [--repo owner/name] [--marker <name>]
 //
 // results.json:
-//   { revision, intentSource, previewUrl?, gaps?:[string], setup?:markdown,
+//   { revision, intentSource, status?:"BLOCKED", previewUrl?, gaps?:[string], setup?:markdown,
 //     cases:[{name, pass, observed?, evidence?:file|[file], before?:file|[file]}],
 //     findings:[{severity,screen,viewport,issue,evidence?}], howToTest?:[{action, expect}] }
 //   evidence/before = plain media basenames ([A-Za-z0-9_.-], png/jpg/gif/webp/mp4/webm/mov) in --run-dir;
-//   only these are published, and a missing one aborts before anything is posted. PASS = every case passed.
+//   only these are published, and a missing one aborts before anything is posted. PASS = every case passed;
+//   status: "BLOCKED" (reason in gaps) overrides it when the run could not be trusted.
 //
 // Posting is all-or-nothing: on any failure the new gallery is removed and the PR left as it was.
 // Prints pr_post=spliced | failed | no-pr; on failed / no-pr the assembled markdown (local media paths)
@@ -59,8 +60,11 @@ function gh(args, opts = {}) {
 const IMAGE = /\.(png|jpe?g|gif|webp)$/i;
 const VIDEO = /\.(mp4|webm|mov)$/i;
 const cases = Array.isArray(results.cases) ? results.cases : [];
-if (!cases.length || cases.some((c) => typeof c.pass !== 'boolean')) die('results.cases must be non-empty, each with a boolean "pass"');
-const status = cases.every((c) => c.pass) ? 'PASS' : 'FAIL';
+if (results.status && results.status !== 'BLOCKED') die('results.status only takes "BLOCKED"; PASS/FAIL come from the cases');
+const blocked = results.status === 'BLOCKED';
+if ((!cases.length && !blocked) || cases.some((c) => typeof c.pass !== 'boolean'))
+  die('results.cases must be non-empty (unless BLOCKED), each with a boolean "pass"');
+const status = blocked ? 'BLOCKED' : cases.every((c) => c.pass) ? 'PASS' : 'FAIL';
 if (status === 'PASS' && !/^[0-9a-f]{7,40}\b/i.test(String(results.revision ?? ''))) die('a PASS needs results.revision to start with the tested commit SHA');
 const findings = Array.isArray(results.findings) ? results.findings : [];
 const list = (v) => (Array.isArray(v) ? v : v ? [v] : []);
@@ -123,7 +127,7 @@ function buildGallery() {
 
 function buildBodyBlock({ galleryUrl, headSha }) {
   const revision = String(results.revision ?? 'unknown');
-  const badge = status === 'PASS' ? '✅ PASS' : '❌ FAIL';
+  const badge = { PASS: '✅ PASS', FAIL: '❌ FAIL', BLOCKED: '⛔ BLOCKED' }[status];
   const gaps = Array.isArray(results.gaps) ? results.gaps : [];
   const howTo = Array.isArray(results.howToTest) ? results.howToTest : [];
 
