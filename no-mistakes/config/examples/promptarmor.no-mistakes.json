@@ -43,6 +43,13 @@
           "accessToken": "/api/backend/v1/access_token"
         }
       },
+      "propelauth-login": {
+        "kind": "browser-login",
+        "secretsTool": "doppler",
+        "dopplerProject": "tprm-app",
+        "secretsScopeDir": "~/PromptArmor/AI-TPRM",
+        "env": { "email": "PLAYWRIGHT_USER_EMAIL", "password": "PLAYWRIGHT_USER_PASSWORD" }
+      },
       "moffitt": {
         "kind": "bearer-env",
         "secretsTool": "doppler",
@@ -61,7 +68,7 @@
       "devUrl": "http://localhost:5173",
       "devCommand": "pnpm run dev",
       "browserProfile": "no-mistakes-tprm",
-      "auth": "propelauth",
+      "auth": "propelauth-login",
       "previewService": "ai-tprm-v2-ai-tprm-v2",
       "previewSlug": "ai-tprm-v2"
     },

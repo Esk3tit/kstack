@@ -112,11 +112,12 @@ interactive login. Its dev server starts already authenticated (the profile's `k
 the secrets tool, e.g. `doppler run -- <app.devCommand>`), so just navigate.
 
 **API ground-truth (the configured backend app is the authoritative source).**
-- Login app (`propelauth` profile): mint a Bearer by `cd` into the profile's `secretsScopeDir` and
-  running the minter under the secrets tool, e.g.
+- Login app: mint a Bearer with the backend app's `propelauth` profile, passing the test user's email
+  (not a secret; read it from the login profile's scope), e.g.
   ```bash
-  cd <auth profile secretsScopeDir>
-  doppler run -- node "$H/harness/api-token.mjs" --json   # when secretsTool=doppler; PROPEL_AUTH_TEST_* present in scope
+  EMAIL=$(cd <login profile secretsScopeDir> && doppler secrets get <env.email> --plain)
+  cd <backend propelauth profile secretsScopeDir>
+  doppler run -- node "$H/harness/api-token.mjs" --json "$EMAIL"   # PROPEL_AUTH_TEST_* resolve in this scope
   ```
   (`--json` → `{access_token,user_id,org_id,org_name,auth_url}`.)
 - No-login app (`bearer-env` profile): read the profile's `keyEnv` and use it directly as the Bearer

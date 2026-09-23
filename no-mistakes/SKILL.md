@@ -126,10 +126,11 @@ localhost. Post via the `$BE` poster. The router's verdict mirrors the backend r
 
 **Auth.** When the backend app's auth profile is `kind: propelauth`, mint a Bearer with no browser for
 API+DB ground-truth from the backend app's `repoPath` via the configured secrets tool — e.g. (when
-`secretsTool=doppler`): `cd "$NM_CHECKOUT_BASE/<backend repo>" && doppler run -- node "$FE/harness/api-token.mjs" --json`.
+`secretsTool=doppler`): `cd "$NM_CHECKOUT_BASE/<backend repo>" && doppler run -- node "$FE/harness/api-token.mjs" --json "$EMAIL"`,
+with `EMAIL` read from the frontend login profile's scope (`$FE/SKILL.md` §3).
 Frontend browser auth per the detected `auth` profile: a **bearer-env profile** (e.g. `moffitt`) —
 `$FE/harness/snippets.md` template **C** with the profile's `keyEnv`, point agent-browser at `feUrl`; a
-**`propelauth` profile** — template **A** at `feUrl`. **PropelAuth caveat:** a `propelauth` frontend may
+**login profile** (`propelauth` / `browser-login`) — template **A** at `feUrl`. **PropelAuth caveat:** a `propelauth` frontend may
 reject the preview ClusterIP origin; if the browser login fails, **fall back to API+DB-only** (the bearer
 needs no browser, so the DB round-trip still works) and mark the **UI portion** `reason=preview-auth`
 (a coverage gap, not a silent pass). **Never** echo/screenshot/persist a token, key, or secret value;
