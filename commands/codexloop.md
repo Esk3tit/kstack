@@ -6,7 +6,7 @@ argument-hint: [--max-iterations N] [--model MODEL] [--base BRANCH] [--scope aut
 # /codexloop
 
 ## Purpose
-Run Codex (state-of-the-art GPT model) against the current PR or branch to perform a code review, then fix any **real** findings it reports. Repeat until Codex returns no substantive findings (or the max iteration cap is hit).
+Run Codex against the current PR or branch to perform a code review, then fix any **real** findings it reports. Repeat until Codex returns no substantive findings (or the max iteration cap is hit).
 
 **Scope of review:** logical errors, bugs, broken edge cases, security/race issues, incorrect error handling, real convention violations. Nitpicks are **OK only when they meaningfully improve code quality** — naming clarity, following established repo conventions, removing dead code, fixing misleading comments. **NOT** in scope: formatting/styling churn, bikeshedding, unnecessary extra tests for trivial behavior, bloated defensive programming or fallbacks for impossible states, premature abstractions, or any "nice-to-have" suggestion that adds complexity without solving a real problem.
 
@@ -33,7 +33,7 @@ The companion runs the review **foreground/blocking** (no background path for re
 ## Contract
 **Inputs:**
 - `--max-iterations N` — safety cap on loop count (default: 5)
-- `--model MODEL` — Codex model override passed through to the companion (default: Codex's own configured default — the latest state-of-the-art model; never pin a specific version)
+- `--model MODEL` — Codex model passed to the companion (default: the Codex model `CLAUDE.md` names for Codex work; always pass it, since the Codex config sets no default)
 - `--base BRANCH` — base branch to diff against (default: auto-detect `master` or `main`)
 - `--scope auto|working-tree|branch` — review target passed to the companion (default: `auto`; the companion resolves working-tree vs branch when `auto`)
 
@@ -50,7 +50,7 @@ The companion runs the review **foreground/blocking** (no background path for re
      Require `.ready === true` and `.auth.loggedIn === true`. If not, `STATUS=FAIL ERROR="Codex not ready — run /codex:setup"` and stop (do not improvise an auth flow).
    - Confirm working tree is clean or changes are committed (abort if dirty untracked fixes in progress).
    - Determine base branch: explicit `--base` arg wins; otherwise auto-detect via `git symbolic-ref refs/remotes/origin/HEAD` (falls back to `master` then `main`). Confirm it exists.
-   - Parse optional `--max-iterations` (default 5), `--model`, and `--scope` (default `auto`).
+   - Parse optional `--max-iterations` (default 5), `--model` (default: the Codex model `CLAUDE.md` names), and `--scope` (default `auto`).
    - Determine the review target and map it to companion flags:
      - On a PR branch with an open PR → `--scope branch --base origin/<baseRefName>` (from `gh pr view --json baseRefName`).
      - Branch has commits beyond base → `--scope branch --base origin/<base>`.

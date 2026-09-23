@@ -10,6 +10,30 @@ documents what's third-party (so I know what I'm dropping vs. keeping).
 
 ---
 
+## Syncing kstack onto a local install — the human decides what is lost
+
+This applies to every copy, overwrite, re-link, or `cp` from this repo onto a local install, even when
+the user asks for it directly: `~/.claude/CLAUDE.md`, `~/.claude/skills/`, `~/.claude/commands/`,
+`~/.agents/skills/`, `~/.codex/`. Local copies can hold changes kstack lacks (added sections, edited
+skills, extra files), and a blind overwrite deletes them silently.
+
+Before writing anything:
+
+1. **Diff** each target against its kstack source.
+2. **Show the user what would be lost.** List it file by file: the lines, sections, or files that
+   exist only locally.
+3. **Let the user decide** for each item:
+   - **Upstream it:** merge the local change into kstack in a PR, so every install gets it.
+   - **Keep it local:** bring the kstack changes into the local copy and keep the local change. Tell
+     the user their local behavior now differs from kstack.
+   - **Overwrite:** discard the local change.
+4. **Back up** everything you replace into a dated folder outside this repo, then write.
+
+A target that already matches kstack, is a symlink into this checkout, or does not exist yet has
+nothing to lose and needs no prompt.
+
+---
+
 ## What lives here (portable, mine)
 
 | Path | What it is |
@@ -32,14 +56,17 @@ documents what's third-party (so I know what I'm dropping vs. keeping).
   ```bash
   ln -s ~/.claude/CLAUDE.md ~/.codex/AGENTS.md
   ```
-- `~/.claude/CLAUDE.md` is a **copy**, not a link to this repo — edit here, then copy it over
-  (`cp CLAUDE.md ~/.claude/CLAUDE.md`), or the change never reaches either agent.
-- Contents (8 sections): **Technical decisions** (quality over dev-cost), **Operational work**
+- This repo's `CLAUDE.md` is the **source of truth**. `~/.claude/CLAUDE.md` is a **copy** that may carry
+  machine-local additions that stay out of the repo (e.g. pointers to private local guidance). Make
+  shared changes here, then sync them per
+  [Syncing kstack onto a local install](#syncing-kstack-onto-a-local-install--the-human-decides-what-is-lost).
+- Contents (9 sections): **Technical decisions** (quality over dev-cost), **Operational work**
   (simplest direct path; no machinery until it's justified), **Bug fixes** (reproduce E2E first),
   **Quality bar** (fix what's broken, even if it's not yours; pixel-perfection), **Auto-generated
   files** (never hand-edit; fix the generator), **Code comments** (sparse by default, no plan/ticket
   refs), **Picking the right models** (per-model cost/intelligence/taste table + routing), **Large
-  subagent fan-outs** (explain tradeoffs and get approval before swarming).
+  subagent fan-outs** (explain tradeoffs and get approval before swarming), **Browser automation**
+  (`agent-browser`: open → `snapshot -i` → act on `@eN` refs → re-snapshot).
 
 ## 2. Custom slash commands (`commands/`)
 
