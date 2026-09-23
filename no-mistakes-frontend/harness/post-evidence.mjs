@@ -106,7 +106,10 @@ function buildGallery() {
         lines.push(`| ${b} | ${a} |`);
       }
       lines.push('');
-      lines.push(...mediaBlock([...before, ...after].filter((f) => VIDEO.test(f))));
+      for (const [label, files] of [['Before', before], ['After', after]]) {
+        const clips = files.filter((f) => VIDEO.test(f));
+        if (clips.length) lines.push(`**${label}**`, '', ...mediaBlock(clips));
+      }
     } else {
       if (before.length) lines.push('**Before**', '', ...mediaBlock(before));
       if (before.length && after.length) lines.push('**After**', '');
@@ -184,11 +187,21 @@ function galleryComments() {
   return raw ? raw.split('\n').filter(Boolean) : [];
 }
 
-// Creates the new gallery before deleting the old one, so a failed upload never loses the last good gallery.
-// gh exits non-zero on a partial upload but still posts the comment and prints its URL.
+function deleteComments(ids) {
+  for (const id of ids) {
+    try { gh(['api', '--method', 'DELETE', `/repos/${repo}/issues/comments/${id}`]); }
+    catch (e) { console.error(`[post-evidence] could not delete old gallery ${id}: ${e.message.split('\n')[0]}`); }
+  }
+}
+
+// Posts the new gallery first and deletes the old one only after a clean upload, so the last good
+// gallery survives a failure. gh exits non-zero on a partial upload but still posts and prints the URL.
 function postGallery() {
-  if (!galleryBody) return { url: null, action: 'skipped-no-media', uploadError: null };
   const previous = galleryComments();
+  if (!galleryBody) {
+    deleteComments(previous);
+    return { url: null, action: previous.length ? 'removed-stale' : 'skipped-no-media', uploadError: null };
+  }
   writeFileSync(join(runDir, 'nm-gallery.md'), galleryBody);
   const attach = media.flatMap((f) => ['--attach', `./${f}`]);
   let url = null;
@@ -201,11 +214,7 @@ function postGallery() {
     if (!url) throw new Error(uploadError);
   }
   const id = (url.match(/issuecomment-(\d+)/) || [])[1];
-  for (const old of previous) {
-    if (old === id) continue;
-    try { gh(['api', '--method', 'DELETE', `/repos/${repo}/issues/comments/${old}`]); }
-    catch (e) { console.error(`[post-evidence] could not delete old gallery ${old}: ${e.message.split('\n')[0]}`); }
-  }
+  if (!uploadError) deleteComments(previous.filter((old) => old !== id));
   return { url, id, action: previous.length ? 'replaced' : 'created', uploadError };
 }
 

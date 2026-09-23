@@ -193,9 +193,8 @@ function runCli() {
   process.stdout.write(exportLines(cfg, path) + '\n')
 }
 
-// The skill dir is often a symlink (~/.claude/skills/... → real checkout), so
-// argv[1] (the link path) and import.meta.url (the resolved real path) differ.
-// Compare realpaths so the CLI still runs when invoked through the symlink.
+// Skills are usually symlinked into ~/.claude/skills, so argv[1] is the link path while
+// import.meta.url is the real path; compare realpaths.
 const isMain = (() => {
   if (!process.argv[1]) return false
   try {

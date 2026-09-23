@@ -1,7 +1,7 @@
 ---
 name: no-mistakes-frontend
 description: >-
-  Agentically verify a configured frontend app's UI change against the running app with dev-browser:
+  Agentically verify a configured frontend app's UI change against the running app with agent-browser:
   drive the expected flow, assert behavior (with API ground-truth), check the look, and post
   screenshot + clip evidence and a test-case checklist to the PR so you can judge production-readiness,
   review code, and merge. Report-only, ephemeral. Use for "verify the UI", "does this screen
@@ -11,7 +11,7 @@ user-invocable: true
 
 # no-mistakes-frontend — agentic UI verification
 
-Drive the **running** configured frontend app with **dev-browser**, prove a frontend change works
+Drive the **running** configured frontend app with **agent-browser**, prove a frontend change works
 (functional + visual) against **API ground-truth**, capture screenshot and clip evidence, and post a
 test-case checklist to the PR. **Report-only:** never edit product code, never merge — you
 produce evidence; the human reviews code and merges. **Ephemeral:** nothing lands in the product
@@ -39,21 +39,16 @@ under test with `node "$H/harness/load-config.mjs" --app <name>` (or `--app-map`
 `slug|service|auth|kind`) and read its `repoPath`, `devUrl`, `devCommand`, `browserProfile`, and
 `auth` fields.
 
-All harness scripts are at `$H/harness/...`. The dev-browser script templates (auth / recon /
+All harness scripts are at `$H/harness/...`. The agent-browser templates (auth / recon / clip /
 capture+audit) live in `$H/harness/snippets.md` — read it and copy the relevant block verbatim;
 they are verified-live and parameterized by the app's config fields. Never hardcode
 `/Users/<name>/...`; the only fixed local paths are the apps' `repoPath`s from config.
 
 ## 1. Preflight (gate)
 
-1. **Browser driver installed.** Either **dev-browser** (default) or **chrome-devtools-axi** on PATH
-   (`command -v dev-browser || command -v chrome-devtools-axi`; chrome-devtools-axi also runs
-   on-demand via `npx -y chrome-devtools-axi`). If neither, emit
-   `NOMISTAKES_FRONTEND_STATUS=BLOCKED reason=needs-setup` and tell the user to run `$H/scripts/setup.sh`.
-   Confirm the driver can launch a page (dev-browser: chromium ready; chrome-devtools-axi:
-   `chrome-devtools-axi open <url>` returns a snapshot). The `snippets.md` templates are written for
-   dev-browser; its **Browser drivers** section maps each operation to the chrome-devtools-axi
-   command form.
+1. **Browser driver installed.** `agent-browser` (>= 0.37) on PATH with its Chrome installed. If
+   not, emit `NOMISTAKES_FRONTEND_STATUS=BLOCKED reason=needs-setup` and tell the user to run
+   `$H/scripts/setup.sh`.
 2. **Target in-scope (only production is refused).** In-scope = a **localhost dev server** OR a
    **dev/preview env backed by a redacted preview DB branch** (the configured DB platform
    `$NM_DB_PLATFORM`; dev-equivalent data, no production customer data — so previews are
@@ -79,10 +74,10 @@ they are verified-live and parameterized by the app's config fields. Never hardc
    needs its credential env vars; a `bearer-env` profile needs its `keyEnv`. Both resolve via the
    profile's secrets tool (`secretsTool`, e.g. `doppler run` when `secretsTool=doppler`) in the
    profile's `secretsScopeDir`. If unresolvable: `NOMISTAKES_FRONTEND_STATUS=BLOCKED reason=no-creds`.
-6. **Run id + evidence dir.** Generate a run id (host shell stamps it — dev-browser sandbox has no
-   `Date`), e.g. `RUN="$(date +%Y%m%d-%H%M%S)-$$"`. Evidence dir = `~/.no-mistakes/$RUN/`. Reject
+6. **Run id + evidence dir.** Generate a run id, e.g. `RUN="$(date +%Y%m%d-%H%M%S)-$$"`. Evidence dir = `~/.no-mistakes/$RUN/`. Reject
    any caller-supplied evidence dir that resolves **inside a product checkout** (fall back to the
    default). `mkdir -p ~/.no-mistakes/$RUN`.
+
 ## 2. Derive test cases (gate)
 
 Turn the change's intent into a behavioral checklist. **Intent-source precedence:**
@@ -100,21 +95,21 @@ the untrusted-content rule.
 
 ## 3. Auth
 
-Read `$H/harness/snippets.md` and use the matching template. Inject creds via the shell heredoc as
-JSON; **never write creds to a file, never echo them, never screenshot credential entry.**
+Read `$H/harness/snippets.md` and use the matching template. Creds reach the browser only through
+`batch` stdin; **never put them in argv or a file, never echo them, never snapshot, screenshot, or
+record while they sit in the form.** Set `AGENT_BROWSER_SESSION` and `AGENT_BROWSER_RESTORE` to the
+app's `browserProfile` so every command shares one session that survives across runs.
 
 **A login app** (auth profile `kind: propelauth` / `browser-login`) — snippet **A**. Run from the
-auth profile's `secretsScopeDir` (the secrets scope; worktrees aren't scoped). **Force `BASE` to the
-app's `devUrl`** (override `PLAYWRIGHT_BASE_URL`). Persistent browser profile
-`--browser <app.browserProfile>`; the daemon persists the session so later scripts reuse it with no
-creds. Logged-in marker = the app's authenticated marker (PropelAuth example: the user-avatar `img`
-named "User"). On failure: screenshot + snapshot for calibration, then
-`NOMISTAKES_FRONTEND_STATUS=BLOCKED reason=login-failed`.
+auth profile's `secretsScopeDir` (the secrets scope; worktrees aren't scoped), with `APP_URL` set to
+the target (the app's `devUrl`, or the preview `feUrl`; never an inherited `PLAYWRIGHT_BASE_URL`).
+Log in once; the restored session carries later runs. Logged-in marker = the app's authenticated
+marker (PropelAuth example: the "My Organization" nav link). On failure: snapshot + screenshot the
+(credential-free) page for calibration, then `NOMISTAKES_FRONTEND_STATUS=BLOCKED reason=login-failed`.
 
 **A no-login app** (auth profile `kind: bearer-env`, `noLogin: true`) — snippet **C**. No
 interactive login. Its dev server starts already authenticated (the profile's `keyEnv` injected by
-the secrets tool, e.g. `doppler run -- <app.devCommand>`), so just navigate. Separate profile
-`--browser <app.browserProfile>`.
+the secrets tool, e.g. `doppler run -- <app.devCommand>`), so just navigate.
 
 **API ground-truth (the configured backend app is the authoritative source).**
 - Login app (`propelauth` profile): mint a Bearer by `cd` into the profile's `secretsScopeDir` and
@@ -136,17 +131,19 @@ the secrets tool, e.g. `doppler run -- <app.devCommand>`), so just navigate. Sep
 
 Confirm the active session's **user/org/persona matches the intended context** (not merely that a
 session exists — a stale session or wrong persona produces false evidence). Then use snippet **B**
-(login app) / **C** (no-login app) to `snapshotForAI()` the touched screens and read off real selectors.
-`snapshotForAI().full` is large — pipe it through `ctx_execute`/`ctx_search`, don't read it raw.
+(login app) / **C** (no-login app) to `snapshot -i` the touched screens and read off their `@eN`
+refs and accessible names. A full `snapshot` is large — pipe it through `ctx_execute`/`ctx_search`.
 
 ## 5. Functional verify (per test case)
 
-Drive via dev-browser using tiered locators (self-heal mechanism — escalate, never edit product):
-1. **Primary** — `page.locator` / `getByRole` + `page.snapshotForAI()`.
-2. **Fallback 1** — `page.domCua.getVisibleDom()` → act by `node_id` (after ~2 failed locator
-   attempts on the same target).
-3. **Fallback 2** — `page.cua.*` (pixel/vision; coords map 1:1 to CSS px). Never derive coords from
-   a fullPage capture — scroll, re-screenshot.
+Drive via agent-browser using tiered locators (self-heal mechanism — escalate, never edit product):
+1. **Primary** — `snapshot -i` → act on `@eN` refs; re-snapshot after every page change.
+2. **Fallback 1** — `find role|label|text … --name` (after ~2 failed ref attempts on the same
+   target), then a CSS selector.
+3. **Fallback 2** — `screenshot --annotate` (numbered labels keyed to refs) to see what the page
+   shows; for an input that ignores `fill`, `focus` + `keyboard inserttext`.
+
+Wait on state (`wait --text`, `wait --url`, `wait <selector>`), never a bare delay.
 
 For each case: drive the flow, assert behavior, capture evidence → PASS/FAIL + evidence files.
 **No screenshot or clip of credential entry, tokens, or keys.**
@@ -154,12 +151,13 @@ For each case: drive the flow, assert behavior, capture evidence → PASS/FAIL +
 - **Screenshot or clip:** a screenshot for a static result, a **clip** when the claim is an
   interaction (a flow, a transition, a loading or error state). One clip answers one review question
   in ~10–25s: the action and enough of the result to read it, with login and setup kept out. Recipe:
-  `$H/harness/snippets.md` **D**. No agent-browser/ffmpeg → take screenshots and name the missing
-  clip in `gaps`.
+  `$H/harness/snippets.md` **D**. No ffmpeg → take screenshots and name the missing clip in
+  `gaps`.
 - **Before/After** when the change alters something visible: capture the same screen on the base
-  revision with the same viewport, data, and persona, as the case's `before`. For a **bug fix**,
-  reproduce the bug on base first, then show it gone on the PR head. No runnable base target → name
-  that in `gaps`.
+  revision with the same viewport, data, and persona, as the case's `before`. Localhost: run the base
+  from a throwaway worktree (`git worktree add <tmp> origin/<base>`, then its `devCommand` on another
+  port). For a **bug fix**, reproduce the bug on base first, then show it gone on the PR head. No
+  runnable base target → name that in `gaps`.
 - **Inspect every capture before posting** — every screenshot, and frames across each whole clip.
   Drop one that shows setup noise, a secret, or not the claim.
 
@@ -185,10 +183,8 @@ For each case: drive the flow, assert behavior, capture evidence → PASS/FAIL +
 ## 6. Visual verify
 
 Use snippet **Capture + audit**. Capture touched screens @ desktop(1280)/tablet(768)/mobile(375),
-run `$H/harness/audit-metrics.js` (inlined `collectMetrics`) via `page.evaluate`. Outputs land in
-`~/.dev-browser/tmp/` (`look-<SLUG>-*.png`, `audit-<SLUG>.json`). **dev-browser ~30s/script
-timeout:** if a heavy page blows it, split into two runs — viewport loop first (capture), then a
-second run with just `page.evaluate(collectMetrics)` + `writeFile` (audit).
+then run `collectMetrics` from `$H/harness/audit-metrics.js` in the page. Outputs land in the
+evidence dir (`look-<SLUG>-*.png`, `audit-<SLUG>.json`).
 
 - Measured facts use standard thresholds (WCAG contrast 4.5 / 3, 44px tap targets, viewport
   overflow). These are **reported findings, not auto-FAIL**.
@@ -222,8 +218,7 @@ Never an infinite loop.
 
 ## 8. Evidence + PR post
 
-Collect the run's screenshots (`~/.dev-browser/tmp/`) and clips into `~/.no-mistakes/$RUN/`. Build
-`results.json`:
+Screenshots and clips are already in `~/.no-mistakes/$RUN/`. Build `results.json`:
 
 ```json
 {
@@ -328,7 +323,7 @@ number (default: current branch's PR).
 - `NOMISTAKES_FRONTEND_STATUS=BLOCKED reason=<needs-config|needs-setup|app-not-up|no-creds|login-failed|unclear-intent|out-of-scope-target|revision-mismatch|indeterminate|required-case-unverified>`
   — couldn't run or couldn't trust the run; state what's needed.
   - `needs-config` = no `.no-mistakes.json` resolved (walk up from CWD, else `~/.no-mistakes/<project>.json`) or it's invalid — see `no-mistakes/config/README.md` + the examples.
-  - `needs-setup` = dev-browser/chromium missing.
+  - `needs-setup` = agent-browser or its Chrome missing.
   - `app-not-up` = dev server unreachable.
   - `no-creds` = auth creds unresolvable.
   - `login-failed` = the configured login didn't carry a session.
