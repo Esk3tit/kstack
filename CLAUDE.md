@@ -58,7 +58,8 @@ How to apply:
 - Cost should never block using the right model for the job. Lean on the cheaper and faster options to explore widely — gather information, prototype, spike, and run competing hypotheses in parallel — then, once you've settled on the best approach empirically and through a data-driven read of the results, move the finalized work onto the stronger, more expensive model. When the axes genuinely conflict for anything that ships, intelligence > taste > cost.
 - Bulk/mechanical work (clear-spec implementation, data analysis, migrations): gpt-6.1-sol (high reasoning) - it's very cheap and token efficent.
 - Anything user-facing (UI, copy, API design) needs taste ≥ 7.
-- Reviews of plans/implementations: fable-5.1 or opus-5.5, optionally gpt-6.1-sol (high reasoning) as an extra independent perspective.
+- Reviews of plans/implementations: opus-5.5, optionally gpt-6.1-sol (high reasoning) as an extra independent perspective.
+- Never spawn fable-5.1 subagents unless I ask for them or approve it first; Fable reviews happen when I request them.
 - Never use Haiku.
 - Mechanics: gpt-6.1-sol (high reasoning) is handled natively via the `openai/codex-plugin-cc` plugin inside Claude Code, which reads your user-level `~/.codex/config.toml`. That config sets no default model, so pass `--model gpt-6.1-sol` on every Codex call (`/codex:review`, `/codex:adversarial-review`, `/codex:rescue`, or the companion's `review` / `adversarial-review` / `task`); without it Codex runs its own default model. Avoid writing custom bash scripts; instead, utilize the plugin's built-in tools and skills:
     - `/codex:review` - Run non-destructive, read-only code quality assessments. Supports `--base <ref>` for branch analysis.
