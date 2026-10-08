@@ -97,7 +97,7 @@ All user-authored. `/codexloop` drives Codex through the openai-codex Claude Cod
 - **`wide-event-logging/`** — implement wide event logging (canonical log lines) in Python/FastAPI:
   `SKILL.md` + reference modules (`config.py`, `context.py`, `middleware.py`, `security.py`, `usage.py`)
   for TPRM-API observability.
-- **`explain-code-change/`** — explain a code change as a layered Lavish HTML review surface. Layer 1
+- **`explain-code-change/`** — explain a code change as a layered standalone HTML report (own light/dark design, opened in the browser). Layer 1
   fits one screen: what the change does, why, the approach, the alternatives it beat, the risk, and
   the merge status, in plain words with real examples and no analogies. Layers 2 and 3 open on
   demand: the system before the change, the smallest real example animated through the old and new

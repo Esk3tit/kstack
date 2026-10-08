@@ -9,9 +9,8 @@ description: Explain a code change as a layered interactive HTML page. A dense p
 Turn a code change into a page the reader can judge in one screen and dig into
 for as long as they want.
 
-`lavish` owns presentation and the browser review loop. This skill owns what the
-page says and the order it says it in. Read the installed `lavish` skill before
-you build any HTML.
+The page is a **standalone report**: one self-contained HTML file the reader
+opens in their own browser and reads like a well-made document.
 
 ## The reader
 
@@ -148,19 +147,38 @@ Dense and compact. No scrolling needed to judge the approach.
 inventoried symbol appears in layer 3 with its part in the fix; and every edge
 case from step 2 appears in layer 2.
 
-## 4. Build the HTML page
+## 4. Build the report
 
-Open every matching `lavish` playbook. This page needs `explanation`, `diagram`,
-`table`, and `comparison` at minimum, plus `code` when snippets appear. Follow
-Lavish's design-source priority. Create `.lavish/<change-slug>-explainer.html`.
+Write one HTML file, `<change-slug>-explainer.html`. Save it where the
+repository's instructions put local artifacts. With no such rule, use a
+gitignored path or the session scratchpad. It never lands in tracked files.
+
+### Design
+
+The report has its own design, made for reading. It stays independent of the
+product's theme and of any review tool's chrome.
+
+- **Self-contained.** All CSS and JS live inline. The only outside requests are
+  Google Fonts. Use no CSS framework or component library.
+- **Report typography.** A serif display face for headings, a clean sans for
+  body text, and a mono face for code (for example Source Serif 4, Inter,
+  JetBrains Mono). Text runs at 14–15px, with comfortable line height.
+- **Light and dark.** Define every color as a token on `:root`. Redefine the
+  tokens under `prefers-color-scheme: dark` and under `[data-theme="dark"]`, and
+  add a theme toggle. Color SVG through the same tokens, with CSS `fill` and
+  `stroke`, so diagrams follow the theme.
+- **Calm surfaces.** An off-white page, white cards with a hairline border and
+  rounded corners, one accent color, and green, red, and amber only for status.
 
 ### Layout
 
-Layer 1 is fully open and fits the first screen at desktop width. Layers 2 and 3
-sit below it as sections the reader opens on demand: collapsible sections, tabs,
-or a "show more" per section. A sticky table of contents lets the reader jump to
-any section and back. Every claim in layer 1 links down to the section that
-backs it up.
+- A sticky contents sidebar on the left that highlights the section in view.
+  On narrow screens it becomes a row of pills at the top.
+- Layer 1 is fully open and fits one 1440×900 screen.
+- Layers 2 and 3 sit below as collapsible sections the reader opens on demand.
+- Every claim in layer 1 links down to the section that backs it up. A link into
+  a closed section opens it.
+- The page works at 390px wide with no sideways scroll.
 
 ### Pictures
 
@@ -175,10 +193,9 @@ the cases placed along it, and a rule with its exceptions. Chart real data when
 real numbers motivated the change. Render the real thing itself (one real record,
 one real screen, the real shape of the data) instead of describing it in words.
 
-Hand-author clickable maps as SVG or CSS grid rather than a Mermaid block.
-Lavish turns `.mermaid` containers into editable whiteboards on click, which
-takes the click away from your links. Mermaid stays right for sequence and
-state diagrams, where the click does no work.
+Hand-author every diagram as inline SVG, sized by `viewBox`. Keep SVG labels to
+a few words, and put the prose beside the figure in HTML. Show code as small
+hand-styled diff blocks of the lines that carry the fix, not whole files.
 
 ### Motion and interaction
 
@@ -210,21 +227,26 @@ it; every flow that changes over time has a stepped animation with controls;
 every inventoried file and symbol is findable by name; and every link and
 clickable part lands on the section it names.
 
-## 5. Open, audit, and hand off
+## 5. Audit, open, and hand off
 
-Follow the installed `lavish` skill's browser audit and feedback loop through
-handoff. Read the first screen alone and check it against the top test. Then
-read the whole page as the reader, and fix anything that only makes sense to
-someone who has seen the diff. Play every animation once through and step it
-once in each direction.
+Load the report in a headless browser (`agent-browser`) and look at
+screenshots:
 
-When Lavish is unavailable, still create a standalone portable HTML file and
-state that collaborative annotations are unavailable.
+- the first screen at 1440×900, in light and in dark;
+- every animation at its first and last step, stepped once in each direction;
+- the page at 390px wide, with no sideways scroll;
+- the browser console, with no errors.
 
-Deliver the review URL or local artifact link and name the design source used.
+Read the first screen alone and check it against the top test. Then read the
+whole page as the reader, and fix anything that only makes sense to someone who
+has seen the diff. Fix every visual flaw you see: overflow, overlap, clipped
+labels, or unreadable contrast.
 
-**Complete when:** the browser reports no severe layout warnings, every
-animation plays and steps, and the user has a working review link.
+Then open the file in the user's browser (`open <path>` on macOS) and give them
+the path.
+
+**Complete when:** every screenshot above is clean, every animation plays and
+steps, and the report is open in the user's browser.
 
 ## Evidence language
 
