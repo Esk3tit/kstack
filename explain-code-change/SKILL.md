@@ -83,7 +83,8 @@ copy. For each, capture:
 
 - its plain-English job;
 - **its part in the fix**, meaning the reason the change would fail without it;
-- what calls it or consumes its output.
+- what calls it or consumes its output;
+- **its logic before and after, as pseudocode** (see layer 3).
 
 Harvest the edge cases as a list: every "what if" the change handles, such as bad
 or missing input, two things happening at once, a dependency down, a limit hit,
@@ -137,14 +138,38 @@ Dense and compact. No scrolling needed to judge the approach.
 
 ### Layer 3: the code and the evidence
 
-1. **File and function walkthrough.** Every production symbol from step 2. Each
-   entry leads with its part in the fix, then what it does, then what calls it.
+1. **File and function walkthrough, in pseudocode.** Every production symbol
+   from step 2, grouped by file. Each entry leads with its part in the fix and
+   what calls it. Then comes a **pseudocode diff**: the old logic and the new
+   logic, with removed and added lines marked. A reader who reads only these
+   blocks can audit the algorithm without opening the PR.
+
+   The pseudocode keeps the real control flow, one to one:
+   - every branch, loop, early return, retry, limit, timeout, and failure path;
+   - what goes in, what comes out, and what is written or deleted;
+   - the real names of functions, fields, and error classes, so each line can
+     be traced to the code.
+
+   It drops plumbing: logging, metrics, imports, type conversions, and argument
+   passing. One pseudocode line stands for one step of logic, not one line of
+   code.
+
+   Under each block, add a **Look twice** note for anything a reviewer should
+   check: a new or changed retry or limit, a caught and swallowed error, a loop
+   over input with no size bound, a changed default, work that now happens
+   twice, or behavior removed with no replacement. Write "Nothing unusual" when
+   there is nothing.
+
+   Deleted functions show their old pseudocode, all marked removed, and say
+   what replaces them. Mechanical changes (a rename, a new field, a moved
+   import) get one line each, not a block.
 2. **Tests and evals.** A table of what each test group promises, in the
    reader's terms, plus the headline number an eval actually produced.
 3. **Validation and verdict.** What was actually run, and what still gates merge.
 
 **Complete when:** the layer 1 draft passes the top test on its own; every
-inventoried symbol appears in layer 3 with its part in the fix; and every edge
+inventoried symbol appears in layer 3 with its part in the fix, a pseudocode
+diff (or a one-line note for a mechanical change), and a Look twice note; and every edge
 case from step 2 appears in layer 2.
 
 ## 4. Build the report
@@ -174,11 +199,10 @@ product's theme and of any review tool's chrome.
 
 - A sticky contents sidebar on the left that highlights the section in view.
   On narrow screens it becomes a row of pills at the top.
-- Layer 1 is fully open and fits one 1440×900 screen.
+- Layer 1 is fully open and fits the first screen at desktop width.
 - Layers 2 and 3 sit below as collapsible sections the reader opens on demand.
 - Every claim in layer 1 links down to the section that backs it up. A link into
   a closed section opens it.
-- The page works at 390px wide with no sideways scroll.
 
 ### Pictures
 
@@ -194,8 +218,13 @@ real numbers motivated the change. Render the real thing itself (one real record
 one real screen, the real shape of the data) instead of describing it in words.
 
 Hand-author every diagram as inline SVG, sized by `viewBox`. Keep SVG labels to
-a few words, and put the prose beside the figure in HTML. Show code as small
-hand-styled diff blocks of the lines that carry the fix, not whole files.
+a few words, and put the prose beside the figure in HTML.
+
+Render each pseudocode diff as a mono block with indentation for nesting.
+Tint removed lines red and added lines green, and leave unchanged lines plain.
+Offer a before / after / both toggle, so the reader can see either version
+alone or the diff. Put the Look twice note in an amber callout under the block.
+Show real code only for the few lines that carry the fix, as a short diff.
 
 ### Motion and interaction
 
@@ -227,26 +256,19 @@ it; every flow that changes over time has a stepped animation with controls;
 every inventoried file and symbol is findable by name; and every link and
 clickable part lands on the section it names.
 
-## 5. Audit, open, and hand off
+## 5. Open and hand off
 
-Load the report in a headless browser (`agent-browser`) and look at
-screenshots:
+The report exists so the reader can review and ship fast, and handoff speed
+matters more than visual polish. Hand it off straight from the source: skip the
+headless browser, screenshots, and layout checks. The reader flags any visual
+problem they hit, and you fix it then.
 
-- the first screen at 1440×900, in light and in dark;
-- every animation at its first and last step, stepped once in each direction;
-- the page at 390px wide, with no sideways scroll;
-- the browser console, with no errors.
+Read the layer 1 copy once against the top test, and fix anything that only
+makes sense to someone who has seen the diff. Then open the file in the user's
+browser (`open <path>` on macOS) and give them the path.
 
-Read the first screen alone and check it against the top test. Then read the
-whole page as the reader, and fix anything that only makes sense to someone who
-has seen the diff. Fix every visual flaw you see: overflow, overlap, clipped
-labels, or unreadable contrast.
-
-Then open the file in the user's browser (`open <path>` on macOS) and give them
-the path.
-
-**Complete when:** every screenshot above is clean, every animation plays and
-steps, and the report is open in the user's browser.
+**Complete when:** the layer 1 copy passes the top test and the report is open
+in the user's browser.
 
 ## Evidence language
 

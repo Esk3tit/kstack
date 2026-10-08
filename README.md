@@ -42,7 +42,7 @@ nothing to lose and needs no prompt.
 | `commands/` | Custom slash commands (Codex-driven review loops + PR hygiene). |
 | `no-mistakes/` · `no-mistakes-frontend/` · `no-mistakes-backend/` · `no-mistakes-a11y/` · `no-mistakes-setup/` | The verification skill family (router + three specialists: frontend, backend, deep-a11y) plus the onboarding skill that generates a project's `.no-mistakes.json`. See each `SKILL.md`. |
 | `wide-event-logging/` | Skill — canonical-log-line / wide-event logging for Python/FastAPI (with reference modules). |
-| `explain-code-change/` | Skill — turn a branch, PR, or diff into a layered interactive HTML page: a dense plain-language summary of what and why on top, then diagrams, stepped animations, and a walkthrough of every changed file and function below. |
+| `explain-code-change/` | Skill — turn a branch, PR, or diff into a layered interactive HTML page: a dense plain-language summary of what and why on top, then diagrams, stepped animations, and a pseudocode diff of every changed function below. |
 | `codex/config.toml.example` | My Codex CLI config, **token redacted**. |
 | `legacy/` | Retired commands and skills kept for reference, not installed: `/review-spec`, `/review-implementation-plan`, and the `codex-cli` recipe they used. |
 
