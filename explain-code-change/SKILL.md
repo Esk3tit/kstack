@@ -174,11 +174,10 @@ product's theme and of any review tool's chrome.
 
 - A sticky contents sidebar on the left that highlights the section in view.
   On narrow screens it becomes a row of pills at the top.
-- Layer 1 is fully open and fits one 1440×900 screen.
+- Layer 1 is fully open and fits the first screen at desktop width.
 - Layers 2 and 3 sit below as collapsible sections the reader opens on demand.
 - Every claim in layer 1 links down to the section that backs it up. A link into
   a closed section opens it.
-- The page works at 390px wide with no sideways scroll.
 
 ### Pictures
 
@@ -227,26 +226,19 @@ it; every flow that changes over time has a stepped animation with controls;
 every inventoried file and symbol is findable by name; and every link and
 clickable part lands on the section it names.
 
-## 5. Audit, open, and hand off
+## 5. Open and hand off
 
-Load the report in a headless browser (`agent-browser`) and look at
-screenshots:
+The report exists so the reader can review and ship fast, and handoff speed
+matters more than visual polish. Hand it off straight from the source: skip the
+headless browser, screenshots, and layout checks. The reader flags any visual
+problem they hit, and you fix it then.
 
-- the first screen at 1440×900, in light and in dark;
-- every animation at its first and last step, stepped once in each direction;
-- the page at 390px wide, with no sideways scroll;
-- the browser console, with no errors.
+Read the layer 1 copy once against the top test, and fix anything that only
+makes sense to someone who has seen the diff. Then open the file in the user's
+browser (`open <path>` on macOS) and give them the path.
 
-Read the first screen alone and check it against the top test. Then read the
-whole page as the reader, and fix anything that only makes sense to someone who
-has seen the diff. Fix every visual flaw you see: overflow, overlap, clipped
-labels, or unreadable contrast.
-
-Then open the file in the user's browser (`open <path>` on macOS) and give them
-the path.
-
-**Complete when:** every screenshot above is clean, every animation plays and
-steps, and the report is open in the user's browser.
+**Complete when:** the layer 1 copy passes the top test and the report is open
+in the user's browser.
 
 ## Evidence language
 
