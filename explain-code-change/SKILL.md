@@ -1,25 +1,45 @@
 ---
 name: explain-code-change
 user-invocable: true
-description: Explain a code change to a non-engineer as an interactive HTML walkthrough built on one carried analogy, with teaching diagrams that link to every changed file and function. Use when the user asks for a visual, ELI5, or HTML explainer of a branch, PR, diff, or merge decision.
+description: Explain a code change as a layered interactive HTML page. A dense plain-language summary of what and why sits on top, then diagrams, animations, and a walkthrough of every changed file and function sit below it. Use when the user asks for a visual, ELI5, or HTML explainer of a branch, PR, diff, or merge decision.
 ---
 
 # Explain Code Change
 
-Turn a code change into something a non-engineer can **retell in their own words**.
+Turn a code change into a page the reader can judge in one screen and dig into
+for as long as they want.
 
-`lavish` owns presentation and the browser review loop; this skill owns what the
-page has to say. Read the installed `lavish` skill before building any HTML.
+The page is a **standalone report**: one self-contained HTML file the reader
+opens in their own browser and reads like a well-made document.
 
 ## The reader
 
-Write for a teammate who will never open the diff — a PM, a designer, a founder.
-Smart, knows the product, does not know your stack, your file names, or your
-framework. They are deciding whether this is safe to merge.
+The reader is deciding one thing first: **is the approach sound?** They might be
+the author checking their own work at the end of a long day, a PM, or a
+reviewer. They know the product. They may not know this part of the code.
 
-They finish able to say, unprompted: what was broken, what the change does about
-it, what happens when it goes wrong, and what it leaves alone. That is the
-**retell test**, and every step below aims at it.
+So the page is **layered**. The top layer answers what and why, and it is dense
+enough to judge the approach. Each layer below adds detail for a reader who
+wants it. A reader who stops at any layer leaves with a true picture, only a
+less detailed one.
+
+**The top test:** after the first screen alone, the reader can say what changed,
+why, how it works in one breath, why this way and not another, and what breaks if
+it is wrong.
+
+## Plain writing
+
+Every word on the page follows these rules:
+
+- Explain with the real thing. Use real records, real values, real screens, and
+  real numbers from the codebase or the data. Write no analogies and no
+  metaphors. The real example is the explanation.
+- Use small words and short sentences, with one idea per sentence.
+- Define a technical term in plain words the first time it appears. After that,
+  use the same word every time.
+- State facts and numbers. Cut words that only set a mood.
+- Run the installed `unslop` skill over the page copy before you hand it off,
+  when it is available.
 
 ## 1. Fix the review boundary
 
@@ -44,14 +64,17 @@ in the artifact or explicitly excluded with a reason.
 ## 2. Trace the actual behavior
 
 Read the complete diff and enough surrounding code to follow the changed path
-end-to-end. Inspect callers, trust boundaries, failure paths, and changed tests.
+end to end. Inspect callers, trust boundaries, failure paths, and changed tests.
 
-The diff shows what moved; it does not show what the reader is standing on.
+The diff shows what moved. It does not show what the reader is standing on.
 Establish the **baseline** from the codebase rather than the PR: what this system
 is for, what it produces, who reads that output, and what each noun the change
-talks about actually is — where it comes from and what makes it. A reader who
-does not know what the change operates on cannot follow any account of the
-change, however well told.
+talks about actually is, where it comes from, and what makes it.
+
+Find the **approach** and the options it beat. Read the PR body, commit
+messages, review threads, and code comments for the alternatives the author
+considered. When the record names none, say so on the page and name the obvious
+alternative yourself, labeled as your inference.
 
 Inventory every added or materially changed production function, method, class,
 and shared constant. For declarative changes, inventory the equivalent
@@ -59,157 +82,171 @@ behavioral units: prompt sections, schema fields, config keys, migrations, or UI
 copy. For each, capture:
 
 - its plain-English job;
-- **the part it plays in the fix** — the reason the change would fail without it;
+- **its part in the fix**, meaning the reason the change would fail without it;
 - what calls it or consumes its output.
 
-Harvest the edge cases as a list: every "what if" the change handles — bad or
-missing input, two things happening at once, a dependency down, a limit hit, a
-partial failure — paired with what actually happens. This list is the raw
-material for step 3, and it is what earns the reader's trust.
+Harvest the edge cases as a list: every "what if" the change handles, such as bad
+or missing input, two things happening at once, a dependency down, a limit hit,
+or a partial failure. Pair each with what actually happens.
+
+Pick the **smallest real example**: one concrete input that went wrong before and
+goes right now, with real values, never `foo`. It carries the animations in
+step 4.
 
 Keep the original feature distinct from later review fixes and uncommitted work.
-Group tests by file and user-visible promise; enumerate individual test functions
-only when the user requests that granularity.
+Group tests by file and user-visible promise. Enumerate individual test
+functions only when the user requests that granularity.
 
-Bulk changes — fixtures, corpora, snapshots, generated result files — earn a
-count and a sentence, never a walkthrough. Read what a result file *says*, not
-the file itself. A diff whose size comes from data is not a change of that size,
-and the artifact's space belongs to what changed behaviour.
+Bulk changes, such as fixtures, corpora, snapshots, and generated result files,
+earn a count and a sentence, never a walkthrough. Read what a result file *says*,
+not the file itself. A diff whose size comes from data is not a change of that
+size.
 
-**Complete when:** every changed production file and runtime-relevant behavioral
-unit has a role, a part in the fix, and a place in the end-to-end flow; the
-edge-case list is complete; and every noun the change depends on can be traced
-to where it comes from.
+**Complete when:** every changed production file and behavioral unit has a job,
+a part in the fix, and a place in the end-to-end flow; the edge-case list is
+complete; the approach has at least one named alternative; and the smallest real
+example is picked.
 
-## 3. Find the through-line
+## 3. Write the layers
 
-Pick one **through-line**: an everyday situation with the same shape as the
-problem the change solves. Everything downstream is told through it.
+Draft the content before styling it. The page has three layers, in this order.
 
-A through-line earns its place by passing all four:
+### Layer 1: the summary (one screen)
 
-- **The problem maps, not just the fix.** The reader feels the pain in the
-  analogy before hearing the solution.
-- **It runs on ordinary life.** Mail, keys, queues, kitchens, filing cabinets,
-  road signs. No second technical domain standing in for the first.
-- **It has a before and an after**, and the difference is visible.
-- **It stretches to the edges.** Ask every "what if" from step 2 inside the
-  analogy. If answering one forces you back into code vocabulary, the analogy is
-  too small — pick a different one.
+Dense and compact. No scrolling needed to judge the approach.
 
-One through-line, not three; mixed metaphors cost more than they give. Name the
-single place it breaks down, so the reader knows where to stop trusting it.
+1. **One line:** what this change does, in plain words.
+2. **Why:** the problem, what it cost someone, with the real number when one
+   exists.
+3. **How:** the approach in two or three short sentences, beside one
+   before/after picture of the smallest real example.
+4. **Why this way:** the alternatives and why each lost, one line each.
+5. **Risk:** what breaks if this is wrong, who notices first, and how to undo it.
+6. **Status:** what was run, what passed, and what still gates merge.
 
-**Complete when:** every "what if" from step 2 has an answer stated in the
-through-line's own words.
+### Layer 2: how it works
 
-## 4. Write the change story
+1. **The system before the change.** What it does, what it produces, and who
+   reads that output. Start with a **you are here** picture: the system at a
+   glance with the changed part marked.
+2. **The change, step by step.** The smallest real example walks through the old
+   path and the new path.
+3. **What if…** Each edge case as a question the reader would ask, then what
+   happens, then one line of mechanism.
+4. **Changed and deliberately untouched**, side by side.
 
-Draft the content before styling it. These are the pieces the page must carry,
-and this is the order the reader meets them in: oriented in the real system
-first, and only then handed the analogy that stands for it. An analogy that
-arrives before the world it describes reads as a non-sequitur however apt it is.
-Each piece opens in the through-line and lands in the code:
+### Layer 3: the code and the evidence
 
-1. **The world before the change** — what this system does, what it produces, and
-   who reads that output. Then the stakes: what the defect cost someone, in one
-   sentence, with real numbers when they motivated the change.
-2. **The through-line, before and after** — the situation, the pain, the fix.
-3. **The legend** — every noun in the through-line mapped to the real thing it
-   stands for and the name it carries in the code. An analogy with no decoder
-   ring is a story the reader cannot attach to anything.
-4. **The smallest real example** — one concrete input that went wrong before and
-   goes right now. Real values from the codebase or the data, never `foo`.
-5. **What the change actually does** — each moving part named for its job in the
-   through-line first, its code name second.
-6. **What if…** — the edge cases as questions the reader would ask, each answered
-   in through-line terms, then in one line of mechanism.
-7. **Blast radius and reversibility** — if this is wrong, what breaks, who
-   notices first, and how it gets undone.
-8. **Changed and deliberately untouched**, side by side.
-9. **File and function walkthrough** — every production symbol from step 2, each
-   entry leading with the part it plays in the through-line, then what it does.
-10. **Tests and evals** — a table of what each group promises, in the reader's
-    terms, plus the headline number an eval actually produced. The promise and
-    the result, not the harness.
-11. **Validation and verdict** — what was actually run, and what still gates merge.
+1. **File and function walkthrough.** Every production symbol from step 2. Each
+   entry leads with its part in the fix, then what it does, then what calls it.
+2. **Tests and evals.** A table of what each test group promises, in the
+   reader's terms, plus the headline number an eval actually produced.
+3. **Validation and verdict.** What was actually run, and what still gates merge.
 
-Every technical term the reader meets is one you chose to teach: introduce it
-inside the through-line, in plain words, at the moment it first matters.
+**Complete when:** the layer 1 draft passes the top test on its own; every
+inventoried symbol appears in layer 3 with its part in the fix; and every edge
+case from step 2 appears in layer 2.
 
-**Complete when:** every inventoried symbol names its part in the through-line
-before it names its mechanics, every noun in the through-line appears in the
-legend, and a reader who stops after item 6 passes the retell test.
+## 4. Build the report
 
-## 5. Build the HTML review surface
+Write one HTML file, `<change-slug>-explainer.html`. Save it where the
+repository's instructions put local artifacts. With no such rule, use a
+gitignored path or the session scratchpad. It never lands in tracked files.
 
-Open every matching `lavish` playbook — this artifact needs `diagram`, `table`,
-and `comparison` at minimum, plus `code` when snippets appear. Follow Lavish's
-design-source priority. Create `.lavish/<change-slug>-explainer.html`.
+### Design
 
-**Prefer the picture.** Whatever can be shown is shown; prose is the fallback for
-what genuinely has no shape — rationale, tradeoffs, open questions. A paragraph
-that could have been a diagram is a paragraph the reader has to hold in their
-head.
+The report has its own design, made for reading. It stays independent of the
+product's theme and of any review tool's chrome.
 
-When unsure whether something earns its place, keep it: an explainer fails by
-leaving the reader guessing far more often than by telling them too much. Spend
-the surplus on another picture rather than another paragraph — a diagram buys
-understanding at a fraction of a paragraph's reading cost, so more of them is not
-the same cost as more words.
+- **Self-contained.** All CSS and JS live inline. The only outside requests are
+  Google Fonts. Use no CSS framework or component library.
+- **Report typography.** A serif display face for headings, a clean sans for
+  body text, and a mono face for code (for example Source Serif 4, Inter,
+  JetBrains Mono). Text runs at 14–15px, with comfortable line height.
+- **Light and dark.** Define every color as a token on `:root`. Redefine the
+  tokens under `prefers-color-scheme: dark` and under `[data-theme="dark"]`, and
+  add a theme toggle. Color SVG through the same tokens, with CSS `fill` and
+  `stroke`, so diagrams follow the theme.
+- **Calm surfaces.** An off-white page, white cards with a hairline border and
+  rounded corners, one accent color, and green, red, and amber only for status.
 
-**Draw teaching diagrams** — the kind made to teach a concept to someone who has
-never met it, not to document a system. The test: it still makes sense when the
-codebase does not exist. A picture that only means something to someone who
-already knows the system is an architecture diagram; redraw it.
+### Layout
 
-Reach for what a teacher reaches for: before and after, the shape of the problem,
-what happens to each kind of input, a spectrum with the cases placed along it, a
-rule and its exceptions. Chart real data whenever real numbers motivated the
-change — a bar of what the logs actually looked like beats any drawing. A
-code-flow diagram is one visual among many, never the centerpiece.
+- A sticky contents sidebar on the left that highlights the section in view.
+  On narrow screens it becomes a row of pills at the top.
+- Layer 1 is fully open and fits one 1440×900 screen.
+- Layers 2 and 3 sit below as collapsible sections the reader opens on demand.
+- Every claim in layer 1 links down to the section that backs it up. A link into
+  a closed section opens it.
+- The page works at 390px wide with no sideways scroll.
 
-**Draw the baseline too.** The world before the change is what the reader has
-least of and needs first, so it earns pictures rather than prose: render the
-thing itself — one real record, one real screen, the real shape of the data —
-rather than describing it in words. One of those pictures is a **you are here**:
-the system at a glance with the changed part marked, so the reader sees both how
-little of it this touches and what it sits between.
+### Pictures
 
-Open the page on the baseline — the you-are-here, then the thing itself. Only
-after that build the through-line's before/after as the **map**, which by then
-lands on a reader who knows what it stands for. Every part of the map is
-clickable, jumps to the section explaining that part, and offers a way back.
-Follow the playbook's hybrid shape — overview visual first, detail cards beneath.
+**Prefer the picture.** Whatever can be shown is shown. Prose is for what has no
+shape: rationale, tradeoffs, open questions. When unsure whether a picture earns
+its place, keep it. A diagram costs the reader far less than a paragraph.
 
-Hand-author that map as SVG or CSS grid rather than a Mermaid block: Lavish turns
-`.mermaid` containers into editable whiteboards on click, which takes the click
-away from your links. Mermaid stays right for sequence and state diagrams, where
-the click is not doing work.
+Draw diagrams made to teach someone who has never seen the system. The test: it
+still makes sense when the codebase does not exist. Reach for before and after,
+the shape of the problem, what happens to each kind of input, a spectrum with
+the cases placed along it, and a rule with its exceptions. Chart real data when
+real numbers motivated the change. Render the real thing itself (one real record,
+one real screen, the real shape of the data) instead of describing it in words.
 
-Keep the legend beside the hero map rather than buried below it, so the reader
-meets the analogy and its decoder in the same screenful, and give every
-unavoidable technical term a hover gloss in plain words.
+Hand-author every diagram as inline SVG, sized by `viewBox`. Keep SVG labels to
+a few words, and put the prose beside the figure in HTML. Show code as small
+hand-styled diff blocks of the lines that carry the fix, not whole files.
 
-**Complete when:** every section of the change story is on the page, every
-diagram still makes sense with no codebase behind it, every inventoried file and
-symbol is findable by name, and every clickable part of the hero visual lands on
-the section explaining it.
+### Motion and interaction
 
-## 6. Open, audit, and hand off
+Animate what changes over time: the smallest real example moving through the
+old path and then the new one, two requests racing, a retry, a queue draining, a
+value changing as it passes each step. Each animation:
 
-Follow the installed `lavish` skill's browser audit and feedback loop through
-handoff. Read the page once as the reader before handing it over, and fix
-anything that only makes sense to someone who has seen the diff.
+- has play, pause, and step-forward/back controls, with a caption that names
+  what is happening at each step;
+- shows the same steps for "before" and "after", so the reader sees exactly
+  where the paths split;
+- respects `prefers-reduced-motion` by opening in step mode;
+- ends on a final frame that reads correctly as a still picture.
 
-When Lavish is unavailable, still create a standalone portable HTML file and
-state that collaborative annotations are unavailable.
+Add interaction wherever it answers a question faster than reading would:
 
-Deliver the review URL or local artifact link, name the design source used, and
-name the through-line.
+- a **before/after toggle** on any picture that has both states;
+- an **input picker** that lets the reader choose one of the real edge-case
+  inputs and watch which path it takes;
+- **hover glosses** that define each technical term in plain words;
+- **click-to-code links** from each box in a diagram to its entry in the
+  layer 3 walkthrough, with a way back.
 
-**Complete when:** the browser reports no severe layout warnings and the user has
-a working review link.
+Every animation and control shows real behavior from step 2.
+
+**Complete when:** the first screen holds all of layer 1; every section of the
+draft is on the page; every diagram still makes sense with no codebase behind
+it; every flow that changes over time has a stepped animation with controls;
+every inventoried file and symbol is findable by name; and every link and
+clickable part lands on the section it names.
+
+## 5. Audit, open, and hand off
+
+Load the report in a headless browser (`agent-browser`) and look at
+screenshots:
+
+- the first screen at 1440×900, in light and in dark;
+- every animation at its first and last step, stepped once in each direction;
+- the page at 390px wide, with no sideways scroll;
+- the browser console, with no errors.
+
+Read the first screen alone and check it against the top test. Then read the
+whole page as the reader, and fix anything that only makes sense to someone who
+has seen the diff. Fix every visual flaw you see: overflow, overlap, clipped
+labels, or unreadable contrast.
+
+Then open the file in the user's browser (`open <path>` on macOS) and give them
+the path.
+
+**Complete when:** every screenshot above is clean, every animation plays and
+steps, and the report is open in the user's browser.
 
 ## Evidence language
 
@@ -223,5 +260,5 @@ a working review link.
   to their source, and keep them out of the block reporting your own.
 - Describe uncertainty through its actual fallback. Prefer "ambiguous evidence
   produces no highlight" over an absolute promise of zero future errors.
-- Keep the through-line out of the evidence sections. An analogy explains what
-  the code does; it never stands in as proof that the code works.
+- Label inference as inference. An alternative you named yourself, or a reason
+  the record does not state, says so on the page.

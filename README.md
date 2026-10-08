@@ -42,7 +42,7 @@ nothing to lose and needs no prompt.
 | `commands/` | Custom slash commands (Codex-driven review loops + PR hygiene). |
 | `no-mistakes/` · `no-mistakes-frontend/` · `no-mistakes-backend/` · `no-mistakes-a11y/` · `no-mistakes-setup/` | The verification skill family (router + three specialists: frontend, backend, deep-a11y) plus the onboarding skill that generates a project's `.no-mistakes.json`. See each `SKILL.md`. |
 | `wide-event-logging/` | Skill — canonical-log-line / wide-event logging for Python/FastAPI (with reference modules). |
-| `explain-code-change/` | Skill — turn a branch, PR, or diff into an interactive HTML walkthrough a non-engineer can retell: one carried analogy, teaching diagrams that link to every changed file and function. |
+| `explain-code-change/` | Skill — turn a branch, PR, or diff into a layered interactive HTML page: a dense plain-language summary of what and why on top, then diagrams, stepped animations, and a walkthrough of every changed file and function below. |
 | `codex/config.toml.example` | My Codex CLI config, **token redacted**. |
 | `legacy/` | Retired commands and skills kept for reference, not installed: `/review-spec`, `/review-implementation-plan`, and the `codex-cli` recipe they used. |
 
@@ -97,12 +97,12 @@ All user-authored. `/codexloop` drives Codex through the openai-codex Claude Cod
 - **`wide-event-logging/`** — implement wide event logging (canonical log lines) in Python/FastAPI:
   `SKILL.md` + reference modules (`config.py`, `context.py`, `middleware.py`, `security.py`, `usage.py`)
   for TPRM-API observability.
-- **`explain-code-change/`** — explain a code change to a non-engineer as a Lavish HTML review
-  surface. Built on one **through-line** (an everyday analogy chosen against the change's real edge
-  cases) carried from the summary down into the per-symbol walkthrough, with **teaching diagrams**
-  that must still make sense with no codebase behind them, and a clickable hero visual that links
-  into the code sections. Also covers stakes, blast radius, reversibility, scope guardrails, test
-  evidence, and local-vs-external merge gates. Bar: the reader can retell the change unprompted.
+- **`explain-code-change/`** — explain a code change as a layered standalone HTML report (own light/dark design, opened in the browser). Layer 1
+  fits one screen: what the change does, why, the approach, the alternatives it beat, the risk, and
+  the merge status, in plain words with real examples and no analogies. Layers 2 and 3 open on
+  demand: the system before the change, the smallest real example animated through the old and new
+  paths, edge cases, a per-symbol walkthrough, and test evidence with local-vs-external merge gates.
+  Bar: the first screen alone is enough to judge whether the approach is sound.
 
 Install shared skills once under `~/.agents/skills/<name>/`, then link them into Claude Code:
 

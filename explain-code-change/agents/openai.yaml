@@ -1,4 +1,4 @@
 interface:
   display_name: "Explain Code Change"
-  short_description: "Explain a change to a non-engineer as an interactive HTML walkthrough"
-  default_prompt: "Use $explain-code-change to explain this branch as an interactive HTML walkthrough a non-engineer could retell."
+  short_description: "Explain a change as a layered interactive HTML page"
+  default_prompt: "Use $explain-code-change to explain this branch as a layered interactive HTML page whose first screen is enough to judge the approach."
