@@ -29,7 +29,7 @@ A cheap **axe-core static layer** rides along for the no-interaction WCAG rules 
 landmarks, alt text). axe-core *cannot* test the three interaction axes — that's why this skill exists.
 
 **Report-only** (never edit product code, never merge) · **Ephemeral** (nothing lands in a product
-branch). Read `CONTEXT.md` for the vocabulary (operability blocker, finding, focus path, composite
+branch). Read `GLOSSARY.md` for the vocabulary (operability blocker, finding, focus path, composite
 widget, reflow check) and `docs/adr/` for why this is a separate skill. Emit exactly one
 `NOMISTAKES_A11Y_STATUS` line.
 
