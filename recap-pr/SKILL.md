@@ -72,4 +72,4 @@ reviewed by <model>
 
 Then refresh each PR body's `## Behavior changes vs master` section (the `/pr` template) from the changes still in that PR's final diff: accepted rows with a `prod_delta` other than `none`, plus open parity divergences. Rejected, reverted and superseded rows stay in the recap's "Rejected or reverted" section only.
 
-Done when every log row and every parity row appears in exactly one section.
+Done when every log row and every parity row appears in exactly one section: the first one above that fits.
