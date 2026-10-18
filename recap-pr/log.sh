@@ -54,7 +54,7 @@ case "${1:-}" in
   --pins)
     { [ -f "$KEYFILE" ] && cat "$KEYFILE"; echo "$KEY"; } | awk '!seen[$0]++' | while read -r k; do
       f="$HOME/.local/share/recap/$k/decisions.tsv"
-      [ -f "$f" ] && tail -n +2 "$f"
+      if [ -f "$f" ]; then tail -n +2 "$f"; fi
     done | sort -s -t$'\t' -k1,1 | awk '!seen[$0]++' | awk -F'\t' '
       $4 == "you" && $10 ~ /^accepted/ {
         if (match($10, /supersedes: .*$/)) {
