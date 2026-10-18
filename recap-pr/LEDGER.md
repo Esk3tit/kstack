@@ -4,7 +4,7 @@ A ticket's work leaves a **decision log**: one TSV row per decision, so the revi
 
 ## Where it lives
 
-`~/.local/share/recap/<key>/decisions.tsv`. `<key>` is `$RECAP_KEY` when set, else the ticket in the branch name or commit subjects (`PRO-2725`; pattern `$RECAP_TICKET_RE`, default `pro-[0-9]+`), else `<repo>-<branch>`. A branch keeps the key it first resolved to (`~/.local/share/recap/.branch-keys/`), so a later commit naming a ticket does not move its log. One log spans every repo a ticket touches, so set `RECAP_KEY` when sibling branches might not carry the ticket. It is local only and never committed.
+`~/.local/share/recap/<key>/decisions.tsv`. `<key>` is `$RECAP_KEY` when set, else the ticket in the branch name or commit subjects (`PRO-2725`; pattern `$RECAP_TICKET_RE`, default `pro-[0-9]+`), else `<repo>-<branch>`. A branch keeps the key of its first row (`~/.local/share/recap/.branch-keys/`), so neither a later commit naming a ticket nor a `RECAP_KEY` set to log another PR moves its log. One log spans every repo a ticket touches, so set `RECAP_KEY` when sibling branches might not carry the ticket. It is local only and never committed.
 
 ## Writing a row
 

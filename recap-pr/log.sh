@@ -60,7 +60,7 @@ esac
 clean() { printf '%s' "$1" | tr '\t\r\n' '   '; }
 
 mkdir -p "$(dirname "$LOG")" "$(dirname "$KEYFILE")"
-echo "$KEY" > "$KEYFILE"
+[ -s "$KEYFILE" ] || echo "$KEY" > "$KEYFILE"
 # The header is written to a temp file and hard-linked into place, so the log never exists without it.
 if [ ! -e "$LOG" ]; then
   tmp=$(mktemp "$LOG.XXXXXX")
