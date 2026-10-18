@@ -52,25 +52,26 @@ case "${1:-}" in
     new="$HOME/.local/share/recap/$2/decisions.tsv"
     echo "$new"; exit 0 ;;
   --pins)
-    { [ -f "$KEYFILE" ] && cat "$KEYFILE"; echo "$KEY"; printf '%s\n' ${RECAP_PIN_KEYS:-}; } \
+    # An explicit RECAP_KEY reads that log alone (plus RECAP_PIN_KEYS), not the checkout's own logs.
+    { if [ -z "${RECAP_KEY:-}" ] && [ -f "$KEYFILE" ]; then cat "$KEYFILE"; fi
+      echo "$KEY"; printf '%s\n' ${RECAP_PIN_KEYS:-}; } \
       | awk 'NF && !seen[$0]++' | while read -r k; do
       f="$HOME/.local/share/recap/$k/decisions.tsv"
       if [ -f "$f" ]; then tail -n +2 "$f"; fi
-    done | sort -s -t$'\t' -k1,1 | awk '!seen[$0]++' | awk -F'\t' '
+    done \
+      | awk -F'\t' -v OFS='\t' '{ print $1, ($10 ~ /supersedes: /), $0 }' \
+      | sort -s -t$'\t' -k1,1 -k2,2n | cut -f3- | awk '!seen[$0]++' \
+      | awk -F'\t' '
+      # Rows run in time order; within a second, plain rows come before superseding ones and a
+      # log keeps its write order. Each supersession removes the matching rows seen so far.
       $4 == "you" && $10 ~ /^accepted/ {
-        n++; ts[n] = $1; decision[n] = $6; text[n] = "- " $6 " (" $7 ")"
-        if (match($10, /supersedes: .*$/)) old[n] = substr($10, RSTART + 12)
+        if (match($10, /supersedes: .*$/)) {
+          old = substr($10, RSTART + 12)
+          for (j in decision) if (decision[j] == old) { delete decision[j]; delete text[j] }
+        }
+        decision[NR] = $6; text[NR] = "- " $6 " (" $7 ")"
       }
-      # A supersession removes the named decision when logged earlier or in the same second,
-      # whichever log it came from; two rows that supersede each other in one second keep the later.
-      END {
-        for (i = 1; i <= n; i++) if (i in old)
-          for (j = 1; j <= n; j++)
-            if (j != i && decision[j] == old[i] && (ts[j] < ts[i] || \
-                (ts[j] == ts[i] && !((j in old) && old[j] == decision[i] && j > i))))
-              gone[j] = 1
-        for (i = 1; i <= n; i++) if (!(i in gone)) print text[i]
-      }
+      END { for (i = 1; i <= NR; i++) if (i in text) print text[i] }
     '
     exit 0 ;;
 esac
