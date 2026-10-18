@@ -14,6 +14,10 @@ This is not a cost argument and does not soften the section above — effort is 
 
 When doing bug fixes, always start with reproducing the bug in an E2E setting as closely aligned with how an end user would experience it as possible. This makes sure you find the real problem so your fix will actually solve it.
 
+## Decision log
+
+Work you do while the user is not watching (implementation, review loops, PR comments, E2E fixes) logs each decision, and each change to what users see compared with master, in the ticket's decision log: format in `~/.claude/skills/recap-pr/LEDGER.md`. The user audits it with `/recap-pr` before merge.
+
 ## Quality bar — fix what's broken, even if it's not yours
 
 When end-to-end testing a product, be picky about the UI you see and be obsessed with pixel perfection. If something clearly looks off, even if it is not directly related to what you are doing, try to get it fixed along the way.

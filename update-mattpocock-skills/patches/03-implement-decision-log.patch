@@ -1,0 +1,12 @@
+diff -ru after01/SKILL.md inst/SKILL.md
+--- a/SKILL.md	2026-10-17 19:26:49
++++ b/SKILL.md	2026-10-17 19:26:58
+@@ -31,6 +31,8 @@
+ re-run it at the base commit (a throwaway `git worktree` is the cheap way). Report a
+ pre-existing failure as pre-existing; do not fix it silently or count it against the change.
+ 
++Log each decision to the decision log as you make it (`~/.claude/skills/recap-pr/LEDGER.md`): every choice the spec leaves open, every mechanism you add, and every change to what users see compared with master, with its `prod_delta`.
++
+ Once done, use /code-review to review the work.
+ 
+ Commit your work to the current branch.

@@ -1,0 +1,25 @@
+diff -ru pr/SKILL.md pr/SKILL.md
+--- pr/SKILL.md	2026-10-17 14:25:16
++++ pr/SKILL.md	2026-10-17 18:43:37
+@@ -16,6 +16,10 @@
+ 
+ <diagram, diff-sketch, or tree>
+ 
++## Behavior changes vs master
++
++- <what users, customers or ops see differently, and why> | None
++
+ ## Evidence
+ 
+ - **Before:** <screenshot/output/failing test run>
+@@ -154,6 +158,10 @@
+ Place each visual next to the short text it supports. Keep only the calls, files, props, states, and boundaries needed to answer the user's current question or the options to resolve the current discussion point.
+ 
+ You may use one of these, you may use several, it is unlikely you will use all of them. Use your judgement and don't overwhelm the user.
++
++### Behavior changes vs master
++
++Every difference from master someone outside the code will notice: placement, order, labels, collapse state, wording, payload shape, throughput, where data is stored. One line each, with the reason. Take them from the decision log's accepted rows whose `prod_delta` is not `none` and whose change is still in the diff (`~/.claude/skills/recap-pr/LEDGER.md`); write `None` when the change is invisible outside the code.
+ 
+ ### Evidence
+ 

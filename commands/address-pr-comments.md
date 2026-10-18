@@ -7,7 +7,7 @@ argument-hint: [pr-number] [--once]
 
 Address **unresolved** review comments on a PR: judge each one, fix what's valid, push back on what isn't, reply to every comment, resolve the thread. Then loop — push, let the reviewers re-review, repeat — until the PR converges.
 
-**Idempotent.** Each pass only touches unresolved threads with no reply, so re-running is always safe.
+**Idempotent.** Each pass works only the unresolved threads whose last comment is not ours, so re-running is always safe.
 
 - `$1` — PR number (optional; defaults to the current branch's PR)
 - `--once` — run a single pass and stop, instead of looping to convergence
@@ -23,22 +23,22 @@ Classify every check and comment source by name into exactly one bucket — the 
 
 ## Each pass
 
-1. **Fetch & converge.** Find the PR (`gh-axi pr view` off the current branch, or `<pr>` if given). Read review comments and their thread resolution (`gh-axi pr view <pr> --comments --reviews`; `api POST /graphql` for each thread's `isResolved`), and reviewer states (`gh-axi pr checks <pr>`). Keep only unresolved threads with no reply. **Converged** when no such threads remain AND every reviewer is green (`SUCCESS`; `NEUTRAL`/`SKIPPED` pass; `FAILURE`/`CANCELLED`/`TIMED_OUT` don't). On convergence, emit `LOOP_STATUS=CLEAN ITERATIONS=<N>` and stop. A red reviewer with no comment is still a finding — investigate and fix it.
+1. **Fetch & converge.** Find the PR (`gh-axi pr view` off the current branch, or `<pr>` if given). Read review comments and their thread resolution (`gh-axi pr view <pr> --comments --reviews`; `api POST /graphql` for each thread's `isResolved`), and reviewer states (`gh-axi pr checks <pr>`). For an unresolved thread whose last comment is already our reply (an earlier pass stopped before resolving it), resolve it when the reply is a rejection or the commit it names is on the remote branch (`git fetch origin <branch>`, then `git merge-base --is-ancestor <sha> origin/<branch>`); otherwise work it again. Keep the unresolved threads whose last comment is someone else's, including a bot answering our reply. **Converged** when no unresolved thread remains AND every reviewer is green (`SUCCESS`; `NEUTRAL`/`SKIPPED` pass; `FAILURE`/`CANCELLED`/`TIMED_OUT` don't). On convergence, emit `LOOP_STATUS=CLEAN ITERATIONS=<N>` and stop. A red reviewer with no comment is still a finding — investigate and fix it.
 
 2. **Partition into clusters.** Holding every comment at once, group them: comments on the same code or that reference each other share a cluster; everything else is a cluster of one. This call is yours to make directly from full context — no line-distance heuristic.
 
 3. **Fan out.** Spawn one general-purpose subagent per cluster, all in parallel, each with this task:
-   > Address these PR comments: {cluster}. Read the code around each. Judge whether each raises a real issue — technically correct, an actual improvement to quality/security/maintainability, consistent with the codebase. Fix the valid ones with Edit; for invalid ones, prepare a respectful explanation of why it isn't one. Do NOT commit, reply, or resolve. Return per comment: `valid` (bool), `action` ("Fixed: …" / "Not an issue: …"), `files` (paths changed), `reply` (message to post).
+   > Address these PR comments: {cluster}. Read the code around each. Judge whether each raises a real issue — technically correct, an actual improvement to quality/security/maintainability, consistent with the codebase. A fix that adds a mechanism must pass the mechanism rule in `~/.claude/skills/recap-pr/LEDGER.md`; one that fails it is not a valid fix. Fix the valid ones with Edit; for invalid ones, prepare a respectful explanation of why it isn't one. Do NOT commit, reply, or resolve. Return per comment: `valid` (bool), `action` ("Fixed: …" / "Not an issue: …"), `files` (paths changed), `reply` (message to post).
 
    Reject nitpicks, bikeshedding, and bloated defensive code; never fabricate a fix just to silence a bot.
 
-4. **Finalize (parent only).** Collect results. Print a table (Comment | File | Valid? | Action). Reply to each comment and resolve its thread via `gh-axi api` (`POST /repos/{owner}/{repo}/pulls/{pr}/comments/{id}/replies`, and the `resolveReviewThread` graphql mutation). Commit any fixes with a message naming the count addressed.
+4. **Finalize (parent only).** Collect results. Check every returned fix that adds a mechanism against the mechanism rule in `~/.claude/skills/recap-pr/LEDGER.md`; revert one that fails and rewrite its reply as a rejection. Print a table (Comment | File | Valid? | Action). Commit any fixes with a message naming the count addressed and push them (step 5's rules) before replying, so every "Fixed" reply names a commit already on the remote. Then reply to each comment (a fix's reply names its commit SHA) and resolve its thread via `gh-axi api` (`POST /repos/{owner}/{repo}/pulls/{pr}/comments/{id}/replies`, and the `resolveReviewThread` graphql mutation). Log each comment as one decision-log row (`phase pr-comments`, `source bot:<reviewer>`, `asked no`).
 
 **If `--once`: stop here.**
 
 ## Loop
 
-5. **Push** — only if this pass committed. Never force-push; never push to `master`/`main`. If the remote diverged, stop with `LOOP_STATUS=FAIL ERROR="remote diverged"`.
+5. **Push rules** (the push itself happens in step 4) — never force-push; never push to `master`/`main`. If the remote diverged, stop with `LOOP_STATUS=FAIL ERROR="remote diverged"`.
 
 6. **Let reviewers re-review.** Poll `gh-axi pr checks <pr>` every 60–120s until every reviewer reaches a final state — ignore deploys, pending or red. Once they settle, wait ~45s for bots to post. Per-pass timeout 30 min → `LOOP_STATUS=FAIL ERROR="reviewer timeout"`.
 
