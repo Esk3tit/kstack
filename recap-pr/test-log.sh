@@ -33,6 +33,9 @@ row C4 $T A accepted; row C4 $T B "accepted; supersedes: A"; row C4 $T C "accept
 check "same-second A>B>C>A" "$(RECAP_KEY=C4 pins)" "- A (why)"
 row X1 $T B "accepted; supersedes: A"; row X2 $T A accepted
 check "cross-log same-second" "$(RECAP_KEY=X1 RECAP_PIN_KEYS='X1 X2' pins)" "- B (why)"
+row S1 $T A accepted; row S1 $T C "accepted; supersedes: B"; row S2 $T B "accepted; supersedes: A"
+check "split chain, one log order" "$(RECAP_KEY=S1 RECAP_PIN_KEYS='S1 S2' pins)" "- C (why)"
+check "split chain, other log order" "$(RECAP_KEY=S2 RECAP_PIN_KEYS='S2 S1' pins)" "- C (why)"
 row LB 2026-01-01T00:00:09Z B "accepted; supersedes: A"; row LB 2026-01-01T00:00:05Z A accepted
 check "late backfill stays superseded" "$(RECAP_KEY=LB pins)" "- B (why)"
 row RV $T D reverted; row RV $T E accepted

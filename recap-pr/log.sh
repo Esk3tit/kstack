@@ -58,20 +58,35 @@ case "${1:-}" in
       | awk 'NF && !seen[$0]++' | while read -r k; do
       f="$HOME/.local/share/recap/$k/decisions.tsv"
       if [ -f "$f" ]; then tail -n +2 "$f"; fi
-    done \
-      | awk -F'\t' -v OFS='\t' '{ print $1, ($10 ~ /supersedes: /), $0 }' \
-      | sort -s -t$'\t' -k1,1 -k2,2n | cut -f3- | awk '!seen[$0]++' \
-      | awk -F'\t' '
-      # Rows run in time order; within a second, plain rows come before superseding ones and a
-      # log keeps its write order. Each supersession removes the matching rows seen so far.
-      $4 == "you" && $10 ~ /^accepted/ {
-        if (match($10, /supersedes: .*$/)) {
-          old = substr($10, RSTART + 12)
-          for (j in decision) if (decision[j] == old) { delete decision[j]; delete text[j] }
+    done | sort -s -t$'\t' -k1,1 | awk '!seen[$0]++' | awk -F'\t' '
+      # Rows run in time order. Within one second, a row superseding a decision waits until that
+      # decision has been read; only a true cycle falls back to write order.
+      function flush(   a, b, k, x, pick, blocked, left) {
+        left = gn
+        while (left) {
+          pick = 0
+          for (a = 1; a <= gn && !pick; a++) {
+            k = gid[a]
+            if (k in done) continue
+            blocked = 0
+            if (k in old) for (b = 1; b <= gn; b++) {
+              x = gid[b]
+              if (x != k && !(x in done) && dec[x] == old[k]) blocked = 1
+            }
+            if (!blocked) pick = k
+          }
+          if (!pick) for (a = 1; a <= gn; a++) if (!(gid[a] in done)) { pick = gid[a]; break }
+          if (pick in old) for (x in live) if (dec[x] == old[pick]) delete live[x]
+          live[pick] = 1; done[pick] = 1; left--
         }
-        decision[NR] = $6; text[NR] = "- " $6 " (" $7 ")"
+        gn = 0
       }
-      END { for (i = 1; i <= NR; i++) if (i in text) print text[i] }
+      $4 == "you" && $10 ~ /^accepted/ {
+        if ($1 != cur) { flush(); cur = $1 }
+        n++; gid[++gn] = n; dec[n] = $6; text[n] = "- " $6 " (" $7 ")"
+        if (match($10, /supersedes: .*$/)) old[n] = substr($10, RSTART + 12)
+      }
+      END { flush(); for (i = 1; i <= n; i++) if (i in live) print text[i] }
     '
     exit 0 ;;
 esac
