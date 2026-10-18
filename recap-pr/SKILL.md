@@ -24,7 +24,7 @@ Rows go missing during long runs. Cross the log against what actually happened:
 - every review thread and reviewer finding (`gh` threads, Codex results, Fable/Standards/Spec reports);
 - every question the user answered, in every session that worked on the branch: Claude Code transcripts are the `~/.claude/projects/*/*.jsonl` files that mention the branch name (`grep -l`).
 
-Append a `backfill` row for each one with no row behind it. Done when each commit, finding and user answer maps to at least one row.
+Append a `backfill` row for each one with no row behind it, with `RECAP_TS` set to when it happened (the commit time, the finding's time, the transcript message's time) so the log stays in time order. Done when each commit, finding and user answer maps to at least one row.
 
 ## 3. Parity sweep
 
@@ -40,7 +40,7 @@ For each surface, put master and the branch side by side on the same real input:
 - Backend: run both on the same stored input, or compare outputs the tests already pin down.
 - When neither can run, read the diff for that surface and mark the pair `read only`; it goes under Attention as unverified.
 
-Every difference no row's `prod_delta` explains becomes a `parity` row: `source me`, `asked no`, `result open`.
+Only an accepted row can explain a difference. Every difference no accepted row's `prod_delta` explains becomes a `parity` row (`source me`, `asked no`, `result open`), including one that matches a rejected, reverted or superseded row: that change is still in the code.
 
 Done when every listed surface has a master/branch pair or a stated reason it cannot be observed.
 

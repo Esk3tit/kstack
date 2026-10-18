@@ -86,6 +86,7 @@ if [ ! -e "$LOG" ]; then
   ln "$tmp" "$LOG" 2>/dev/null || true
   rm -f "$tmp"
 fi
-row="$(date -u +%Y-%m-%dT%H:%M:%SZ)"$'\t'"$repo"
+# RECAP_TS keeps a backfilled row at its original time, so supersession stays in order.
+row="${RECAP_TS:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"$'\t'"$repo"
 for cell in "$@"; do row+=$'\t'"$(clean "$cell")"; done
 echo "$row" >> "$LOG"

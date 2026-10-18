@@ -12,7 +12,7 @@ A ticket's work leaves a **decision log**: one TSV row per decision, so the revi
 ~/.claude/skills/recap-pr/log.sh <phase> <source> <asked> <decision> <why> <prod_delta> <evidence> <result>
 ```
 
-The helper finds the log from the current repo's branch, writes the header on first use, stamps `ts` and `repo`, and flattens tabs and newlines. `log.sh --path` prints the log path; `log.sh --pins` prints the settled decisions.
+The helper finds the log from the current repo's branch, writes the header on first use, stamps `ts` (or `$RECAP_TS`, for a backfilled row) and `repo`, and flattens tabs and newlines. `log.sh --path` prints the log path; `log.sh --pins` prints the settled decisions.
 
 | column | holds |
 |---|---|
