@@ -2,7 +2,7 @@
 # Decision log helper; format in LEDGER.md beside this script.
 #   log.sh <phase> <source> <asked> <decision> <why> <prod_delta> <evidence> <result>
 #   log.sh --path    print the log path for the current branch
-#   log.sh --pins    print the user's settled decisions, one "- " line each
+#   log.sh --pins    print the user's settled decisions, one "- " line each (RECAP_PIN_KEYS adds logs)
 #   log.sh --bind K  point the current branch at log K from now on (earlier rows stay where they are)
 set -euo pipefail
 
@@ -52,7 +52,8 @@ case "${1:-}" in
     new="$HOME/.local/share/recap/$2/decisions.tsv"
     echo "$new"; exit 0 ;;
   --pins)
-    { [ -f "$KEYFILE" ] && cat "$KEYFILE"; echo "$KEY"; } | awk '!seen[$0]++' | while read -r k; do
+    { [ -f "$KEYFILE" ] && cat "$KEYFILE"; echo "$KEY"; printf '%s\n' ${RECAP_PIN_KEYS:-}; } \
+      | awk 'NF && !seen[$0]++' | while read -r k; do
       f="$HOME/.local/share/recap/$k/decisions.tsv"
       if [ -f "$f" ]; then tail -n +2 "$f"; fi
     done | sort -s -t$'\t' -k1,1 | awk '!seen[$0]++' | awk -F'\t' '

@@ -4,7 +4,7 @@ A ticket's work leaves a **decision log**: one TSV row per decision, so the revi
 
 ## Where it lives
 
-`~/.local/share/recap/<key>/decisions.tsv`. `<key>` is `$RECAP_KEY` when set, else the ticket in the branch name or commit subjects (`PRO-2725`; pattern `$RECAP_TICKET_RE`, default `pro-[0-9]+`), else `<repo>-<branch>`. A branch keeps the key of its first row, so a later commit naming a ticket does not move its log. `RECAP_KEY` routes rows without registering anything. `log.sh --bind <key>` points the current branch at another log from then on; rows never move, so the branch's key file (`~/.local/share/recap/.branch-keys/<repo>--<branch, % as %25 and / as %2F>`) lists every key it has used, newest last, and `/recap-pr` reads them all. One log spans every repo a ticket touches, so set `RECAP_KEY` when sibling branches might not carry the ticket. It is local only and never committed.
+`~/.local/share/recap/<key>/decisions.tsv`. `<key>` is `$RECAP_KEY` when set, else the ticket in the branch name or commit subjects (`PRO-2725`; pattern `$RECAP_TICKET_RE`, default `pro-[0-9]+`), else `<repo>-<branch>`. A branch keeps the key of its first row, so a later commit naming a ticket does not move its log. `RECAP_KEY` routes single writes made on another branch's behalf (the `/recap-pr` backfill) and registers nothing; to move a branch's own logging, use `log.sh --bind <key>`, which points it at another log from then on; rows never move, so the branch's key file (`~/.local/share/recap/.branch-keys/<repo>--<branch, % as %25 and / as %2F>`) lists every key it has used, newest last, and `/recap-pr` reads them all. One log spans every repo a ticket touches, so set `RECAP_KEY` when sibling branches might not carry the ticket. It is local only and never committed.
 
 ## Writing a row
 
@@ -27,7 +27,7 @@ The helper finds the log from the current repo's branch, writes the header on fi
 
 ## What earns a row
 
-- Every answer the user gives to a design question (`source you`, `asked yes`). These are the **settled decisions**: `log.sh --pins` feeds the accepted ones to Codex as focus text. When the user changes one, log the new answer with a `result` that ends in `supersedes: <the old row's decision text>` (anything else, like verification, goes before it: `accepted, tests green; supersedes: quotes above the alert text`); the old row drops out of the pins.
+- Every answer the user gives to a design question (`source you`, `asked yes`). These are the **settled decisions**: `log.sh --pins` feeds the accepted ones to Codex as focus text; `RECAP_PIN_KEYS` (space-separated keys) adds other logs, read together so a supersession in one log applies to the rest. When the user changes one, log the new answer with a `result` that ends in `supersedes: <the old row's decision text>` (anything else, like verification, goes before it: `accepted, tests green; supersedes: quotes above the alert text`); the old row drops out of the pins.
 - Every reviewer finding, accepted or rejected, with the reason.
 - Every change whose `prod_delta` is not `none`, whoever proposed it.
 - Every added **mechanism** (see below).

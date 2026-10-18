@@ -69,7 +69,7 @@ The companion runs the review **foreground/blocking** (no background path for re
    **b. Invoke the review primitive.** Pass this command's review scope as the adversarial-review **focus text**, request JSON, and capture it:
    ```bash
    FOCUS='Review for real defects: logical errors, bugs, broken edge cases, security/race conditions, incorrect error handling, and genuine repo-convention violations. Report nits only when they meaningfully improve quality (naming clarity, dead-code removal, misleading comments). Do NOT report: formatting/style churn, bikeshedding, defensive code for impossible states, premature abstractions, or extra tests for trivial behavior.'
-   PINS=${RECAP_PINS:-$(~/.claude/skills/recap-pr/log.sh --pins)}  # the user's settled decisions
+   PINS=$(~/.claude/skills/recap-pr/log.sh --pins)  # the user's settled decisions
    [ -n "$PINS" ] && FOCUS="$FOCUS Settled decisions (do not re-open; report only defects within them): $PINS"
    node "$COMPANION" adversarial-review --scope <scope> ${BASE:+--base "origin/$BASE"} ${MODEL:+--model "$MODEL"} --json "$FOCUS" \
      > /tmp/codexloop-review.json 2>/tmp/codexloop-review.err
