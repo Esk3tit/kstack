@@ -42,6 +42,7 @@ nothing to lose and needs no prompt.
 | `commands/` | Custom slash commands (Codex-driven review loops + PR hygiene). |
 | `no-mistakes/` · `no-mistakes-frontend/` · `no-mistakes-backend/` · `no-mistakes-a11y/` · `no-mistakes-setup/` | The verification skill family (router + three specialists: frontend, backend, deep-a11y) plus the onboarding skill that generates a project's `.no-mistakes.json`. See each `SKILL.md`. |
 | `wide-event-logging/` | Skill — canonical-log-line / wide-event logging for Python/FastAPI (with reference modules). |
+| `recap-pr/` | Skill — `/recap-pr`: the pre-merge recap of a ticket's PRs from its **decision log** (`LEDGER.md`, `log.sh`): every decision made during hands-off work, a master-vs-branch parity sweep for unintended behavior changes, and anything nobody asked for. |
 | `explain-code-change/` | Skill — turn a branch, PR, or diff into a layered interactive HTML page: a dense plain-language summary of what and why on top, then diagrams, stepped animations, and a pseudocode diff of every changed function below. |
 | `codex/config.toml.example` | My Codex CLI config, **token redacted**. |
 | `legacy/` | Retired commands and skills kept for reference, not installed: `/review-spec`, `/review-implementation-plan`, and the `codex-cli` recipe they used. |
@@ -60,8 +61,9 @@ nothing to lose and needs no prompt.
   machine-local additions that stay out of the repo (e.g. pointers to private local guidance). Make
   shared changes here, then sync them per
   [Syncing kstack onto a local install](#syncing-kstack-onto-a-local-install--the-human-decides-what-is-lost).
-- Contents (9 sections): **Technical decisions** (quality over dev-cost), **Operational work**
+- Contents (10 sections): **Technical decisions** (quality over dev-cost), **Operational work**
   (simplest direct path; no machinery until it's justified), **Bug fixes** (reproduce E2E first),
+  **Decision log** (hands-off work logs each decision and user-visible change for `/recap-pr`),
   **Quality bar** (fix what's broken, even if it's not yours; pixel-perfection), **Auto-generated
   files** (never hand-edit; fix the generator), **Code comments** (sparse by default, no plan/ticket
   refs), **Picking the right models** (per-model cost/intelligence/taste table + routing), **Large
@@ -74,8 +76,9 @@ All user-authored. `/codexloop` drives Codex through the openai-codex Claude Cod
 
 | Command | Purpose |
 |---------|---------|
-| `/codexloop` | Run a Codex adversarial review on the current PR/branch, fix **real** findings, loop until clean, push on CLEAN. Claude is the human-in-the-loop reviewing Codex's review. |
+| `/codexloop` | Run a Codex adversarial review on the current PR/branch, fix **real** findings, loop until clean, push on CLEAN. Claude is the human-in-the-loop reviewing Codex's review. Every finding becomes a decision-log row; the user's settled decisions go to Codex as focus; an added mechanism (semaphore, cache, retry, flag) needs a measured problem. |
 | `/address-pr-comments` | Resolve unresolved PR review-bot comments via parallel subagents. **Loops by default** (`--once` for a single pass), gating on **reviewers** — code-review bots + lint/test — never CI/CD deploys. |
+| `/pr-loop` | Take a finished branch to merge-ready without check-ins: open the PR(s), `/code-review`, `/codexloop` to convergence with bot comments handled alongside, an optional Fable pass, affected tests, then `/recap-pr`. Never merges. |
 | `/trim-code-comments` | Clean up over-commenting in code just written, per the `CLAUDE.md` comment rules. |
 
 ## 3. Custom skills (mine)
