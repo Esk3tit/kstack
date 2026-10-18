@@ -68,6 +68,8 @@ The companion runs the review **foreground/blocking** (no background path for re
    **b. Invoke the review primitive.** Pass this command's review scope as the adversarial-review **focus text**, request JSON, and capture it:
    ```bash
    FOCUS='Review for real defects: logical errors, bugs, broken edge cases, security/race conditions, incorrect error handling, and genuine repo-convention violations. Report nits only when they meaningfully improve quality (naming clarity, dead-code removal, misleading comments). Do NOT report: formatting/style churn, bikeshedding, defensive code for impossible states, premature abstractions, or extra tests for trivial behavior.'
+   PINS=$(~/.claude/skills/recap-pr/log.sh --pins)
+   [ -n "$PINS" ] && FOCUS="$FOCUS Settled decisions (do not re-open; report only defects within them): $PINS"
    node "$COMPANION" adversarial-review --scope <scope> ${BASE:+--base "origin/$BASE"} ${MODEL:+--model "$MODEL"} --json "$FOCUS" \
      > /tmp/codexloop-review.json 2>/tmp/codexloop-review.err
    ```
@@ -96,7 +98,9 @@ The companion runs the review **foreground/blocking** (no background path for re
    - You (Claude) are the reviewer of Codex's review. Do NOT agree with everything at face value. For each finding, decide: is this a real logical error / bug / edge case, OR a nit that meaningfully improves quality, OR is Codex inventing work?
    - **Accept** real issues (logic, bugs, edge cases, security) AND nits that meaningfully improve quality (clearer naming, repo-convention alignment, dead-code removal, fixing misleading comments).
    - **Reject and skip** findings that are: formatting/styling churn, pure bikeshedding, defensive code for impossible states, bloated fallbacks, premature abstractions, "while you're here" refactors, unnecessary extra tests for trivial behavior, or anything that adds complexity/bloat without fixing a real problem. Note the rejection in the summary — don't fabricate a change to silence it.
-   - **Watch for flip-flopping across iterations.** If Codex now suggests reverting or contradicting a change it (or a prior iteration) requested, STOP. Do not apply it. Treat flip-flop as a signal the loop has converged — exit with `STATUS=CLEAN` and surface the contradiction to the user. Keep a short ledger of prior iterations' applied changes in `/tmp/codexloop-history.txt` and cross-check each new finding against it before acting.
+   - **Watch for flip-flopping across iterations.** If Codex now suggests reverting or contradicting a change it (or a prior iteration) requested, STOP. Do not apply it. Treat flip-flop as a signal the loop has converged — exit with `STATUS=CLEAN` and surface the contradiction to the user. Cross-check each new finding against this run's `codexloop` rows in the decision log before acting.
+   - **A mechanism needs a measured problem.** A finding that adds a semaphore or concurrency cap, cache, retry, batch, timeout, feature flag, or a new place data is stored is accepted only when its `why` names a problem observed in this code or its data; otherwise reject it.
+   - **Log every finding**, accepted or rejected, as one decision-log row ([LEDGER.md](~/.claude/skills/recap-pr/LEDGER.md)): `log.sh codexloop codex no "<decision>" "<why>" "<prod_delta vs master>" "<file:line or commit>" "<accepted|rejected: reason>"`. The user audits these rows with `/recap-pr` before merge.
    - For findings you accept, read the referenced file and apply the **smallest correct fix** (prefer Edit over Write). Do NOT blindly apply Codex's `recommendation` — verify against the actual code and reject if wrong or out of scope.
    - **Optional escalation:** for a genuinely hard finding that needs deep multi-file debugging (not a smallest-fix), you may subcontract that one fix to Codex via the plugin's rescue primitive — `node "$COMPANION" task --write "<tight fix prompt>"` (equivalent to `/codex:rescue`) — then review its diff before staging. Default remains: Claude applies the fix.
    - **Keep it clean.** Do not leave explanatory comments about the fix, the finding, or the iteration. No "// addressed in codexloop" markers, no narrating-what-the-code-does comments. Only add a comment if a genuinely non-obvious invariant requires it.
@@ -104,8 +108,7 @@ The companion runs the review **foreground/blocking** (no background path for re
 
    **e. Commit fixes:**
    - Stage only files you changed (never `git add -A`).
-   - Conventional commit: `fix(codexloop): address iteration <n> findings`.
-   - Append a one-line ledger entry to `/tmp/codexloop-history.txt` summarizing what was changed/rejected this iteration (used for flip-flop detection next iteration).
+   - Conventional commit whose subject says what the fix changed, in the repo's own scope (`fix(cont-mon): keep a newly linked quote over an already linked repeat of it`), one commit per iteration.
    - If every finding this iteration was rejected (no real issues), exit with `STATUS=CLEAN` instead of committing — the loop has converged.
    - Do NOT push mid-loop — only after the loop exits CLEAN (see step 4).
 
@@ -131,7 +134,7 @@ The companion runs the review **foreground/blocking** (no background path for re
 - **Keep it simple** — reject any suggestion that adds complexity, abstractions, bloated fallbacks, or defensive checks for impossible states without fixing a real problem.
 - **Push back on Codex** — Claude is the human-in-the-loop, not a rubber stamp. Skip findings that aren't necessary and note the rejection. Don't fabricate changes to silence findings.
 - **Findings come as structured JSON** — parse `result.findings` (severity/title/body/file/line_start/recommendation); empty array = CLEAN. Never scrape prose and never treat a parse failure as CLEAN.
-- **Detect flip-flops** — if Codex contradicts a prior iteration's change (suggesting to revert or invert it), STOP and exit CLEAN. Maintain `/tmp/codexloop-history.txt` and cross-check each iteration against it.
+- **Detect flip-flops** — if Codex contradicts a prior iteration's change (suggesting to revert or invert it), STOP and exit CLEAN. The decision log's `codexloop` rows are the history to cross-check.
 - **No explanatory comments** — keep diffs clean. No "// per codex review" or narrative comments. Comments only for non-obvious invariants.
 - **Push only on CLEAN exit** — never push mid-loop, never push on MAX_ITERATIONS or FAIL, never push to `master`/`main`, never force-push.
 - **Never skip hooks** (no `--no-verify`).

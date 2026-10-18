@@ -32,7 +32,7 @@ Classify every check and comment source by name into exactly one bucket — the 
 
    Reject nitpicks, bikeshedding, and bloated defensive code; never fabricate a fix just to silence a bot.
 
-4. **Finalize (parent only).** Collect results. Print a table (Comment | File | Valid? | Action). Reply to each comment and resolve its thread via `gh-axi api` (`POST /repos/{owner}/{repo}/pulls/{pr}/comments/{id}/replies`, and the `resolveReviewThread` graphql mutation). Commit any fixes with a message naming the count addressed.
+4. **Finalize (parent only).** Collect results. Print a table (Comment | File | Valid? | Action). Reply to each comment and resolve its thread via `gh-axi api` (`POST /repos/{owner}/{repo}/pulls/{pr}/comments/{id}/replies`, and the `resolveReviewThread` graphql mutation). Log each comment as one decision-log row (`~/.claude/skills/recap-pr/LEDGER.md`): `log.sh pr-comments bot:<reviewer> no "<decision>" "<why>" "<prod_delta vs master>" "<comment URL>" "<accepted|rejected: reason>"`. Commit any fixes with a message naming the count addressed.
 
 **If `--once`: stop here.**
 
