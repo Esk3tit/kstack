@@ -23,7 +23,7 @@ Classify every check and comment source by name into exactly one bucket — the 
 
 ## Each pass
 
-1. **Fetch & converge.** Find the PR (`gh-axi pr view` off the current branch, or `<pr>` if given). Read review comments and their thread resolution (`gh-axi pr view <pr> --comments --reviews`; `api POST /graphql` for each thread's `isResolved`), and reviewer states (`gh-axi pr checks <pr>`). Resolve any unresolved thread whose last comment is already our reply (an earlier pass stopped before resolving it); keep the unresolved threads whose last comment is someone else's, including a bot answering our reply. **Converged** when no unresolved thread remains AND every reviewer is green (`SUCCESS`; `NEUTRAL`/`SKIPPED` pass; `FAILURE`/`CANCELLED`/`TIMED_OUT` don't). On convergence, emit `LOOP_STATUS=CLEAN ITERATIONS=<N>` and stop. A red reviewer with no comment is still a finding — investigate and fix it.
+1. **Fetch & converge.** Find the PR (`gh-axi pr view` off the current branch, or `<pr>` if given). Read review comments and their thread resolution (`gh-axi pr view <pr> --comments --reviews`; `api POST /graphql` for each thread's `isResolved`), and reviewer states (`gh-axi pr checks <pr>`). For an unresolved thread whose last comment is already our reply (an earlier pass stopped before resolving it), resolve it when the reply is a rejection or the commit it names is on the remote branch (`git merge-base --is-ancestor <sha> origin/<branch>`); otherwise work it again. Keep the unresolved threads whose last comment is someone else's, including a bot answering our reply. **Converged** when no unresolved thread remains AND every reviewer is green (`SUCCESS`; `NEUTRAL`/`SKIPPED` pass; `FAILURE`/`CANCELLED`/`TIMED_OUT` don't). On convergence, emit `LOOP_STATUS=CLEAN ITERATIONS=<N>` and stop. A red reviewer with no comment is still a finding — investigate and fix it.
 
 2. **Partition into clusters.** Holding every comment at once, group them: comments on the same code or that reference each other share a cluster; everything else is a cluster of one. This call is yours to make directly from full context — no line-distance heuristic.
 
@@ -32,13 +32,13 @@ Classify every check and comment source by name into exactly one bucket — the 
 
    Reject nitpicks, bikeshedding, and bloated defensive code; never fabricate a fix just to silence a bot.
 
-4. **Finalize (parent only).** Collect results. Check every returned fix that adds a mechanism against the mechanism rule in `~/.claude/skills/recap-pr/LEDGER.md`; revert one that fails and rewrite its reply as a rejection. Print a table (Comment | File | Valid? | Action). Reply to each comment and resolve its thread via `gh-axi api` (`POST /repos/{owner}/{repo}/pulls/{pr}/comments/{id}/replies`, and the `resolveReviewThread` graphql mutation). Log each comment as one decision-log row (`phase pr-comments`, `source bot:<reviewer>`, `asked no`). Commit any fixes with a message naming the count addressed.
+4. **Finalize (parent only).** Collect results. Check every returned fix that adds a mechanism against the mechanism rule in `~/.claude/skills/recap-pr/LEDGER.md`; revert one that fails and rewrite its reply as a rejection. Print a table (Comment | File | Valid? | Action). Commit any fixes with a message naming the count addressed and push them (step 5's rules) before replying, so every "Fixed" reply names a commit already on the remote. Then reply to each comment (a fix's reply names its commit SHA) and resolve its thread via `gh-axi api` (`POST /repos/{owner}/{repo}/pulls/{pr}/comments/{id}/replies`, and the `resolveReviewThread` graphql mutation). Log each comment as one decision-log row (`phase pr-comments`, `source bot:<reviewer>`, `asked no`).
 
 **If `--once`: stop here.**
 
 ## Loop
 
-5. **Push** — only if this pass committed. Never force-push; never push to `master`/`main`. If the remote diverged, stop with `LOOP_STATUS=FAIL ERROR="remote diverged"`.
+5. **Push rules** (the push itself happens in step 4) — never force-push; never push to `master`/`main`. If the remote diverged, stop with `LOOP_STATUS=FAIL ERROR="remote diverged"`.
 
 6. **Let reviewers re-review.** Poll `gh-axi pr checks <pr>` every 60–120s until every reviewer reaches a final state — ignore deploys, pending or red. Once they settle, wait ~45s for bots to post. Per-pass timeout 30 min → `LOOP_STATUS=FAIL ERROR="reviewer timeout"`.
 

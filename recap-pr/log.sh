@@ -86,7 +86,10 @@ if [ ! -e "$LOG" ]; then
   ln "$tmp" "$LOG" 2>/dev/null || true
   rm -f "$tmp"
 fi
-# RECAP_TS keeps a backfilled row at its original time, so supersession stays in order.
-row="${RECAP_TS:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"$'\t'"$repo"
+# RECAP_TS keeps a backfilled row at its original time; one UTC format keeps rows sortable as text.
+ts="${RECAP_TS:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"
+[[ "$ts" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]] \
+  || { echo "RECAP_TS must be UTC YYYY-MM-DDTHH:MM:SSZ, got: $ts" >&2; exit 2; }
+row="$ts"$'\t'"$repo"
 for cell in "$@"; do row+=$'\t'"$(clean "$cell")"; done
 echo "$row" >> "$LOG"
