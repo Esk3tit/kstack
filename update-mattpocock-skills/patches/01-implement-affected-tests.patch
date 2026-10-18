@@ -1,0 +1,32 @@
+--- a/SKILL.md
++++ b/SKILL.md
+@@ -8,8 +8,28 @@
+ 
+ Use /tdd where possible, at pre-agreed seams.
+ 
+-Run typechecking regularly, single test files regularly, and the full test suite once at the end.
++Run typechecking regularly, and single test files regularly.
+ 
++At the end, run the affected tests — not the full suite. Derive the affected set from
++the change rather than guessing: grep the test tree for every symbol, module, and file
++the diff touches, including downstream consumers, and run exactly that set.
++
++```bash
++git diff <base>...HEAD --name-only          # what changed
++grep -rln "<changed symbols>" tests/        # who exercises it, directly or downstream
++```
++
++Err toward including a test file when unsure — a too-wide affected set is still orders
++of magnitude cheaper than the full suite, and it catches the files a directory-level
++guess misses.
++
++Run the full suite only when the change is genuinely global (shared fixture, base class,
++config, dependency bump) or the user asks for it.
++
++When a test in the affected set fails, establish whether it is yours before fixing it:
++re-run it at the base commit (a throwaway `git worktree` is the cheap way). Report a
++pre-existing failure as pre-existing; do not fix it silently or count it against the change.
++
+ Once done, use /code-review to review the work.
+ 
+ Commit your work to the current branch.

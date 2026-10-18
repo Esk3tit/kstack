@@ -43,6 +43,7 @@ nothing to lose and needs no prompt.
 | `no-mistakes/` · `no-mistakes-frontend/` · `no-mistakes-backend/` · `no-mistakes-a11y/` · `no-mistakes-setup/` | The verification skill family (router + three specialists: frontend, backend, deep-a11y) plus the onboarding skill that generates a project's `.no-mistakes.json`. See each `SKILL.md`. |
 | `wide-event-logging/` | Skill — canonical-log-line / wide-event logging for Python/FastAPI (with reference modules). |
 | `recap-pr/` | Skill — `/recap-pr`: the pre-merge recap of a ticket's PRs from its **decision log** (`LEDGER.md`, `log.sh`): every decision made during hands-off work, a master-vs-branch parity sweep for unintended behavior changes, and anything nobody asked for. |
+| `update-mattpocock-skills/` | Skill — `/update-mattpocock-skills`: update the mattpocock skills installed with `npx skills`, check upstream commits and releases for breaking changes, and reapply the local patches you pick (`PATCHES.md`, `patches/`). |
 | `explain-code-change/` | Skill — turn a branch, PR, or diff into a layered interactive HTML page: a dense plain-language summary of what and why on top, then diagrams, stepped animations, and a pseudocode diff of every changed function below. |
 | `codex/config.toml.example` | My Codex CLI config, **token redacted**. |
 | `legacy/` | Retired commands and skills kept for reference, not installed: `/review-spec`, `/review-implementation-plan`, and the `codex-cli` recipe they used. |
@@ -83,6 +84,7 @@ All user-authored. `/codexloop` drives Codex through the openai-codex Claude Cod
 
 ## 3. Custom skills (mine)
 
+- **`update-mattpocock-skills/`** — the only supported way to update the mattpocock skills (`npx skills check -g` applies updates and wipes local edits). `PATCHES.md` lists each local patch in plain words; the skill reads upstream history for breaking changes, judges each patch against the new version (reapply, rewrite or drop), asks which to apply, then rebuilds the patch set. `/pr-loop` and the decision log depend on patches 03 (`/implement` logs decisions) and 04 (`/pr` gains "Behavior changes vs master"); on a new machine, install the mattpocock skills, then apply `patches/` in number order.
 - **`recap-pr/`** — `/recap-pr`, the pre-merge audit of hands-off work. `LEDGER.md` defines the **decision log** every hands-off step writes (one TSV per ticket in `~/.local/share/recap/`, never committed) and the mechanism rule; `log.sh` appends rows and prints the user's settled decisions for Codex. `/recap-pr` backfills the log from commits, findings and transcripts, compares master and the branch on the same real inputs to catch behavior changes nobody decided, gets a second opinion from another model family, and prints the recap.
 - **`no-mistakes/` (router) + `no-mistakes-frontend/` + `no-mistakes-backend/` + `no-mistakes-a11y/`** — agentic verification
   for app changes against a running app + its database. The router classifies a request and runs

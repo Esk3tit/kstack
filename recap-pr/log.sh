@@ -58,13 +58,18 @@ case "${1:-}" in
       if [ -f "$f" ]; then tail -n +2 "$f"; fi
     done | sort -s -t$'\t' -k1,1 | awk '!seen[$0]++' | awk -F'\t' '
       $4 == "you" && $10 ~ /^accepted/ {
-        if (match($10, /supersedes: .*$/)) {
-          old = substr($10, RSTART + 12)
-          for (j in decision) if (decision[j] == old) { delete decision[j]; delete text[j] }
-        }
-        decision[NR] = $6; text[NR] = "- " $6 " (" $7 ")"
+        n++; ts[n] = $1; decision[n] = $6; text[n] = "- " $6 " (" $7 ")"
+        if (match($10, /supersedes: .*$/)) old[n] = substr($10, RSTART + 12)
       }
-      END { for (i = 1; i <= NR; i++) if (i in text) print text[i] }
+      # A supersession removes the named decision when logged earlier, or in the same second
+      # without a supersession of its own, whichever log it came from.
+      END {
+        for (i = 1; i <= n; i++) if (i in old)
+          for (j = 1; j <= n; j++)
+            if (j != i && decision[j] == old[i] && (ts[j] < ts[i] || (ts[j] == ts[i] && !(j in old))))
+              gone[j] = 1
+        for (i = 1; i <= n; i++) if (!(i in gone)) print text[i]
+      }
     '
     exit 0 ;;
 esac
