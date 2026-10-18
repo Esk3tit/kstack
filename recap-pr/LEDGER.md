@@ -4,7 +4,7 @@ A ticket's work leaves a **decision log**: one TSV row per decision, so the revi
 
 ## Where it lives
 
-`~/.local/share/recap/<key>/decisions.tsv`. `<key>` is `$RECAP_KEY` when set, else the ticket in the branch name or commit subjects (`PRO-2725`; pattern `$RECAP_TICKET_RE`, default `pro-[0-9]+`), else `<repo>-<branch>`. A branch keeps the key of its first row (`~/.local/share/recap/.branch-keys/`), so a later commit naming a ticket does not move its log. `RECAP_KEY` routes rows without registering anything; `log.sh --bind <key>` points the current branch at a log on purpose and moves any rows it had already logged elsewhere. One log spans every repo a ticket touches, so set `RECAP_KEY` when sibling branches might not carry the ticket. It is local only and never committed.
+`~/.local/share/recap/<key>/decisions.tsv`. `<key>` is `$RECAP_KEY` when set, else the ticket in the branch name or commit subjects (`PRO-2725`; pattern `$RECAP_TICKET_RE`, default `pro-[0-9]+`), else `<repo>-<branch>`. A branch keeps the key of its first row, so a later commit naming a ticket does not move its log. `RECAP_KEY` routes rows without registering anything. `log.sh --bind <key>` points the current branch at another log from then on; rows never move, so the branch's key file (`~/.local/share/recap/.branch-keys/<repo>--<branch, % as %25 and / as %2F>`) lists every key it has used, newest last, and `/recap-pr` reads them all. One log spans every repo a ticket touches, so set `RECAP_KEY` when sibling branches might not carry the ticket. It is local only and never committed.
 
 ## Writing a row
 

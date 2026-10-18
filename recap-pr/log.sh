@@ -3,7 +3,7 @@
 #   log.sh <phase> <source> <asked> <decision> <why> <prod_delta> <evidence> <result>
 #   log.sh --path    print the log path for the current branch
 #   log.sh --pins    print the user's settled decisions, one "- " line each
-#   log.sh --bind K  point the current branch at log K, moving rows it already logged elsewhere
+#   log.sh --bind K  point the current branch at log K from now on (earlier rows stay where they are)
 set -euo pipefail
 
 HEADER=$'ts\trepo\tphase\tsource\tasked\tdecision\twhy\tprod_delta\tevidence\tresult'
@@ -22,13 +22,13 @@ branch_id=$(printf '%s' "$branch" | sed 's/%/%25/g; s#/#%2F#g')
 KEYFILES="$HOME/.local/share/recap/.branch-keys"
 KEYFILE="$KEYFILES/$repo--$branch_id"
 
-# A branch keeps the key its first row was written under, so a later ticketed commit cannot move its log.
+# The key file lists every key the branch has logged under, newest last; the newest one is current.
 log_key() {
   local base key keyfile=$KEYFILE
   if [ -n "${RECAP_KEY:-}" ]; then
     key=$RECAP_KEY
   elif [ -s "$keyfile" ]; then
-    cat "$keyfile"; return
+    tail -1 "$keyfile"; return
   else
     key=$(ticket_in "$branch")
     if [ -z "$key" ]; then
@@ -46,27 +46,17 @@ LOG="$HOME/.local/share/recap/$KEY/decisions.tsv"
 case "${1:-}" in
   --path) echo "$LOG"; exit 0 ;;
   --bind)
-    new="$HOME/.local/share/recap/${2:?usage: log.sh --bind <key>}/decisions.tsv"
-    mkdir -p "$(dirname "$new")" "$(dirname "$KEYFILE")"
-    if [ -s "$KEYFILE" ] && [ "$(cat "$KEYFILE")" != "$2" ]; then
-      oldkey=$(cat "$KEYFILE")
-      old="$HOME/.local/share/recap/$oldkey/decisions.tsv"
-      if [ -f "$old" ]; then
-        # Merge in time order, so --pins still applies supersessions oldest first.
-        tmp=$(mktemp "$new.XXXXXX")
-        { echo "$HEADER"; { [ -f "$new" ] && tail -n +2 "$new"; tail -n +2 "$old"; } | sort -s -t$'\t' -k1,1; } > "$tmp"
-        mv "$tmp" "$new"
-        # The old log stays while another branch still points at it.
-        if [ "$(grep -lx -- "$oldkey" "$KEYFILES"/* 2>/dev/null | grep -cvx -- "$KEYFILE")" -eq 0 ]; then
-          rm -f "$old"
-        fi
-      fi
-    fi
-    echo "$2" > "$KEYFILE"
+    mkdir -p "$KEYFILES"
+    [ -s "$KEYFILE" ] && [ "$(tail -1 "$KEYFILE")" = "${2:?usage: log.sh --bind <key>}" ] \
+      || echo "${2:?usage: log.sh --bind <key>}" >> "$KEYFILE"
+    new="$HOME/.local/share/recap/$2/decisions.tsv"
     echo "$new"; exit 0 ;;
   --pins)
-    [ -f "$LOG" ] && awk -F'\t' '
-      NR > 1 && $4 == "you" && $10 ~ /^accepted/ {
+    { [ -f "$KEYFILE" ] && cat "$KEYFILE"; echo "$KEY"; } | awk '!seen[$0]++' | while read -r k; do
+      f="$HOME/.local/share/recap/$k/decisions.tsv"
+      [ -f "$f" ] && tail -n +2 "$f"
+    done | sort -s -t$'\t' -k1,1 | awk '!seen[$0]++' | awk -F'\t' '
+      $4 == "you" && $10 ~ /^accepted/ {
         if (match($10, /supersedes: .*$/)) {
           old = substr($10, RSTART + 12)
           for (j in decision) if (decision[j] == old) { delete decision[j]; delete text[j] }
@@ -74,7 +64,7 @@ case "${1:-}" in
         decision[NR] = $6; text[NR] = "- " $6 " (" $7 ")"
       }
       END { for (i = 1; i <= NR; i++) if (i in text) print text[i] }
-    ' "$LOG"
+    '
     exit 0 ;;
 esac
 
