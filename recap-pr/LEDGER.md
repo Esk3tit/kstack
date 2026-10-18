@@ -27,7 +27,7 @@ The helper finds the log from the current repo's branch, writes the header on fi
 
 ## What earns a row
 
-- Every answer the user gives to a design question (`source you`, `asked yes`). These are the **settled decisions**: `log.sh --pins` feeds them to Codex as focus text.
+- Every answer the user gives to a design question (`source you`, `asked yes`). These are the **settled decisions**: `log.sh --pins` feeds the accepted ones to Codex as focus text. When the user changes one, log the new answer with `result` `accepted (supersedes: <the old row's decision text>)`; the old row drops out of the pins.
 - Every reviewer finding, accepted or rejected, with the reason.
 - Every change whose `prod_delta` is not `none`, whoever proposed it.
 - Every added **mechanism** (see below).
