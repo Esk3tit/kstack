@@ -91,7 +91,7 @@ The companion runs the review **foreground/blocking** (no background path for re
      if(x.recommendation)console.log("  rec: "+x.recommendation.replace(/\s+/g," "));
    });'
    ```
-   - **CLEAN detection:** `COUNT: 0` (empty `findings`) → print `STATUS=CLEAN ITERATIONS=<n>` and exit the loop.
+   - **CLEAN detection:** `COUNT: 0` (empty `findings`) → print `STATUS=CLEAN ITERATIONS=<n>` and exit the loop. Under `--until-converged`, count it as a clean round instead and exit only on the second clean round in a row.
    - **PARSE_ERROR with no result:** retry the review once; if it still fails, `STATUS=FAIL ERROR="codex returned unparseable review"`. Never treat a parse failure as CLEAN.
    - Otherwise list the findings to the user (severity, `file:line`, issue) and proceed to 2d.
 
@@ -110,7 +110,7 @@ The companion runs the review **foreground/blocking** (no background path for re
    **e. Commit fixes:**
    - Stage only files you changed (never `git add -A`).
    - Conventional commit whose subject says what the fix changed, in the repo's own scope (`fix(api): keep the newest retry token instead of the first`), one commit per iteration.
-   - If every finding this iteration was rejected (no real issues), exit with `STATUS=CLEAN` instead of committing — the loop has converged.
+   - If every finding this iteration was rejected (no real issues), exit with `STATUS=CLEAN` instead of committing — the loop has converged. Under `--until-converged`, that is a clean round: exit on the second in a row; any committed fix resets the count.
    - Do NOT push mid-loop — only after the loop exits CLEAN (see step 4). Under `--until-converged`, push each committed iteration instead.
 
 3. **Exit conditions:**

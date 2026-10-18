@@ -7,7 +7,7 @@ argument-hint: [ticket or spec] [--repos <sibling repos>]
 
 Run the whole pre-merge loop on the current branch, and on the same-named branch in any sibling repo the change spans, without stopping to ask. The user is away; the recap at the end is how they audit the run, so write each decision to the decision log as it is made (`~/.claude/skills/recap-pr/LEDGER.md`). Every change accepted from any reviewer passes LEDGER's mechanism rule. The run ends with open, converged PRs; merging is the user's call.
 
-Set `RECAP_KEY` once (the ticket, else the branch name) and export it for every repo, so all repos write one log.
+Resolve the log key once in the main repo (`log.sh --path` reuses the key the branch already logged under) and export it as `RECAP_KEY` for every sibling repo, so all repos write one log.
 
 ## 1. Open the PRs
 
@@ -25,7 +25,7 @@ Done when each PR's findings are fixed, logged as rejected with a reason, or lis
 
 Run `/codexloop --until-converged` on each PR. Its review call blocks, so launch each round from a background shell. While a round runs, triage the PR's new bot threads per `/address-pr-comments` without editing files; once the round returns, apply the accepted Codex and bot fixes together, commit, push, and start the next round on the new head.
 
-Done when every PR has converged and has no unresolved bot thread.
+Done when every PR has converged, has no unresolved bot thread, and every reviewer check on its final pushed head has finished and passed (the `/address-pr-comments` convergence gate). A fix made to get there restarts that PR's convergence count.
 
 ## 4. Fable pass, when it changes the outcome
 
