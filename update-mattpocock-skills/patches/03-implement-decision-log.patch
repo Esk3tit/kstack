@@ -1,7 +1,7 @@
-diff -ru implement/SKILL.md implement/SKILL.md
---- implement/SKILL.md	2026-10-17 14:07:44
-+++ implement/SKILL.md	2026-10-17 14:07:44
-@@ -30,6 +30,8 @@
+diff -ru after01/SKILL.md inst/SKILL.md
+--- a/SKILL.md	2026-10-17 19:26:49
++++ b/SKILL.md	2026-10-17 19:26:58
+@@ -31,6 +31,8 @@
  re-run it at the base commit (a throwaway `git worktree` is the cheap way). Report a
  pre-existing failure as pre-existing; do not fix it silently or count it against the change.
  

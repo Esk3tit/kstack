@@ -10,14 +10,14 @@ patch -p1 -d ~/.agents/skills/<skill> < ~/.claude/skills/update-mattpocock-skill
 
 `patches/01-implement-affected-tests.patch`, added 2026-10-04.
 
-- **What it does:** at the end of `/implement`, the agent runs only the tests the change can affect (found by grepping the test tree for every file and symbol the diff touches), not the whole suite. The whole suite runs only for global changes or when asked. A failing test is first re-run on the base commit, so an old failure is reported as old instead of being "fixed" silently.
+- **What it does:** at the end of `/implement`, the agent runs only the tests the change can affect (found by grepping the test tree for every file and symbol the change touches, committed or not), not the whole suite. The whole suite runs only for global changes or when asked. A failing test is first re-run on the base commit, so an old failure is reported as old instead of being "fixed" silently.
 - **Why:** the TPRM-API suite takes about 40 minutes.
 
 ## 02 · implement-spec · affected tests only
 
 `patches/02-implement-spec-affected-tests.patch`, added 2026-10-07.
 
-- **What it does:** the implementer subagents that `/implement-spec` spawns also check their work with the affected tests only.
+- **What it does:** the implementer subagents that `/implement-spec` spawns also check their work with the affected tests, with the same full-suite exceptions as patch 01 (a global change, or when asked).
 - **Why:** an implementer subagent ran the full suite.
 
 ## 03 · implement · decision log

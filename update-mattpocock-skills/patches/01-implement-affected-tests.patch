@@ -1,18 +1,20 @@
---- a/SKILL.md
-+++ b/SKILL.md
-@@ -8,8 +8,28 @@
+diff -ru a/SKILL.md b/SKILL.md
+--- a/SKILL.md	2026-10-17 19:26:49
++++ b/SKILL.md	2026-10-17 19:26:49
+@@ -8,7 +8,28 @@
  
  Use /tdd where possible, at pre-agreed seams.
  
 -Run typechecking regularly, single test files regularly, and the full test suite once at the end.
 +Run typechecking regularly, and single test files regularly.
- 
++
 +At the end, run the affected tests — not the full suite. Derive the affected set from
 +the change rather than guessing: grep the test tree for every symbol, module, and file
 +the diff touches, including downstream consumers, and run exactly that set.
 +
 +```bash
-+git diff <base>...HEAD --name-only          # what changed
++git diff <base> --name-only                 # what changed, committed or not
++git ls-files --others --exclude-standard    # new files not yet added
 +grep -rln "<changed symbols>" tests/        # who exercises it, directly or downstream
 +```
 +
@@ -26,7 +28,6 @@
 +When a test in the affected set fails, establish whether it is yours before fixing it:
 +re-run it at the base commit (a throwaway `git worktree` is the cheap way). Report a
 +pre-existing failure as pre-existing; do not fix it silently or count it against the change.
-+
+ 
  Once done, use /code-review to review the work.
  
- Commit your work to the current branch.

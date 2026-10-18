@@ -56,7 +56,7 @@ Then ask with AskUserQuestion: which patches to reapply (multi-select, recommend
 
 ## 5. Update
 
-1. Back up the lock and every updated skill folder to `~/.local/share/skill-backups/<date>/`.
+1. Back up the lock and every skill folder the update or a removal will touch (updated, removed and renamed skills) to `~/.local/share/skill-backups/<date>/`.
 2. Run `npx skills update <every updated mattpocock skill> -g`, naming exactly the skills reviewed in steps 1 to 4. `npx skills check -g` and a bare `update` touch every global skill, including other sources' (langfuse, gh-axi), so they are never used here. Confirm afterwards that no lock entry from another source changed. Remove skills deleted upstream with `npx skills remove <name> -g -y`, since an update never removes them.
 3. Apply the chosen patches in number order to the skills the update refreshed; a skill that did not change upstream still carries its patches and is left alone. Carry out each **rewrite** by editing the skill by hand to the same intent.
 4. Apply the chosen migrations.
