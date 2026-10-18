@@ -12,7 +12,7 @@ Arguments: optional PR numbers or a ticket key. Default: the current branch's PR
 
 ## 1. Gather
 
-List every PR in scope: the ones named in the arguments, else `gh pr list --head <branch>` in each repo the log or ticket names. For each, read its head SHA and base from `gh pr view <n> --json headRefOid,baseRefName`, fetch both, and work from `git diff origin/<base>...<head SHA>`; every later step uses that exact head, never the current checkout. Find the PR's logs from its own repo and head branch, never the current checkout: every key in its key file (LEDGER.md, "Where it lives"); with no key file, its ticket; with neither, `<repo>-<head branch, encoded>`. Read the union of those logs, drop duplicate rows, and order by `ts`. Write new rows with `RECAP_KEY` set to the key file's last key (else the derived key).
+List every PR in scope: the ones named in the arguments; for a ticket key, the PRs linked on the ticket plus `gh pr list --state all --search <key>` in each repo the log or ticket names; else `gh pr list --head <branch>` in those repos. A ticket with no PR found is listed under Attention. For each, read its head SHA and base from `gh pr view <n> --json headRefOid,baseRefName`, fetch both, and work from `git diff origin/<base>...<head SHA>`; every later step uses that exact head, never the current checkout. Find the PR's logs from its own repo and head branch, never the current checkout: every key in its key file (LEDGER.md, "Where it lives"); with no key file, its ticket; with neither, `<repo>-<head branch, encoded>`. Read the union of those logs, drop duplicate rows, and order by `ts`. Write new rows with `RECAP_KEY` set to the key file's last key (else the derived key).
 
 Done when every PR in scope and its diff are in hand.
 
