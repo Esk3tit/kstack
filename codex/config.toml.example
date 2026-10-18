@@ -36,6 +36,9 @@ CODEX_CLI_PATH = "/Applications/Codex.app/Contents/Resources/codex"
 multi_agent = true
 js_repl = false
 
+[sandbox_workspace_write]
+writable_roots = ["/Users/khaiphan/.local/share/recap"]  # the /recap-pr decision log
+
 [projects."/Users/khaiphan/PromptArmor/TPRM-API"]
 trust_level = "trusted"
 

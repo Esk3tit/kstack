@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Usage: claude-review <dir> <model>
+# Reviews <dir>/diff.patch, steered by <dir>/focus.txt, with a Claude model. Prints a new directory holding review.json:
+# {"result": {verdict, summary, findings[]}} or {"parseError": "..."}. Codex allows it outside the sandbox, so it
+# writes only under ~/.cache, which the sandbox cannot touch, and runs nothing from the reviewed repo: Claude starts
+# outside it (no git there) and ignores its .claude settings.
+set -uo pipefail
+R=$1 MODEL=$2 REPO=$PWD
+
+mkdir -p "$HOME/.cache" && T=$(mktemp -d "$HOME/.cache/claude-review.XXXXXX") || exit 1
+echo "$T"
+put() { printf '%s' "$1" > "$T/review.json"; rm -f "$T/claude.json" "$T/review.err"; exit 0; }
+plain() { [ -f "$R/$1" ] && [ ! -L "$R/$1" ] && [ -s "$R/$1" ]; }
+plain diff.patch && plain focus.txt || put '{"parseError":"missing or empty diff.patch or focus.txt"}'
+FOCUS=$(cat "$R/focus.txt")
+
+SCHEMA='{"type":"object","required":["verdict","summary","findings"],"properties":{"verdict":{"enum":["approve","needs-attention"]},"summary":{"type":"string"},"findings":{"type":"array","items":{"type":"object","required":["severity","title","body","file","line_start","recommendation"],"properties":{"severity":{"enum":["critical","high","medium","low"]},"title":{"type":"string"},"body":{"type":"string"},"file":{"type":"string"},"line_start":{"type":"integer"},"line_end":{"type":"integer"},"recommendation":{"type":"string"}}}}}}'
+# Read tools only: claude -p inherits the user's permission mode, so a Bash allowlist would not hold it read-only.
+# --safe-mode drops hooks, plugins and MCP servers but still runs auth settings such as apiKeyHelper,
+# so --setting-sources user keeps the repo's .claude/settings*.json from running anything.
+cd "$T" && claude -p --model "$MODEL" --effort high --safe-mode --setting-sources user --tools "Read,Grep,Glob" --add-dir "$REPO" --no-session-persistence \
+  --output-format json --json-schema "$SCHEMA" \
+  "Adversarially review the piped diff of the repository at $REPO. Read its files for context, and its AGENTS.md / CLAUDE.md for its conventions. $FOCUS" \
+  < "$R/diff.patch" > "$T/claude.json" 2> "$T/review.err"
+
+put "$(node -e 'const fs=require("fs"),T=process.argv[1];let o;
+try{const j=JSON.parse(fs.readFileSync(T+"/claude.json","utf8"));o=j.is_error||!j.structured_output?{parseError:String(j.result||j.subtype)}:{result:j.structured_output}}
+catch(e){o={parseError:"no reviewer output: "+e.message+"; stderr: "+fs.readFileSync(T+"/review.err","utf8").slice(-500)}}
+process.stdout.write(JSON.stringify(o))' "$T")"

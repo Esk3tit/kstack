@@ -46,6 +46,7 @@ nothing to lose and needs no prompt.
 | `update-mattpocock-skills/` | Skill — `/update-mattpocock-skills`: update the mattpocock skills installed with `npx skills`, check upstream commits and releases for breaking changes, and reapply the local patches you pick (`PATCHES.md`, `patches/`). |
 | `explain-code-change/` | Skill — turn a branch, PR, or diff into a layered interactive HTML page: a dense plain-language summary of what and why on top, then diagrams, stepped animations, and a pseudocode diff of every changed function below. |
 | `codex/config.toml.example` | My Codex CLI config, **token redacted**. |
+| `codex/bin/` | `claude-review` (one Claude Opus review round for `/codexloop` in Codex) and `claude-read` (one read-only Claude call), the only Claude entry points Codex runs outside the sandbox. |
 | `legacy/` | Retired commands and skills kept for reference, not installed: `/review-spec`, `/review-implementation-plan`, and the `codex-cli` recipe they used. |
 
 ---
@@ -73,19 +74,19 @@ nothing to lose and needs no prompt.
 
 ## 2. Custom slash commands (`commands/`)
 
-All user-authored. `/codexloop` drives Codex through the openai-codex Claude Code plugin; `/address-pr-comments` uses `gh-axi`.
+All user-authored, and the same files serve Claude Code and Codex. Reviews come from the other model family: from Claude Code, `/codexloop` drives Codex through the openai-codex plugin; from Codex, it calls Claude Opus 5.5 through `claude -p`. `/address-pr-comments` uses `gh-axi`.
 
 | Command | Purpose |
 |---------|---------|
-| `/codexloop` | Run a Codex adversarial review on the current PR/branch, fix **real** findings, loop until clean, push on CLEAN. Claude is the human-in-the-loop reviewing Codex's review. Every finding becomes a decision-log row and the user's settled decisions go to Codex as focus. `--until-converged` drops the cap: two clean rounds in a row end the loop. |
+| `/codexloop` | Run an adversarial review from the other model family on the current PR/branch, fix **real** findings, loop until clean, push on CLEAN. The running agent is the human-in-the-loop reviewing the review. Every finding becomes a decision-log row and the user's settled decisions go to the reviewer as focus. `--until-converged` drops the cap: two clean rounds in a row end the loop. |
 | `/address-pr-comments` | Resolve unresolved PR review-bot comments via parallel subagents. **Loops by default** (`--once` for a single pass), gating on **reviewers** — code-review bots + lint/test — never CI/CD deploys. |
-| `/pr-loop` | Take a finished branch to merge-ready without check-ins: open the PR(s), `/code-review`, `/codexloop` to convergence with bot comments handled alongside, an optional Fable pass, affected tests, then `/recap-pr`. Never merges. |
+| `/pr-loop` | Take a finished branch to merge-ready without check-ins: open the PR(s), `/code-review`, `/codexloop` to convergence (cross-family) with bot comments handled alongside, an optional Fable pass, affected tests, then `/recap-pr`. Never merges. |
 | `/trim-code-comments` | Clean up over-commenting in code just written, per the `CLAUDE.md` comment rules. |
 
 ## 3. Custom skills (mine)
 
 - **`update-mattpocock-skills/`** — the only supported way to update the mattpocock skills (`npx skills check -g` applies updates and wipes local edits). `PATCHES.md` lists each local patch in plain words; the skill reads upstream history for breaking changes, judges each patch against the new version (reapply, rewrite or drop), asks which to apply, then rebuilds the patch set. `/pr-loop` and the decision log depend on patches 03 (`/implement` logs decisions) and 04 (`/pr` gains "Behavior changes vs master"); on a new machine, install the mattpocock skills, then apply `patches/` in number order.
-- **`recap-pr/`** — `/recap-pr`, the pre-merge audit of hands-off work. `LEDGER.md` defines the **decision log** every hands-off step writes (one TSV per ticket in `~/.local/share/recap/`, never committed) and the mechanism rule; `log.sh` appends rows and prints the user's settled decisions for Codex. `/recap-pr` backfills the log from commits, findings and transcripts, compares master and the branch on the same real inputs to catch behavior changes nobody decided, gets a second opinion from another model family, and prints the recap.
+- **`recap-pr/`** — `/recap-pr`, the pre-merge audit of hands-off work. `LEDGER.md` defines the **decision log** every hands-off step writes (one TSV per ticket in `~/.local/share/recap/`, never committed) and the mechanism rule; `log.sh` appends rows and prints the user's settled decisions for the reviewer. `/recap-pr` backfills the log from commits, findings and transcripts, compares master and the branch on the same real inputs to catch behavior changes nobody decided, gets a second opinion from another model family, and prints the recap.
 - **`no-mistakes/` (router) + `no-mistakes-frontend/` + `no-mistakes-backend/` + `no-mistakes-a11y/`** — agentic verification
   for app changes against a running app + its database. The router classifies a request and runs
   frontend-only / backend-only / **fullstack round-trip** (drive a UI action → assert the UI → read the
@@ -193,7 +194,7 @@ context-mode and superpowers. (Dropping those plugins drops their hooks too.)
 
 1. `git clone` this repo.
 2. `cp CLAUDE.md ~/.claude/CLAUDE.md` and `ln -s ~/.claude/CLAUDE.md ~/.codex/AGENTS.md`.
-3. `cp -R commands/* ~/.claude/commands/`; link each shared skill dir into
+3. Link each command into both agents (`mkdir -p ~/.claude/commands ~/.codex/prompts`, then `ln -s "$PWD"/commands/<name>.md` into each), applying the sync rule above to any target that already exists. For Codex's cross-family reviews, copy `codex/bin/claude-review` and `codex/bin/claude-read` into `~/.codex/bin/` and allow only those two outside the sandbox: `mkdir -p ~/.codex/bin ~/.codex/rules ~/.local/share/recap && install -m 755 codex/bin/claude-review codex/bin/claude-read ~/.codex/bin/ && for s in claude-review claude-read; do printf 'prefix_rule(pattern=["%s/.codex/bin/%s"], decision="allow")\n' "$HOME" $s; done >> ~/.codex/rules/default.rules` (skip a rule the file already has). Copies, never links: a link into this checkout would let a Codex edit in the checkout run unsandboxed; re-copy under the sync rule after changing them. A rule on bare `claude -p` would let any Claude call, with any tools, run unsandboxed. Codex's sandbox keeps `.git` read-only, so `/codexloop` in Codex also needs `git fetch`, `git add`, `git commit`, `git push` and `gh pr` allowed the same way (`/pr-loop` adds `gh api graphql` and `gh-axi`). Keep those rules to the subcommands: a bare `gh` rule also runs aliases and extensions. An allowed `git commit`/`git push` runs the repo's tracked hooks (pre-commit, husky, lefthook) unsandboxed, which the sandboxed agent can edit; without those two rules Codex asks before each commit and push, so the loop is no longer hands-off. The wrappers' guarantees also assume no Codex workspace or writable root contains `$HOME`, since the sandbox could then edit `~/.claude/settings.json`. The decision log also needs `~/.local/share/recap` in `[sandbox_workspace_write] writable_roots` (see `codex/config.toml.example`). Link each shared skill dir into
    `~/.agents/skills/` and then into `~/.claude/skills/` (plus `~/.codex/skills/` when that Codex
    installation does not scan `~/.agents/skills/`).
 4. `cp codex/config.toml.example ~/.codex/config.toml` → fill in tokens; `codex login` (ChatGPT mode).
