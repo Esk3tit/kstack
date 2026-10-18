@@ -64,7 +64,7 @@ Then ask with AskUserQuestion: which patches to reapply (multi-select, recommend
 ## 6. Refresh the patch set
 
 - Regenerate each kept patch from its own before-and-after snapshots: the new upstream folder with the earlier-numbered patches for that skill applied, against that plus this patch alone. Keep `a/` and `b/` path prefixes so `-p1` keeps working. Check that applying the kept patches in order reproduces the installed folder, and that each patch alone carries only its own change.
-- Delete the files and PATCHES.md entries of patches the user dropped or chose not to reapply.
+- For a patch the user dropped on a skill the update left alone, reverse it first (`patch -R -p1`, after backing the folder up). Then delete the files and PATCHES.md entries of every dropped patch.
 - Re-run step 1's unrecorded-edits check.
 
 Done when every installed skill equals its new upstream version plus its kept patches, with no difference left over.

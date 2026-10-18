@@ -22,7 +22,7 @@ Rows go missing during long runs. Cross the log against what actually happened:
 
 - every commit on each PR (`git log origin/<base>..<head SHA>`, with the refs captured in step 1);
 - every review thread and reviewer finding (`gh` threads, Codex results, Fable/Standards/Spec reports);
-- every question the user answered, in every session that worked on the branch: Claude Code transcripts are the `~/.claude/projects/*/*.jsonl` files that mention the branch name (`grep -l`).
+- every question the user answered, in every session that worked on the branch: the Claude Code (`~/.claude/projects/*/*.jsonl`) and Codex (`~/.codex/sessions/**/*.jsonl`) transcripts that mention the branch name (`grep -l`). History that cannot be found or read goes under Attention as a coverage gap.
 
 Append a `backfill` row for each one with no row behind it, with `RECAP_TS` set to when it happened (the commit time, the finding's time, the transcript message's time) so the log stays in time order. Done when each commit, finding and user answer maps to at least one row.
 
