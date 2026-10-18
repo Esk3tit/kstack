@@ -37,9 +37,9 @@ Done when the run-or-skip decision and its reason are logged, and every Fable fi
 
 ## 5. Affected tests
 
-Run each repo's affected tests on the final heads, deriving the set from the diff as `/implement` does.
+Run each repo's affected tests on the final heads, deriving the set from the diff as `/implement` does. Fix a failure that predates the branch too, in its own commit, logged with `asked no`; any fix goes back through step 3.
 
-Done when the tests pass on the heads being handed back, or each failure is shown to predate the branch.
+Done when the affected tests pass on the heads being handed back.
 
 ## 6. Recap
 

@@ -44,12 +44,13 @@ case "${1:-}" in
   --pins)
     [ -f "$LOG" ] && awk -F'\t' '
       NR > 1 && $4 == "you" && $10 ~ /^accepted/ {
-        decision[NR] = $6; text[NR] = "- " $6 " (" $7 ")"
         if (match($10, /supersedes: .*$/)) {
-          old = substr($10, RSTART + 12); sub(/\)$/, "", old); gone[old] = 1
+          old = substr($10, RSTART + 12); sub(/\)$/, "", old)
+          for (j in decision) if (decision[j] == old) { delete decision[j]; delete text[j] }
         }
+        decision[NR] = $6; text[NR] = "- " $6 " (" $7 ")"
       }
-      END { for (i = 1; i <= NR; i++) if ((i in text) && !(decision[i] in gone)) print text[i] }
+      END { for (i = 1; i <= NR; i++) if (i in text) print text[i] }
     ' "$LOG"
     exit 0 ;;
 esac
