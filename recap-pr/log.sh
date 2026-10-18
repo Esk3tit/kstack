@@ -7,16 +7,34 @@ set -euo pipefail
 
 HEADER=$'ts\trepo\tphase\tsource\tasked\tdecision\twhy\tprod_delta\tevidence\tresult'
 
+ticket_in() {
+  printf '%s\n' "$1" | grep -oiE "(^|[^[:alnum:]])${RECAP_TICKET_RE:-pro-[0-9]+}([^[:alnum:]]|$)" | head -1 \
+    | sed -E 's/^[^[:alnum:]]//; s/[^[:alnum:]]$//' | tr '[:lower:]' '[:upper:]' || true
+}
+
+repo=$(basename -s .git "$(git remote get-url origin 2>/dev/null || git rev-parse --show-toplevel 2>/dev/null || pwd)")
+
+# A branch keeps the key it first resolved to, so a later ticketed commit cannot move its log.
 log_key() {
-  if [ -n "${RECAP_KEY:-}" ]; then echo "$RECAP_KEY"; return; fi
-  local branch base ticket
-  branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "no-branch")
-  ticket=$(printf '%s' "$branch" | grep -oiE 'pro-[0-9]+' | head -1 || true)
-  if [ -z "$ticket" ]; then
-    base=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || echo origin/master)
-    ticket=$(git log --format=%s "$base..HEAD" 2>/dev/null | grep -oiE 'pro-[0-9]+' | head -1 || true)
+  local branch base key keyfile
+  branch=$(git symbolic-ref --quiet --short HEAD 2>/dev/null \
+    || git rev-parse --short HEAD 2>/dev/null || echo no-branch)
+  keyfile="$HOME/.local/share/recap/.branch-keys/$repo--$(echo "$branch" | tr '/' '-')"
+  if [ -n "${RECAP_KEY:-}" ]; then
+    key=$RECAP_KEY
+  elif [ -s "$keyfile" ]; then
+    cat "$keyfile"; return
+  else
+    key=$(ticket_in "$branch")
+    if [ -z "$key" ]; then
+      base=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || echo origin/master)
+      key=$(ticket_in "$(git log --reverse --format=%s "$base..HEAD" 2>/dev/null)")
+    fi
+    [ -n "$key" ] || key=$(echo "$branch" | tr '/' '-')
   fi
-  if [ -n "$ticket" ]; then echo "$ticket" | tr '[:lower:]' '[:upper:]'; else echo "$branch" | tr '/' '-'; fi
+  mkdir -p "$(dirname "$keyfile")"
+  echo "$key" > "$keyfile"
+  echo "$key"
 }
 
 LOG="$HOME/.local/share/recap/$(log_key)/decisions.tsv"
@@ -33,8 +51,8 @@ esac
 clean() { printf '%s' "$1" | tr '\t\r\n' '   '; }
 
 mkdir -p "$(dirname "$LOG")"
-[ -s "$LOG" ] || echo "$HEADER" > "$LOG"
-repo=$(basename -s .git "$(git remote get-url origin 2>/dev/null || git rev-parse --show-toplevel 2>/dev/null || pwd)")
+# noclobber: of two first writers, only one creates the file and writes the header.
+( set -o noclobber; echo "$HEADER" > "$LOG" ) 2>/dev/null || true
 row="$(date -u +%Y-%m-%dT%H:%M:%SZ)"$'\t'"$repo"
 for cell in "$@"; do row+=$'\t'"$(clean "$cell")"; done
 echo "$row" >> "$LOG"

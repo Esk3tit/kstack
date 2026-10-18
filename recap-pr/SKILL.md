@@ -12,7 +12,7 @@ Arguments: optional PR numbers or a ticket key. Default: the current branch's PR
 
 ## 1. Gather
 
-Resolve the log with `~/.claude/skills/recap-pr/log.sh --path` (or `RECAP_KEY=<ticket>`). List every PR in scope (`gh pr list --head <branch>` in each repo the log or ticket names) and each one's `git diff origin/master...HEAD`.
+Resolve the log with `~/.claude/skills/recap-pr/log.sh --path` (or `RECAP_KEY=<ticket>`). List every PR in scope: the ones named in the arguments, else `gh pr list --head <branch>` in each repo the log or ticket names. For each, read its head SHA and base from `gh pr view <n> --json headRefOid,baseRefName`, fetch both, and work from `git diff origin/<base>...<head SHA>`; every later step uses that exact head, never the current checkout.
 
 Done when every PR in scope and its diff are in hand.
 
@@ -22,7 +22,7 @@ Rows go missing during long runs. Cross the log against what actually happened:
 
 - every commit on each PR branch (`git log origin/master..HEAD`);
 - every review thread and reviewer finding (`gh` threads, Codex results, Fable/Standards/Spec reports);
-- every question the user answered in this session's transcript.
+- every question the user answered, in every session that worked on the branch: Claude Code transcripts are the `~/.claude/projects/*/*.jsonl` files that mention the branch name (`grep -l`).
 
 Append a `backfill` row for each one with no row behind it. Done when each commit, finding and user answer maps to at least one row.
 
@@ -32,11 +32,13 @@ The log only holds what the agent knew it changed. A **divergence** is a differe
 
 List every surface the diffs touch that someone outside the code experiences: rendered UI (placement, order, collapse state, labels, styling), customer-facing text, API payloads, LLM inputs and prompts, where and how data is stored, throughput and latency limits, notifications.
 
+Choose inputs that exercise every branch the diff changes: for each new or edited condition, a real record that takes each side of it (an event with a linked document, one without). On UI surfaces, open every toggle, tab and collapsed section the change touches before comparing.
+
 For each surface, put master and the branch side by side on the same real input:
 
 - UI: screenshot the master build and the branch build on the same event. Prod runs master, so a prod event is the cheapest master view (read-only); otherwise use a master worktree on a second port.
 - Backend: run both on the same stored input, or compare outputs the tests already pin down.
-- When neither can run, read the diff for that surface and mark the pair `read only`.
+- When neither can run, read the diff for that surface and mark the pair `read only`; it goes under Attention as unverified.
 
 Every difference no row's `prod_delta` explains becomes a `parity` row: `source me`, `asked no`, `result open`.
 
@@ -50,6 +52,8 @@ Hand the log, the diffs and the parity pairs to a reviewer from a different mode
 - accepted `asked no` rows that add a mechanism or widen scope;
 - rows whose evidence does not show what they claim;
 - anything a skim of the recap would miss.
+
+Done when the reviewer's flags are in hand, or it reports none.
 
 ## 5. Recap
 
@@ -66,6 +70,6 @@ reviewed by <model>
 
 `Not asked for` holds accepted `asked no` rows, mechanisms first. `Attention` holds step 4's flags, or "No flags".
 
-Then refresh each PR body's `## Behavior changes vs master` section (the `/pr` template) from the rows with a `prod_delta`.
+Then refresh each PR body's `## Behavior changes vs master` section (the `/pr` template) from the changes still in that PR's final diff: accepted rows with a `prod_delta` other than `none`, plus open parity divergences. Rejected, reverted and superseded rows stay in the recap's "Rejected or reverted" section only.
 
 Done when every log row and every parity row appears in exactly one section.

@@ -76,13 +76,14 @@ All user-authored. `/codexloop` drives Codex through the openai-codex Claude Cod
 
 | Command | Purpose |
 |---------|---------|
-| `/codexloop` | Run a Codex adversarial review on the current PR/branch, fix **real** findings, loop until clean, push on CLEAN. Claude is the human-in-the-loop reviewing Codex's review. Every finding becomes a decision-log row; the user's settled decisions go to Codex as focus; an added mechanism (semaphore, cache, retry, flag) needs a measured problem. |
+| `/codexloop` | Run a Codex adversarial review on the current PR/branch, fix **real** findings, loop until clean, push on CLEAN. Claude is the human-in-the-loop reviewing Codex's review. Every finding becomes a decision-log row and the user's settled decisions go to Codex as focus. `--until-converged` drops the cap: two clean rounds in a row end the loop. |
 | `/address-pr-comments` | Resolve unresolved PR review-bot comments via parallel subagents. **Loops by default** (`--once` for a single pass), gating on **reviewers** — code-review bots + lint/test — never CI/CD deploys. |
 | `/pr-loop` | Take a finished branch to merge-ready without check-ins: open the PR(s), `/code-review`, `/codexloop` to convergence with bot comments handled alongside, an optional Fable pass, affected tests, then `/recap-pr`. Never merges. |
 | `/trim-code-comments` | Clean up over-commenting in code just written, per the `CLAUDE.md` comment rules. |
 
 ## 3. Custom skills (mine)
 
+- **`recap-pr/`** — `/recap-pr`, the pre-merge audit of hands-off work. `LEDGER.md` defines the **decision log** every hands-off step writes (one TSV per ticket in `~/.local/share/recap/`, never committed) and the mechanism rule; `log.sh` appends rows and prints the user's settled decisions for Codex. `/recap-pr` backfills the log from commits, findings and transcripts, compares master and the branch on the same real inputs to catch behavior changes nobody decided, gets a second opinion from another model family, and prints the recap.
 - **`no-mistakes/` (router) + `no-mistakes-frontend/` + `no-mistakes-backend/` + `no-mistakes-a11y/`** — agentic verification
   for app changes against a running app + its database. The router classifies a request and runs
   frontend-only / backend-only / **fullstack round-trip** (drive a UI action → assert the UI → read the
