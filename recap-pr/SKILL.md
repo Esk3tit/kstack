@@ -12,7 +12,7 @@ Arguments: optional PR numbers or a ticket key. Default: the current branch's PR
 
 ## 1. Gather
 
-List every PR in scope: the ones named in the arguments, else `gh pr list --head <branch>` in each repo the log or ticket names. For each, read its head SHA and base from `gh pr view <n> --json headRefOid,baseRefName`, fetch both, and work from `git diff origin/<base>...<head SHA>`; every later step uses that exact head, never the current checkout. Find the PR's log from its head branch: the key in `~/.local/share/recap/.branch-keys/<repo>--<head branch, / as ->`, else its ticket. Export it as `RECAP_KEY` before any `log.sh` call.
+List every PR in scope: the ones named in the arguments, else `gh pr list --head <branch>` in each repo the log or ticket names. For each, read its head SHA and base from `gh pr view <n> --json headRefOid,baseRefName`, fetch both, and work from `git diff origin/<base>...<head SHA>`; every later step uses that exact head, never the current checkout. Find the PR's log from its head branch: the key in `~/.local/share/recap/.branch-keys/<repo>--<head branch, percent-encoded: % as %25, / as %2F>`, else its ticket. Export it as `RECAP_KEY` before any `log.sh` call.
 
 Done when every PR in scope and its diff are in hand.
 

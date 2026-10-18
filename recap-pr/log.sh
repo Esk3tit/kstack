@@ -17,7 +17,10 @@ repo=$(basename -s .git "$(git remote get-url origin 2>/dev/null || git rev-pars
 
 branch=$(git symbolic-ref --quiet --short HEAD 2>/dev/null \
   || git rev-parse --short HEAD 2>/dev/null || echo no-branch)
-KEYFILE="$HOME/.local/share/recap/.branch-keys/$repo--$(echo "$branch" | tr '/' '-')"
+# Percent-encoded so distinct branches (feat/a-b, feat-a/b) never share a file name.
+branch_id=$(printf '%s' "$branch" | sed 's/%/%25/g; s#/#%2F#g')
+KEYFILES="$HOME/.local/share/recap/.branch-keys"
+KEYFILE="$KEYFILES/$repo--$branch_id"
 
 # A branch keeps the key its first row was written under, so a later ticketed commit cannot move its log.
 log_key() {
@@ -32,7 +35,7 @@ log_key() {
       base=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || echo origin/master)
       key=$(ticket_in "$(git log --reverse --format=%s "$base..HEAD" 2>/dev/null)")
     fi
-    [ -n "$key" ] || key="$repo-$(echo "$branch" | tr '/' '-')"
+    [ -n "$key" ] || key="$repo-$branch_id"
   fi
   echo "$key"
 }
@@ -46,11 +49,17 @@ case "${1:-}" in
     new="$HOME/.local/share/recap/${2:?usage: log.sh --bind <key>}/decisions.tsv"
     mkdir -p "$(dirname "$new")" "$(dirname "$KEYFILE")"
     if [ -s "$KEYFILE" ] && [ "$(cat "$KEYFILE")" != "$2" ]; then
-      old="$HOME/.local/share/recap/$(cat "$KEYFILE")/decisions.tsv"
+      oldkey=$(cat "$KEYFILE")
+      old="$HOME/.local/share/recap/$oldkey/decisions.tsv"
       if [ -f "$old" ]; then
-        [ -e "$new" ] || echo "$HEADER" > "$new"
-        tail -n +2 "$old" >> "$new"
-        rm -f "$old"
+        # Merge in time order, so --pins still applies supersessions oldest first.
+        tmp=$(mktemp "$new.XXXXXX")
+        { echo "$HEADER"; { [ -f "$new" ] && tail -n +2 "$new"; tail -n +2 "$old"; } | sort -s -t$'\t' -k1,1; } > "$tmp"
+        mv "$tmp" "$new"
+        # The old log stays while another branch still points at it.
+        if [ "$(grep -lx -- "$oldkey" "$KEYFILES"/* 2>/dev/null | grep -cvx -- "$KEYFILE")" -eq 0 ]; then
+          rm -f "$old"
+        fi
       fi
     fi
     echo "$2" > "$KEYFILE"
