@@ -4,7 +4,7 @@ A ticket's work leaves a **decision log**: one TSV row per decision, so the revi
 
 ## Where it lives
 
-`~/.local/share/recap/<key>/decisions.tsv`. `<key>` is `$RECAP_KEY` when set, else the ticket in the branch name or commit subjects (`PRO-2725`; pattern `$RECAP_TICKET_RE`, default `pro-[0-9]+`), else the branch name. A branch keeps the key it first resolved to (`~/.local/share/recap/.branch-keys/`), so a later commit naming a ticket does not move its log. One log spans every repo a ticket touches, so set `RECAP_KEY` when sibling branches might not carry the ticket. It is local only and never committed.
+`~/.local/share/recap/<key>/decisions.tsv`. `<key>` is `$RECAP_KEY` when set, else the ticket in the branch name or commit subjects (`PRO-2725`; pattern `$RECAP_TICKET_RE`, default `pro-[0-9]+`), else `<repo>-<branch>`. A branch keeps the key it first resolved to (`~/.local/share/recap/.branch-keys/`), so a later commit naming a ticket does not move its log. One log spans every repo a ticket touches, so set `RECAP_KEY` when sibling branches might not carry the ticket. It is local only and never committed.
 
 ## Writing a row
 
@@ -27,7 +27,7 @@ The helper finds the log from the current repo's branch, writes the header on fi
 
 ## What earns a row
 
-- Every answer the user gives to a design question (`source you`, `asked yes`). These are the **settled decisions**: `log.sh --pins` feeds the accepted ones to Codex as focus text. When the user changes one, log the new answer with `result` `accepted (supersedes: <the old row's decision text>)`; the old row drops out of the pins.
+- Every answer the user gives to a design question (`source you`, `asked yes`). These are the **settled decisions**: `log.sh --pins` feeds the accepted ones to Codex as focus text. When the user changes one, log the new answer with a `result` that ends in `supersedes: <the old row's decision text>` (anything else, like verification, goes before it: `accepted, tests green; supersedes: quotes above the alert text`); the old row drops out of the pins.
 - Every reviewer finding, accepted or rejected, with the reason.
 - Every change whose `prod_delta` is not `none`, whoever proposed it.
 - Every added **mechanism** (see below).

@@ -31,7 +31,7 @@ log_key() {
       base=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || echo origin/master)
       key=$(ticket_in "$(git log --reverse --format=%s "$base..HEAD" 2>/dev/null)")
     fi
-    [ -n "$key" ] || key=$(echo "$branch" | tr '/' '-')
+    [ -n "$key" ] || key="$repo-$(echo "$branch" | tr '/' '-')"
   fi
   echo "$key"
 }
@@ -45,7 +45,7 @@ case "${1:-}" in
     [ -f "$LOG" ] && awk -F'\t' '
       NR > 1 && $4 == "you" && $10 ~ /^accepted/ {
         if (match($10, /supersedes: .*$/)) {
-          old = substr($10, RSTART + 12); sub(/\)$/, "", old)
+          old = substr($10, RSTART + 12)
           for (j in decision) if (decision[j] == old) { delete decision[j]; delete text[j] }
         }
         decision[NR] = $6; text[NR] = "- " $6 " (" $7 ")"
