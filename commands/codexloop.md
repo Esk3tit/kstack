@@ -45,9 +45,11 @@ fi
 - **Ready check:** `/Users/<you>/.codex/bin/claude-read claude-opus-5-5 "reply ok"` answers; otherwise `STATUS=FAIL ERROR="claude unavailable: <its error>"`.
 - **Model:** `claude-opus-5-5`.
 - **Review call.**
-  1. In the sandbox, write the diff and the focus text. One diff covers both scopes: the working tree against the merge-base, so committed fixes and any uncommitted work stay in review together. A failed `git diff` fails the round; the focus file spares the pins any shell quoting:
+  1. In the sandbox, write the diff and the focus text. The default diff is the working tree against the merge-base, so committed fixes and any uncommitted work stay in review together; an explicit `--scope` narrows it. A failed `git diff` fails the round; the focus file spares the pins any shell quoting:
      ```bash
-     { git diff "$(git merge-base "origin/$BASE" HEAD)" && git ls-files --others --exclude-standard --full-name :/ | sed 's/^/New file, not in the diff; read it: /'; } > "$R/diff.patch"
+     MB=$(git merge-base "origin/$BASE" HEAD)
+     git diff "$MB" > "$R/diff.patch"      # default (auto); --scope branch: git diff "$MB" HEAD; --scope working-tree: git diff HEAD
+     git ls-files --others --exclude-standard --full-name :/ | sed 's/^/New file, not in the diff; read it: /' >> "$R/diff.patch"   # skip for --scope branch
      printf '%s' "$FOCUS" > "$R/focus.txt"
      ```
   2. Review it, as a plain command (no pipe, redirect or variable assignment, so the rule matches) with `$HOME` written out:
