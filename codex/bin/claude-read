@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Usage: claude-read <model> <prompt> [<dir to read>...]
+# One read-only Claude call from Codex, which allows this script outside the sandbox. Prints Claude's answer.
+# Claude starts in a fresh dir under ~/.cache, out of the sandbox's reach, so the git it runs at startup finds
+# nothing the repo or the sandbox planted; --safe-mode drops hooks, plugins and MCP servers;
+# --setting-sources user keeps the repo's .claude settings (an apiKeyHelper runs even in safe mode) from running.
+set -uo pipefail
+REPO=$PWD
+mkdir -p "$HOME/.cache" && D=$(mktemp -d "$HOME/.cache/claude-read.XXXXXX") && cd "$D" || exit 1
+trap 'rm -rf "$D"' EXIT
+MODEL=$1 PROMPT=$2; shift 2
+dirs=(); for d in "$REPO" "$HOME/.local/share/recap" "$@"; do dirs+=(--add-dir "$d"); done
+claude -p --model "$MODEL" --effort high --safe-mode --setting-sources user --tools "Read,Grep,Glob" "${dirs[@]}" \
+  --no-session-persistence -- "Working directory: $REPO. $PROMPT" < /dev/null

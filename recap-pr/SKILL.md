@@ -46,7 +46,7 @@ Done when every listed surface has a master/branch pair or a stated reason it ca
 
 ## 4. Second opinion
 
-Hand the log, the diffs and the parity pairs to a reviewer from a different model family from the one that did most of the work (Codex `gpt-6.1-sol` through the companion `task`, read-only, when Claude implemented; a Claude subagent when Codex did). It flags:
+Hand the log, the diffs and the parity pairs to a reviewer from a different model family from the one that did most of the work: Codex `gpt-6.1-sol` through the companion `task`, read-only, when Claude implemented; Claude Opus 5.5 when Codex did. From Codex, run it as the plain command `/Users/<you>/.codex/bin/claude-read claude-opus-5-5 "<brief>" [<extra dirs to read>]` (a copy of kstack `codex/bin/`, the only read-only Claude entry Codex allows outside the sandbox), pointing the brief at files to Read. It flags:
 
 - `prod_delta none` rows whose diff says otherwise;
 - accepted `asked no` rows that add a mechanism or widen scope;
@@ -64,12 +64,15 @@ Write `recap.md` beside the log and print it. Group by surface within each secti
 ## Behavior changes vs master
 ## Not asked for
 ## Rejected or reverted
+## Decided, no behavior change
 ## Attention
 reviewed by <model>
 ```
 
-`Not asked for` holds accepted `asked no` rows, mechanisms first. `Attention` holds step 4's flags, or "No flags".
+`Not asked for` holds accepted `asked no` rows, mechanisms first. `Attention` holds step 4's flags and any other `open` row, or "No flags".
 
 Then refresh each PR body's `## Behavior changes vs master` section (the `/pr` template) from the changes still in that PR's final diff: accepted rows with a `prod_delta` other than `none`, plus open parity divergences. Rejected, reverted and superseded rows stay in the recap's "Rejected or reverted" section only.
 
-Done when every log row and every parity row appears in exactly one section; an accepted `asked no` row goes in `Not asked for` even when it also changes behavior.
+`Decided, no behavior change` holds accepted `asked yes` rows with `prod_delta none`.
+
+Done when every log row and every parity row appears in exactly one section: a superseded row in `Rejected or reverted`, an accepted `asked no` row in `Not asked for`, any other row in the first section above that fits.

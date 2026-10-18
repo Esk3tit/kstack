@@ -17,7 +17,7 @@ After any change to `log.sh`, run `bash test-log.sh` beside it. The helper finds
 | column | holds |
 |---|---|
 | `phase` | `implement`, `review`, `codexloop`, `pr-comments`, `fable`, `e2e`, `user`, `parity`, `backfill` |
-| `source` | who proposed it: `you` (the user), `me` (the agent writing), `codex`, `fable`, `review` (Standards/Spec subagents), `bot:<name>` (Gemini, BugBot, Codex connector) |
+| `source` | who proposed it: `you` (the user), `me` (the agent writing), `codex`, `claude` (a Claude reviewer called from Codex), `fable`, `review` (Standards/Spec subagents), `bot:<name>` (Gemini, BugBot, Codex connector) |
 | `asked` | `yes` when the user or the ticket asked for it; `no` when an agent or reviewer chose it |
 | `decision` | what was chosen or done, one line |
 | `why` | the reason, in plain words |
@@ -27,7 +27,7 @@ After any change to `log.sh`, run `bash test-log.sh` beside it. The helper finds
 
 ## What earns a row
 
-- Every answer the user gives to a design question (`source you`, `asked yes`). These are the **settled decisions**: `log.sh --pins` feeds the accepted ones to Codex as focus text; `RECAP_PIN_KEYS` (space-separated keys) adds other logs, read together so a supersession in one log applies to the rest. When the user changes one, log the new answer with a `result` that ends in `supersedes: <the old row's decision text>` (anything else, like verification, goes before it: `accepted, tests green; supersedes: quotes above the alert text`); the old row drops out of the pins.
+- Every answer the user gives to a design question (`source you`, `asked yes`). These are the **settled decisions**: `log.sh --pins` feeds the accepted ones to the reviewer as focus text; `RECAP_PIN_KEYS` (space-separated keys) adds other logs, read together so a supersession in one log applies to the rest. When the user changes one, log the new answer with a `result` that ends in `supersedes: <the old row's decision text>` (anything else, like verification, goes before it: `accepted, tests green; supersedes: quotes above the alert text`); the old row drops out of the pins.
 - Every reviewer finding, accepted or rejected, with the reason.
 - Every change whose `prod_delta` is not `none`, whoever proposed it.
 - Every added **mechanism** (see below).

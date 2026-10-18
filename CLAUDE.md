@@ -70,7 +70,7 @@ How to apply:
     - `/codex:adversarial-review` - Perform a skeptical design review to pressure-test tradeoffs, auth, and reliability. Append custom focus text at the end of the command to steer the focus.
     - `/codex:rescue` - Subcontract active debugging, multi-file refactoring, or implementation loops to Codex when a second pass is required.
     - `/codex:status` / `/codex:result` / `/codex:cancel` - Use these to check, fetch, or abort asynchronous jobs when using the `--background` flag on heavy tasks.
-- Claude models (sonnet-5, opus-5.5, fable-5.1) run via the Agent/Workflow model parameter.
+- Claude models (sonnet-5, opus-5.5, fable-5.1) run via the Agent/Workflow model parameter. From Codex, they run through `/Users/<you>/.codex/bin/claude-read claude-opus-5-5 "<brief>" [<extra dirs to read>]` (Fable: `claude-fable-5-1`) (a copy of kstack `codex/bin/`), pointing the brief at files to Read; Codex allows only that read-only wrapper outside the sandbox, as a plain command.
 
 Using gpt-6.1-sol (high reasoning) inside workflows and subagents:
 - Subagents and automated workflows should call the plugin's native slash commands or its exposed `codex-cli-runtime` skills to delegate tasks directly, omitting the need for raw terminal wrappers.
