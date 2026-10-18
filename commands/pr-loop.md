@@ -7,7 +7,7 @@ argument-hint: [ticket or spec] [--repos <sibling repos>]
 
 Run the whole pre-merge loop on the current branch, and on the same-named branch in any sibling repo the change spans, without stopping to ask. The user is away; the recap at the end is how they audit the run, so write each decision to the decision log as it is made (`~/.claude/skills/recap-pr/LEDGER.md`). Every change accepted from any reviewer passes LEDGER's mechanism rule. The run ends with open, converged PRs; merging is the user's call.
 
-Resolve the log key once in the main repo (`log.sh --path` reuses the key the branch already logged under) and export it as `RECAP_KEY` for every sibling repo, so all repos write one log.
+Resolve the log key once in the main repo (`log.sh --path` reuses the key the branch already logged under), then run `log.sh --bind <that key>` in each sibling repo's branch, so every repo writes, pins and recaps one log.
 
 ## 1. Open the PRs
 

@@ -3,6 +3,7 @@
 #   log.sh <phase> <source> <asked> <decision> <why> <prod_delta> <evidence> <result>
 #   log.sh --path    print the log path for the current branch
 #   log.sh --pins    print the user's settled decisions, one "- " line each
+#   log.sh --bind K  point the current branch at log K, moving rows it already logged elsewhere
 set -euo pipefail
 
 HEADER=$'ts\trepo\tphase\tsource\tasked\tdecision\twhy\tprod_delta\tevidence\tresult'
@@ -41,6 +42,19 @@ LOG="$HOME/.local/share/recap/$KEY/decisions.tsv"
 
 case "${1:-}" in
   --path) echo "$LOG"; exit 0 ;;
+  --bind)
+    new="$HOME/.local/share/recap/${2:?usage: log.sh --bind <key>}/decisions.tsv"
+    mkdir -p "$(dirname "$new")" "$(dirname "$KEYFILE")"
+    if [ -s "$KEYFILE" ] && [ "$(cat "$KEYFILE")" != "$2" ]; then
+      old="$HOME/.local/share/recap/$(cat "$KEYFILE")/decisions.tsv"
+      if [ -f "$old" ]; then
+        [ -e "$new" ] || echo "$HEADER" > "$new"
+        tail -n +2 "$old" >> "$new"
+        rm -f "$old"
+      fi
+    fi
+    echo "$2" > "$KEYFILE"
+    echo "$new"; exit 0 ;;
   --pins)
     [ -f "$LOG" ] && awk -F'\t' '
       NR > 1 && $4 == "you" && $10 ~ /^accepted/ {
@@ -59,8 +73,12 @@ esac
 
 clean() { printf '%s' "$1" | tr '\t\r\n' '   '; }
 
-mkdir -p "$(dirname "$LOG")" "$(dirname "$KEYFILE")"
-[ -s "$KEYFILE" ] || echo "$KEY" > "$KEYFILE"
+mkdir -p "$(dirname "$LOG")"
+# Only a derived key registers the branch; an explicit RECAP_KEY routes this row without binding.
+if [ -z "${RECAP_KEY:-}" ] && [ ! -s "$KEYFILE" ]; then
+  mkdir -p "$(dirname "$KEYFILE")"
+  echo "$KEY" > "$KEYFILE"
+fi
 # The header is written to a temp file and hard-linked into place, so the log never exists without it.
 if [ ! -e "$LOG" ]; then
   tmp=$(mktemp "$LOG.XXXXXX")
