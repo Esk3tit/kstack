@@ -61,12 +61,13 @@ case "${1:-}" in
         n++; ts[n] = $1; decision[n] = $6; text[n] = "- " $6 " (" $7 ")"
         if (match($10, /supersedes: .*$/)) old[n] = substr($10, RSTART + 12)
       }
-      # A supersession removes the named decision when logged earlier, or in the same second
-      # without a supersession of its own, whichever log it came from.
+      # A supersession removes the named decision when logged earlier or in the same second,
+      # whichever log it came from; two rows that supersede each other in one second keep the later.
       END {
         for (i = 1; i <= n; i++) if (i in old)
           for (j = 1; j <= n; j++)
-            if (j != i && decision[j] == old[i] && (ts[j] < ts[i] || (ts[j] == ts[i] && !(j in old))))
+            if (j != i && decision[j] == old[i] && (ts[j] < ts[i] || \
+                (ts[j] == ts[i] && !((j in old) && old[j] == decision[i] && j > i))))
               gone[j] = 1
         for (i = 1; i <= n; i++) if (!(i in gone)) print text[i]
       }
