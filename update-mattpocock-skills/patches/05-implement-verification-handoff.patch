@@ -1,0 +1,11 @@
+--- a/SKILL.md
++++ b/SKILL.md
+@@ -9,6 +9,8 @@
+ Use /tdd where possible, at pre-agreed seams.
+ 
+ Run typechecking regularly, and single test files regularly.
++
++Carry the affected test scope, required skills, frozen inputs for stage-level evals, and shared-service ownership into each child brief. Coordinate tests that share a database. Prompt edits use writing-for-agents. Use eval for affected-stage experiments, with E2E bug reproduction and a final integration check when the changed boundary requires it.
+ 
+ At the end, run the affected tests — not the full suite. Derive the affected set from
+ the change rather than guessing: grep the test tree for every symbol, module, and file

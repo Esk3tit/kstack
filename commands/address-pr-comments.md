@@ -5,6 +5,8 @@ argument-hint: [pr-number] [--once]
 
 # /address-pr-comments
 
+Inside T3, use app-owned delegated tasks for independent comment clusters, retaining each task ID and the chosen model options. Give write-capable fixers isolated worktrees; otherwise apply fixes serially in the parent. Use a bounded handful of agents and follow the existing fan-out approval rule. Use the T3 PR watch when monitoring, then end the turn; unwatch before handing back. Native CLI sessions use the tools below.
+
 Address **unresolved** review comments on a PR: judge each one, fix what's valid, push back on what isn't, reply to every comment, resolve the thread. Then loop — push, let the reviewers re-review, repeat — until the PR converges.
 
 **Idempotent.** Each pass works only the unresolved threads whose last comment is not ours, so re-running is always safe.
@@ -27,7 +29,7 @@ Classify every check and comment source by name into exactly one bucket — the 
 
 2. **Partition into clusters.** Holding every comment at once, group them: comments on the same code or that reference each other share a cluster; everything else is a cluster of one. This call is yours to make directly from full context — no line-distance heuristic.
 
-3. **Fan out.** Spawn one general-purpose subagent per cluster, all in parallel, each with this task:
+3. **Fan out.** Handle dependent clusters serially. For independent clusters, use a bounded handful of subagents with isolated worktrees for writes, or fix them serially in the parent when isolation is unavailable. Each fixer has this task:
    > Address these PR comments: {cluster}. Read the code around each. Judge whether each raises a real issue — technically correct, an actual improvement to quality/security/maintainability, consistent with the codebase. A fix that adds a mechanism must pass the mechanism rule in `~/.claude/skills/recap-pr/LEDGER.md`; one that fails it is not a valid fix. Fix the valid ones with Edit; for invalid ones, prepare a respectful explanation of why it isn't one. Do NOT commit, reply, or resolve. Return per comment: `valid` (bool), `action` ("Fixed: …" / "Not an issue: …"), `files` (paths changed), `reply` (message to post).
 
    Reject nitpicks, bikeshedding, and bloated defensive code; never fabricate a fix just to silence a bot.

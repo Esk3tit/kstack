@@ -33,3 +33,10 @@ patch -p1 -d ~/.agents/skills/<skill> < ~/.claude/skills/update-mattpocock-skill
 
 - **What it does:** adds a "Behavior changes vs master" section to PR bodies, listing what users, customers or ops will see differently and why, taken from the decision log.
 - **Why:** reviewers saw code changes but not behavior changes.
+
+## 05 · implement · verification handoff
+
+`patches/05-implement-verification-handoff.patch`, added 2026-10-23. Apply after patch 03.
+
+- **What it does:** carries affected tests, stage-eval inputs, required prompt-writing skills, and shared-service ownership into child briefs. It preserves E2E bug reproduction and warranted integration checks.
+- **Why:** subagents repeatedly ran broad suites against the same dev database or replayed the full pipeline for a stage-only experiment.

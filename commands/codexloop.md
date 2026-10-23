@@ -5,6 +5,8 @@ argument-hint: [--max-iterations N] [--until-converged] [--model MODEL] [--base 
 
 # /codexloop
 
+When T3 app-owned delegation is available, use it instead of the CLI reviewer transport below. Discover the provider/model and options, give each review round its own task with the full brief and prior findings/responses, and retain its task ID. Keep write-capable agents isolated. For PR monitoring, use the available T3 watch tool and end the turn; unwatch before handing back. The CLI transport and polling below apply to native CLI sessions without those capabilities.
+
 ## Purpose
 Have a reviewer from the **other model family** review the current PR or branch, then fix any **real** findings it reports. Repeat until the reviewer returns no substantive findings (or the max iteration cap is hit). The loop is the same in every harness; only the reviewer call differs.
 

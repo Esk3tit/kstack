@@ -39,6 +39,8 @@ nothing to lose and needs no prompt.
 | Path | What it is |
 |------|------------|
 | `CLAUDE.md` | Global instructions for Claude Code. **Shared with Codex** via a symlink (below). |
+| `cleanup/` | Shared session cleanup and archive-time resource ownership checks. |
+| `pr-loop/` | Canonical merge-ready skill; the slash command is an alias. |
 | `commands/` | Custom slash commands (Codex-driven review loops + PR hygiene). |
 | `no-mistakes/` · `no-mistakes-frontend/` · `no-mistakes-backend/` · `no-mistakes-a11y/` · `no-mistakes-setup/` | The verification skill family (router + three specialists: frontend, backend, deep-a11y) plus the onboarding skill that generates a project's `.no-mistakes.json`. See each `SKILL.md`. |
 | `wide-event-logging/` | Skill — canonical-log-line / wide-event logging for Python/FastAPI (with reference modules). |
