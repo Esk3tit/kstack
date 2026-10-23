@@ -32,6 +32,8 @@ Done when every selected process/resource is gone or listed with its reason for 
 
 Read `git worktree list --porcelain`, then check each selected checkout's current status, head, branch, live process references, and app/thread binding. Confirm the work is finished. An ancestor of a freshly checked base is evidence of retained commits; a squash merge needs its own merge-state check.
 
+Check installed skill and command links too. A checkout serving live entrypoints stays until those links are repointed and verified.
+
 Inspect ignored files as well as ordinary untracked files. Preserve needed outputs, local prompts, notes, glossaries, and prototypes outside a checkout before removing it, and verify the saved copies. Treat nested worktrees and unsettled thread bindings as retention decisions. Main checkouts, active work, unique commits, and unresolved data stay in place.
 
 Use the project's existing artifact location, such as `~/.local/share/tprm-api/<ticket-or-run>/`, or the existing recap log's directory for otherwise unassigned retained files. Record original and saved paths, verify file hashes and symlink targets, and refresh the source comparison before removal.
