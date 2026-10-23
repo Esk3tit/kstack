@@ -6,7 +6,7 @@ When making technical decisions, give no weight to development cost or engineeri
 
 ## Operational work — simplest direct path first
 
-For stale session resources or an archive verdict, use the shared `cleanup` skill. For authorized merge-ready work, use `pr-loop`. Carry verification scope and required skills into delegated briefs.
+For stale session resources or an archive verdict, use the shared `cleanup` skill. For authorized merge-ready work, use `pr-loop`. Before delegating, read `~/.agents/skills/pr-loop/HANDOFF.md`.
 
 For one-off or infrequent operational work, start with the **simplest direct end-to-end path**. Do not build wrappers, control planes, policy layers, custom verifiers, or automation unless the direct path exposes a concrete blocker or a repeated need that justifies the added machinery.
 

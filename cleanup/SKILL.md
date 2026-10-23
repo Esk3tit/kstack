@@ -5,7 +5,7 @@ description: Audit or clean up coding-session processes, preview servers, Docker
 
 # Cleanup
 
-Account for the resources a coding session left behind. Start with an inventory; make changes within the user's authorized resources and actions. An existing approval carries forward within that scope; a delegated agent also obeys its own brief. Hold resources whose ownership or retention is unresolved. Missing facts are unresolved, not evidence that a resource is unused.
+Account for the resources a coding session left behind. A bare invocation produces an inventory and proposed actions. With no authorized cleanup action, stop there. Execute only the resources and actions named by the user's current request or a still-applicable approval; do not extend it to other resources or another delegated brief. An existing approval carries forward within that scope; a delegated agent also obeys its own brief. Hold resources whose ownership or retention is unresolved. Missing facts are unresolved, not evidence that a resource is unused.
 
 ## Identify owners
 
