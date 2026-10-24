@@ -6,6 +6,8 @@ When making technical decisions, give no weight to development cost or engineeri
 
 ## Operational work — simplest direct path first
 
+For stale session resources or an archive verdict, use the shared `cleanup` skill. For authorized merge-ready work, use `pr-loop`. Before delegating, read `~/.agents/skills/pr-loop/HANDOFF.md`.
+
 For one-off or infrequent operational work, start with the **simplest direct end-to-end path**. Do not build wrappers, control planes, policy layers, custom verifiers, or automation unless the direct path exposes a concrete blocker or a repeated need that justifies the added machinery.
 
 This is not a cost argument and does not soften the section above — effort is still not a factor. Unneeded machinery is *worse* on the axes that decide: it adds surface to maintain, more places to be wrong, and indirection between you and the thing you were actually asked to do. Build it when the direct path proves it's needed, not in anticipation.

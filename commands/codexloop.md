@@ -5,6 +5,8 @@ argument-hint: [--max-iterations N] [--until-converged] [--model MODEL] [--base 
 
 # /codexloop
 
+Inside T3, follow its injected instructions for app-owned review rounds and PR tracking; the native CLI transport below applies outside T3.
+
 ## Purpose
 Have a reviewer from the **other model family** review the current PR or branch, then fix any **real** findings it reports. Repeat until the reviewer returns no substantive findings (or the max iteration cap is hit). The loop is the same in every harness; only the reviewer call differs.
 

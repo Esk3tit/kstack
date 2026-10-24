@@ -39,6 +39,8 @@ nothing to lose and needs no prompt.
 | Path | What it is |
 |------|------------|
 | `CLAUDE.md` | Global instructions for Claude Code. **Shared with Codex** via a symlink (below). |
+| `cleanup/` | Shared session cleanup and archive-time resource ownership checks. |
+| `pr-loop/` | Canonical merge-ready skill; the slash command is an alias. |
 | `commands/` | Custom slash commands (Codex-driven review loops + PR hygiene). |
 | `no-mistakes/` · `no-mistakes-frontend/` · `no-mistakes-backend/` · `no-mistakes-a11y/` · `no-mistakes-setup/` | The verification skill family (router + three specialists: frontend, backend, deep-a11y) plus the onboarding skill that generates a project's `.no-mistakes.json`. See each `SKILL.md`. |
 | `wide-event-logging/` | Skill — canonical-log-line / wide-event logging for Python/FastAPI (with reference modules). |
@@ -79,12 +81,14 @@ All user-authored, and the same files serve Claude Code and Codex. Reviews come 
 | Command | Purpose |
 |---------|---------|
 | `/codexloop` | Run an adversarial review from the other model family on the current PR/branch, fix **real** findings, loop until clean, push on CLEAN. The running agent is the human-in-the-loop reviewing the review. Every finding becomes a decision-log row and the user's settled decisions go to the reviewer as focus. `--until-converged` drops the cap: two clean rounds in a row end the loop. |
-| `/address-pr-comments` | Resolve unresolved PR review-bot comments via parallel subagents. **Loops by default** (`--once` for a single pass), gating on **reviewers** — code-review bots + lint/test — never CI/CD deploys. |
+| `/address-pr-comments` | Resolve unresolved PR review-bot comments through bounded isolated fixers or serial parent edits. **Loops by default** (`--once` for a single pass), gating on **reviewers** — code-review bots + lint/test — never CI/CD deploys. |
 | `/pr-loop` | Take a finished branch to merge-ready without check-ins: open the PR(s), `/code-review`, `/codexloop` to convergence (cross-family) with bot comments handled alongside, an optional Fable pass, affected tests, then `/recap-pr`. Never merges. |
 | `/trim-code-comments` | Clean up over-commenting in code just written, per the `CLAUDE.md` comment rules. |
 
 ## 3. Custom skills (mine)
 
+- **`cleanup/`**: inventory session resources, shut down authorized leftovers, preserve worktree artifacts and produce an archive verdict.
+- **`pr-loop/`**: the shared finishing workflow; `commands/pr-loop.md` is its alias. `HANDOFF.md` is the common child-brief contract.
 - **`update-mattpocock-skills/`** — the only supported way to update the mattpocock skills (`npx skills check -g` applies updates and wipes local edits). `PATCHES.md` lists each local patch in plain words; the skill reads upstream history for breaking changes, judges each patch against the new version (reapply, rewrite or drop), asks which to apply, then rebuilds the patch set. `/pr-loop` and the decision log depend on patches 03 (`/implement` logs decisions) and 04 (`/pr` gains "Behavior changes vs master"); on a new machine, install the mattpocock skills, then apply `patches/` in number order.
 - **`recap-pr/`** — `/recap-pr`, the pre-merge audit of hands-off work. `LEDGER.md` defines the **decision log** every hands-off step writes (one TSV per ticket in `~/.local/share/recap/`, never committed) and the mechanism rule; `log.sh` appends rows and prints the user's settled decisions for the reviewer. `/recap-pr` backfills the log from commits, findings and transcripts, compares master and the branch on the same real inputs to catch behavior changes nobody decided, gets a second opinion from another model family, and prints the recap.
 - **`no-mistakes/` (router) + `no-mistakes-frontend/` + `no-mistakes-backend/` + `no-mistakes-a11y/`** — agentic verification
