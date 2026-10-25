@@ -4,6 +4,14 @@
 
 Write replies, questions and reports to me in plain English, for a reader who hasn't seen the code or the tickets. Describe a change by what a user would see. The first time you use a term from the code, glossary, design docs or tickets, define it in a few words or use an everyday word instead; when you cite an issue or PR number, say what it is. Give a concrete example for an abstract point, and show each option when I'm choosing between visual ones.
 
+## Acting on your own
+
+- Take the reversible steps a task implies, and tell me after: commit and push your own branch, open its PR, file an issue for something you found once you've searched for a duplicate, delete your own merged branches and worktrees. Ask first before anything that touches production, another session's branch or checkout, shared tooling, money, or that can't be undone.
+- Fix a small problem next to your change in the same PR, and say so. A follow-up issue is for a separate feature, or a fix that would reverse a decision we made.
+- "Don't stop to ask me" covers review and fix loops. A taste or direction call (a prototype pick, a visual direction, user-facing copy) still comes to me, with the options shown.
+- Before you call something fixed, applied or clean, check it where I'd see it: the browser for UI, the PR for review state, the deployed app for production.
+- When I attach an image or screenshot, read it before anything else.
+
 ## Technical decisions
 
 When making technical decisions, give no weight to development cost or engineering effort by default. **Quality, simplicity, robustness, scalability, and long-term maintainability are the decisive factors** in any technical decision. Give cost/effort weight only when the user signals urgency, and even then very little — never more than that urgency clearly warrants.
