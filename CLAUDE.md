@@ -1,5 +1,9 @@
 # Global instructions
 
+## Writing to me
+
+Write replies, questions and reports to me in plain English, for a reader who hasn't seen the code or the tickets. Describe a change by what a user would see. The first time you use a term from the code, glossary, design docs or tickets, define it in a few words or use an everyday word instead; when you cite an issue or PR number, say what it is. Give a concrete example for an abstract point, and show each option when I'm choosing between visual ones.
+
 ## Technical decisions
 
 When making technical decisions, give no weight to development cost or engineering effort by default. **Quality, simplicity, robustness, scalability, and long-term maintainability are the decisive factors** in any technical decision. Give cost/effort weight only when the user signals urgency, and even then very little — never more than that urgency clearly warrants.
@@ -50,7 +54,7 @@ If removing the comment wouldn't confuse a future reader, don't write it.
 
 ## Picking the right models for workflows and subagents
 
-Rankings, higher = better. Cost reflects what I actually pay (OpenAI has really generous limits), not list price. Intelligence is how hard a problem you can hand the model unsupervised. Taste covers UI/UX, code quality, API design, and copy.
+Rankings, higher = better, so a high cost score means cheap. Cost reflects what I actually pay (OpenAI has really generous limits), not list price. Intelligence is how hard a problem you can hand the model unsupervised. Taste covers UI/UX, code quality, API design, and copy.
 
 | model | cost | intelligence | taste |
 |---|---|---|---|
@@ -67,7 +71,7 @@ How to apply:
 - Reviews of plans/implementations: opus-5.5, optionally gpt-6.1-sol (high reasoning) as an extra independent perspective.
 - Never spawn fable-5.1 subagents unless I ask for them or approve it first; Fable reviews happen when I request them.
 - Never use Haiku.
-- Mechanics: gpt-6.1-sol (high reasoning) is handled natively via the `openai/codex-plugin-cc` plugin inside Claude Code, which reads your user-level `~/.codex/config.toml`. That config sets no default model, so pass `--model gpt-6.1-sol` on every Codex call (`/codex:review`, `/codex:adversarial-review`, `/codex:rescue`, or the companion's `review` / `adversarial-review` / `task`); without it Codex runs its own default model. Avoid writing custom bash scripts; instead, utilize the plugin's built-in tools and skills:
+- Mechanics: gpt-6.1-sol (high reasoning) is handled natively via the `openai/codex-plugin-cc` plugin inside Claude Code, which reads your user-level `~/.codex/config.toml`. Pass `--model gpt-6.1-sol` on every Codex call (`/codex:review`, `/codex:adversarial-review`, `/codex:rescue`, or the companion's `review` / `adversarial-review` / `task`), so the reviewer stays pinned whatever that config's default becomes. Avoid writing custom bash scripts; instead, utilize the plugin's built-in tools and skills:
     - `/codex:review` - Run non-destructive, read-only code quality assessments. Supports `--base <ref>` for branch analysis.
     - `/codex:adversarial-review` - Perform a skeptical design review to pressure-test tradeoffs, auth, and reliability. Append custom focus text at the end of the command to steer the focus.
     - `/codex:rescue` - Subcontract active debugging, multi-file refactoring, or implementation loops to Codex when a second pass is required.
@@ -78,7 +82,6 @@ Using gpt-6.1-sol (high reasoning) inside workflows and subagents:
 - Subagents and automated workflows should call the plugin's native slash commands or its exposed `codex-cli-runtime` skills to delegate tasks directly, omitting the need for raw terminal wrappers.
 - **Always run long Codex work in the background.** Any Codex job that could plausibly run more than a few minutes must use the plugin's background path (`/codex:review --background`, `/codex:adversarial-review --background`, or `task --background` behind `/codex:rescue`), which spawns a detached worker that survives past Bash's ~10-minute timeout. A synchronous run that trips that timeout tears the call down and we lose all output — never risk that. Launch in the background, then poll `/codex:status` and collect the result with `/codex:result` (or `--wait` only when the work is genuinely small).
 - **Isolate parallel write-capable Codex agents in their own git worktrees.** The Codex plugin runs in the shared checkout — verified: it does NOT create its own worktrees (it resolves to the repo root/cwd and edits in place). So when fanning out multiple `--write` implementation agents over GPT in parallel, give each one an isolated worktree (e.g. Workflow's `isolation: 'worktree'`) so their edits don't collide in the shared tree. Serial single-agent runs don't need this. Re-verify the plugin's behavior if its version changes, in case it starts managing worktrees itself.
-- For closed-loop quality assurance, keep the review gate turned on via `/codex:setup --enable-review-gate`. This ensures a stop hook automatically challenges Claude's outputs using Codex before finalizing, preventing broken code or weak design assumptions from reaching the main session unvetted.
 
 ## Large subagent fan-outs — ask before spawning
 
