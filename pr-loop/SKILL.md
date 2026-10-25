@@ -26,7 +26,7 @@ Done when each PR's findings are fixed, logged as rejected with a reason, or lis
 
 Run `/codexloop --until-converged` on each PR; its reviewer is the other model family (Codex from Claude Code, Claude Opus 5.5 from Codex). Triage bot threads while reviews run, without concurrent writes. In a native CLI, use the existing supported cross-family path and keep long Codex work on the plugin's background path. Then apply the accepted reviewer and bot fixes together, commit, push, and start the next round on the new head.
 
-Done when every PR has converged, has no unresolved bot thread, and every reviewer check on its final pushed head has finished and passed (the `/address-pr-comments` convergence gate). A fix made to get there restarts that PR's convergence count.
+Done when every PR has converged, has no open bot finding (threads and review-body items alike), and every reviewer on its final pushed head has reviewed that head and passed, or is reported `NOT_REVIEWED` (the `/address-pr-comments` convergence gate). A fix made to get there restarts that PR's convergence count.
 
 ## 4. Fable pass, when it changes the outcome
 
