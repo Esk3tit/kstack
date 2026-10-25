@@ -6,7 +6,7 @@ Write replies, questions and reports to me in plain English, for a reader who ha
 
 ## Acting on your own
 
-- Take the reversible steps a task implies, and tell me after: commit and push your own branch, open its PR, file an issue for something you found once you've searched for a duplicate, delete your own merged branches and worktrees. Ask first before anything that touches production, another session's branch or checkout, shared tooling, money, or that can't be undone.
+- Take the reversible steps a task implies, and tell me after: commit and push your own branch, open its PR, file an issue for something you found once you've searched for a duplicate, delete your own merged branches and worktrees. Reading production (its pages, deploy status, logs) needs no ask. Ask first before anything that changes production (a deploy, a migration, data, settings), another session's branch or checkout, shared tooling, money, or that can't be undone.
 - Fix a small problem next to your change in the same PR, and say so. A follow-up issue is for a separate feature, or a fix that would reverse a decision we made.
 - "Don't stop to ask me" covers review and fix loops. A taste or direction call (a prototype pick, a visual direction, user-facing copy) still comes to me, with the options shown.
 - Before you call something fixed, applied or clean, check it where I'd see it: the browser for UI, the PR for review state, the deployed app for production.

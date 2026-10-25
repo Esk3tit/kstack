@@ -38,7 +38,7 @@ Done when the run-or-skip decision and its reason are logged, and every Fable fi
 
 ## 5. Verify in the running app, when the diff changes what renders
 
-When a diff changes what a user sees or does (components, routes, styles, copy, a UI-facing API), run `/no-mistakes` on the final head and post its screenshots and recordings to the PR. A diff that changes nothing on screen skips this; log the run-or-skip and why. A fix it causes goes back through step 3, and the evidence is retaken on the head that fix produces.
+When a diff changes what a user sees or does (components, routes, styles, copy, a UI-facing API), run `/no-mistakes` on the final head through a route that drives the browser (frontend or full-stack, never backend-only), with a case for the change on screen, and post its screenshots and recordings to the PR. When the pixels that change belong to another repo's PR, post them on the PR whose diff caused them. A diff that changes nothing on screen skips this; log the run-or-skip and why. A fix it causes goes back through step 3, and the evidence is retaken on the head that fix produces.
 
 Done when every PR whose diff changes what renders carries evidence from its final head, or a logged skip.
 
