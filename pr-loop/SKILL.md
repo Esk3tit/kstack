@@ -1,6 +1,6 @@
 ---
 name: pr-loop
-description: Take an authorized finished branch or PR to merge-ready through review, valid comment fixes, affected checks, and recap. Use when asked to finish PR review or get a change ready to merge.
+description: Take an authorized finished branch or PR to merge-ready through review, valid comment fixes, app evidence, affected checks, and recap, then close it out once merged. Use when asked to finish PR review or get a change ready to merge, or when the user says a PR it ran has merged.
 ---
 
 
@@ -36,17 +36,41 @@ Run it read-only, briefed with the diffs, the settled decisions, and what to loo
 
 Done when the run-or-skip decision and its reason are logged, and every Fable finding is fixed or logged as rejected.
 
-## 5. Affected tests
+## 5. Verify in the running app, when the diff changes what renders
+
+When a diff changes what a user sees or does (components, routes, styles, copy, a UI-facing API), run `/no-mistakes` on the final head and post its screenshots and recordings to the PR. A diff that changes nothing on screen skips this; log the run-or-skip and why. A fix it causes goes back through step 3, and the evidence is retaken on the head that fix produces.
+
+Done when every PR whose diff changes what renders carries evidence from its final head, or a logged skip.
+
+## 6. Affected tests
 
 Run each repo's affected tests on the final heads, deriving the set from the diff as `/implement` does. Fix a failure that predates the branch too, in its own commit, logged with `asked no`; any fix goes back through step 3.
 
 Record each final head, affected commands and collected/executed test results, review state, and unresolved items together in the decision log. Reuse evidence for unchanged inputs and revisions; a relevant fix reruns its affected checks. Done when the affected tests pass on the heads being handed back.
 
-## 6. Recap
+## 7. Recap and hand-back
 
-Follow `~/.claude/skills/recap-pr/SKILL.md`. Hand back the PR URLs, the merge order, each PR's convergence state, the test results, and the recap.
+Follow `~/.claude/skills/recap-pr/SKILL.md`. Then hand back this block for each PR, every line filled from the final head:
 
-Done when `recap.md` exists beside the log and every PR body's "Behavior changes vs master" section matches it.
+```text
+PR <url> · head <sha> · merge order <n>
+Reviewers on this head: <name: reviewed, passed | NOT_REVIEWED: reason>, one per reviewer
+Open findings: <none | each one>
+CI on this head: <each job and its conclusion; e2e shards with passed/failed/flaky counts>
+App evidence: <taken on <sha> | skipped: reason>
+Re-verify before merge: <no | yes: what, and why>
+Merge-ready: <yes | no: what blocks it>
+```
+
+Done when `recap.md` exists beside the log, every PR body's "Behavior changes vs master" section matches it, and each PR's block is handed back.
+
+## When the user says merged
+
+1. Fast-forward the local base where that is safe, and use the cleanup skill to retire this run's worktrees, branches, servers and watchers.
+2. Close what the PRs finished: each ticket the merge did not close, and its parent once every child is closed, ticking the parent's checklist where it keeps one.
+3. Check production runs the merge, following the deploy check the repo documents (`docs/deploy.md` or similar): report the deployed commit and whether pending migrations applied. With no documented check, say so rather than guess.
+
+Done when the cleanup inventory is empty or names a reason for each kept resource, the finished issues are closed, and the deploy state is reported.
 
 ## Runtime handoff and close-out
 
