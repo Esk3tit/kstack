@@ -81,6 +81,12 @@ case "${1:-}" in
         }
         gn = 0
       }
+      # A correction from any source retires the earlier pins carrying that decision text.
+      match($10, /retracts: .*$/) {
+        flush(); cur = ""
+        r = substr($10, RSTART + 10)
+        for (x in live) if (dec[x] == r) delete live[x]
+      }
       $4 == "you" && $10 ~ /^accepted/ {
         if ($1 != cur) { flush(); cur = $1 }
         n++; gid[++gn] = n; dec[n] = $6; text[n] = "- " $6 " (" $7 ")"

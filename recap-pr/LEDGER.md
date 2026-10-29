@@ -27,7 +27,7 @@ After any change to `log.sh`, run `bash test-log.sh` beside it. The helper finds
 
 ## What earns a row
 
-- Every answer the user gives to a design question (`source you`, `asked yes`). These are the **settled decisions**: `log.sh --pins` feeds the accepted ones to the reviewer as focus text; `RECAP_PIN_KEYS` (space-separated keys) adds other logs, read together so a supersession in one log applies to the rest. When the user changes one, log the new answer with a `result` that ends in `supersedes: <the old row's decision text>` (anything else, like verification, goes before it: `accepted, tests green; supersedes: quotes above the alert text`); the old row drops out of the pins.
+- Every answer the user gives to a design question (`source you`, `asked yes`). These are the **settled decisions**: `log.sh --pins` feeds the accepted ones to the reviewer as focus text; `RECAP_PIN_KEYS` (space-separated keys) adds other logs, read together so a supersession in one log applies to the rest. When the user changes one, log the new answer with a `result` that ends in `supersedes: <the old row's decision text>` (anything else, like verification, goes before it: `accepted, tests green; supersedes: quotes above the alert text`); the old row drops out of the pins. When a pinned row turns out not to be the user's answer (it credited them with someone else's call), log a correction from whoever found it, any source, whose `result` ends in `retracts: <that row's decision text>`: the pin drops out, the old row stays as history, and a later answer from the user with the same text pins it again.
 - Every reviewer finding, accepted or rejected, with the reason.
 - Every change whose `prod_delta` is not `none`, whoever proposed it.
 - Every added **mechanism** (see below).
