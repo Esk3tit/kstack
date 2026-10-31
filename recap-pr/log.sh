@@ -79,18 +79,19 @@ case "${1:-}" in
           if (pick in old) for (x in live) if (dec[x] == old[pick]) delete live[x]
           live[pick] = 1; done[pick] = 1; left--
         }
-        gn = 0
+        for (r in gone) for (x in live) if (dec[x] == r) delete live[x]
+        split("", gone); gn = 0
       }
-      # A correction from any source retires the earlier pins carrying that decision text.
-      match($10, /retracts: .*$/) {
-        flush(); cur = ""
-        r = substr($10, RSTART + 10)
-        for (x in live) if (dec[x] == r) delete live[x]
+      function after(tag) { return match($10, tag ".*$") ? substr($10, RSTART + length(tag)) : "" }
+      # A retraction lands after its second'"'"'s pins, so write order within a second never decides it.
+      $10 ~ /^accepted/ && (r = after("retracts: ")) != "" {
+        if ($1 != cur) { flush(); cur = $1 }
+        gone[r] = 1
       }
       $4 == "you" && $10 ~ /^accepted/ {
         if ($1 != cur) { flush(); cur = $1 }
         n++; gid[++gn] = n; dec[n] = $6; text[n] = "- " $6 " (" $7 ")"
-        if (match($10, /supersedes: .*$/)) old[n] = substr($10, RSTART + 12)
+        if ((s = after("supersedes: ")) != "") old[n] = s
       }
       END { flush(); for (i = 1; i <= n; i++) if (i in live) print text[i] }
     '

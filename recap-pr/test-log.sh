@@ -11,6 +11,7 @@ fail=0
 check() { if [ "$2" = "$3" ]; then echo "ok   $1"; else echo "FAIL $1: got [$2], want [$3]"; fail=1; fi; }
 pins() { "$L" --pins | tr '\n' ' ' | sed 's/ $//'; }
 row() { RECAP_KEY=$1 RECAP_TS=$2 "$L" user you yes "$3" why none ev "$4"; }
+correction() { RECAP_KEY=$1 RECAP_TS=$2 "$L" review me no "$3" why none ev "$4"; }
 T=2026-01-01T00:00:00Z
 
 git switch -q -c fix/repro-42-x
@@ -40,17 +41,25 @@ row LB 2026-01-01T00:00:09Z B "accepted; supersedes: A"; row LB 2026-01-01T00:00
 check "late backfill stays superseded" "$(RECAP_KEY=LB pins)" "- B (why)"
 row RV $T D reverted; row RV $T E accepted
 check "reverted is not pinned" "$(RECAP_KEY=RV pins)" "- E (why)"
-fix() { RECAP_KEY=$1 RECAP_TS=$2 "$L" fix me no "$3" why none ev "$4"; }
-row RT $T A accepted; row RT $T B accepted; fix RT 2026-01-01T00:00:05Z "A was the coordinator's" "corrected; retracts: A"
+row RT $T A accepted; row RT $T B accepted; correction RT 2026-01-01T00:00:05Z "A was the coordinator's" "accepted; retracts: A"
 check "a correction from another source retires a pin" "$(RECAP_KEY=RT pins)" "- B (why)"
-fix RE 2026-01-01T00:00:01Z "early" "corrected; retracts: A"; row RE 2026-01-01T00:00:05Z A accepted
+row RJ $T A accepted; correction RJ 2026-01-01T00:00:05Z x "rejected; retracts: A"
+check "a rejected retraction retires nothing" "$(RECAP_KEY=RJ pins)" "- A (why)"
+correction RE 2026-01-01T00:00:01Z "early" "accepted; retracts: A"; row RE 2026-01-01T00:00:05Z A accepted
 check "a retraction only retires earlier pins" "$(RECAP_KEY=RE pins)" "- A (why)"
-row RA $T A accepted; fix RA 2026-01-01T00:00:05Z x "corrected; retracts: A"; row RA 2026-01-01T00:00:09Z A accepted
+row RA $T A accepted; correction RA 2026-01-01T00:00:05Z x "accepted; retracts: A"; row RA 2026-01-01T00:00:09Z A accepted
 check "a pin re-confirmed after its retraction is back" "$(RECAP_KEY=RA pins)" "- A (why)"
-row RS $T A accepted; fix RS $T x "corrected; retracts: A"
+row RS $T A accepted; correction RS $T x "accepted; retracts: A"
 check "a same-second retraction written after its pin retires it" "$(RECAP_KEY=RS pins)" ""
-row RN $T A accepted; fix RN 2026-01-01T00:00:05Z x "corrected; retracts: Z"
+correction RB $T x "accepted; retracts: A"; row RB $T A accepted
+check "a same-second retraction written before its pin retires it" "$(RECAP_KEY=RB pins)" ""
+row RN $T A accepted; correction RN 2026-01-01T00:00:05Z x "accepted; retracts: Z"
 check "a retraction naming no pin changes nothing" "$(RECAP_KEY=RN pins)" "- A (why)"
+row RG $T B "accepted; supersedes: A"; correction RG $T x "accepted; retracts: Q"; row RG $T A accepted
+check "a retraction keeps its second's supersession whole" "$(RECAP_KEY=RG pins)" "- B (why)"
+correction RX1 $T x "accepted; retracts: A"; row RX2 $T A accepted
+check "cross-log same-second retraction, one log order" "$(RECAP_KEY=RX1 RECAP_PIN_KEYS='RX1 RX2' pins)" ""
+check "cross-log same-second retraction, other log order" "$(RECAP_KEY=RX2 RECAP_PIN_KEYS='RX2 RX1' pins)" ""
 check "non-UTC RECAP_TS refused" "$(RECAP_TS=2026-01-01T00:00:00-07:00 "$L" user you yes x w none e accepted 2>/dev/null; echo $?)" "2"
 
 exit $fail
