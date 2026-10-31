@@ -1,6 +1,6 @@
 ---
 name: pr-loop
-description: Take an authorized finished branch or PR to merge-ready through review, valid comment fixes, app evidence, affected checks, and recap, then close it out once merged. Use when asked to finish PR review or get a change ready to merge, or when the user says a PR it ran has merged.
+description: Take an authorized finished branch or PR to merge-ready through review, valid comment fixes, affected checks, and recap. Use when asked to finish PR review or get a change ready to merge, or when the user says a PR it ran has merged.
 ---
 
 
@@ -44,7 +44,7 @@ Done when every PR whose diff changes what renders carries evidence from its fin
 
 ## 6. Affected tests
 
-Run each repo's affected tests on the final heads, deriving the set from the diff as `/implement` does. Fix a failure that predates the branch too, in its own commit, logged with `asked no`; any fix goes back through step 3.
+Run each repo's affected tests on the final heads, deriving the set from the diff as `/implement` does. Fix a failure that predates the branch too, in its own commit, logged with `asked no`; any fix goes back through step 3, and through step 5 when it changes what renders.
 
 Record each final head, affected commands and collected/executed test results, review state, and unresolved items together in the decision log. Reuse evidence for unchanged inputs and revisions; a relevant fix reruns its affected checks. Done when the affected tests pass on the heads being handed back.
 
@@ -53,22 +53,24 @@ Record each final head, affected commands and collected/executed test results, r
 Follow `~/.claude/skills/recap-pr/SKILL.md`. Then hand back this block for each PR, every line filled from the final head:
 
 ```text
-PR <url> · head <sha> · merge order <n>
-Reviewers on this head: <name: reviewed, passed | NOT_REVIEWED: reason>, one per reviewer
+PR <url>: <what it changes, in a user's words> · head <sha> · merge order <n>
+Reviewers on this head: <name: passed | failed: why | NOT_REVIEWED: reason>, one per reviewer
 Open findings: <none | each one>
-CI on this head: <each job and its conclusion; e2e shards with passed/failed/flaky counts>
+CI on this head: <each check and its conclusion, with test counts where the check reports them>
 App evidence: <taken on <sha> | skipped: reason>
 Re-verify before merge: <no | yes: what, and why>
 Merge-ready: <yes | no: what blocks it>
 ```
 
+A deploy job's result is reported but never sets `Merge-ready: no`; a failed reviewer, an open finding or a failing required check does.
+
 Done when `recap.md` exists beside the log, every PR body's "Behavior changes vs master" section matches it, and each PR's block is handed back.
 
 ## When the user says merged
 
-1. Fast-forward the local base where that is safe, and use the cleanup skill to retire this run's worktrees, branches, servers and watchers.
+1. Use the cleanup skill to retire this run's resources, deleting its merged branches, and stop any PR watch the run started.
 2. Close what the PRs finished: each ticket the merge did not close, and its parent once every child is closed, ticking the parent's checklist where it keeps one.
-3. Check production runs the merge, following the deploy check the repo documents (`docs/deploy.md` or similar): report the deployed commit and whether pending migrations applied. With no documented check, say so rather than guess.
+3. Check production runs the merge, following the deploy check the repo documents (`docs/deploy.md` or similar): report the deployed commit and, where the merge carries migrations, whether they applied. With no documented check, say so rather than guess.
 
 Done when the cleanup inventory is empty or names a reason for each kept resource, the finished issues are closed, and the deploy state is reported.
 

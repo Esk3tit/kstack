@@ -65,7 +65,9 @@ nothing to lose and needs no prompt.
   machine-local additions that stay out of the repo (e.g. pointers to private local guidance). Make
   shared changes here, then sync them per
   [Syncing kstack onto a local install](#syncing-kstack-onto-a-local-install--the-human-decides-what-is-lost).
-- Contents (10 sections): **Technical decisions** (quality over dev-cost), **Operational work**
+- Contents (12 sections): **Writing to me** (plain English for a reader who hasn't seen the code),
+  **Acting on your own** (reversible steps without asking; production changes, money and taste calls
+  come to me), **Technical decisions** (quality over dev-cost), **Operational work**
   (simplest direct path; no machinery until it's justified), **Bug fixes** (reproduce E2E first),
   **Decision log** (hands-off work logs each decision and user-visible change for `/recap-pr`),
   **Quality bar** (fix what's broken, even if it's not yours; pixel-perfection), **Auto-generated
