@@ -63,12 +63,27 @@ fi
 ## Contract
 **Inputs:**
 - `--max-iterations N` — safety cap on loop count (default: 5)
-- `--until-converged` — no iteration cap. The loop has converged after two consecutive rounds with no accepted finding, or on a flip-flop. Each committed iteration is pushed right away, so bots and the next round review the same head. `/pr-loop` runs this mode.
+- `--until-converged` — no iteration cap, and each round reviews either the whole PR or only the fixes since the last round (**Round scope**, below). The loop has converged when two rounds in a row at the same head are clean and the second reviewed the whole PR, or on a flip-flop. Each committed iteration is pushed right away, so bots and the next round review the same head. `/pr-loop` runs this mode.
 - `--model MODEL` — reviewer model (default: the one its Reviewer section names)
 - `--base BRANCH` — base branch to diff against (default: auto-detect `master` or `main`)
 - `--scope auto|working-tree|branch` — review target (default: `auto`: branch when it has commits beyond base, else working-tree)
 
 **Outputs:** `STATUS=<CLEAN|MAX_ITERATIONS|FAIL> ITERATIONS=<N> FINDINGS_REMAINING=<N> [ERROR="..."]`
+
+## Round scope (`--until-converged`)
+
+A round reviews one of two scopes:
+
+- **Whole PR:** the branch against its merge-base with the base, as every round does without `--until-converged`. Round 1 is always one. Its focus text also says what the PR is for (its ticket, or the PR summary), so the last look checks the outcome as well as the code.
+- **Fixes:** only the commits since the last reviewed head. In Claude Code, pass `--base <last reviewed sha>` in place of `origin/<base>`; in Codex, write `git diff <last reviewed sha> HEAD` as the round's diff. The focus text adds each finding those commits fix, as `Fixed since the last round: <title> (<file>:<line>) — <the fix in one line>`, and asks whether each fix resolves its finding and whether the change breaks anything it reaches. The reviewer reads whole files, callers and tests, reports a defect wherever the change reaches, and may ask for a whole-PR round in its summary.
+
+Write each round's scope, reviewed head (`git rev-parse HEAD` as it starts) and merge-base with `origin/<base>` into its decision-log rows; a fixes round diffs from the previous round's head. Choose the next round's scope from the one just finished:
+
+- An accepted fix from the reviewer or a bot → a fixes round, unless that round's reviewer asked for a whole-PR round.
+- A clean round → a whole-PR round at the same head. When a whole-PR round is clean and the round before it at that head was too, the loop has converged.
+- A fixes round would be next but the branch took in base changes since the last reviewed head (a merge or rebase: `git merge-base --is-ancestor <last reviewed sha> HEAD` fails, or `git merge-base origin/<base> HEAD` moved) → a whole-PR round instead, since the diff would carry the base's changes.
+
+Every exit therefore has two clean rounds at the final head, the second over the whole PR: each fix gets a look aimed at it, and unchanged code is not re-read after every one-line fix. Inside T3, each delegated round's brief names its scope, and a fixes round's brief carries the fixed findings.
 
 ## Instructions
 
@@ -114,7 +129,7 @@ fi
      if(x.recommendation)console.log("  rec: "+x.recommendation.replace(/\s+/g," "));
    });' "<the round's R path>"
    ```
-   - **CLEAN detection:** `COUNT: 0` (empty `findings`) → print `STATUS=CLEAN ITERATIONS=<n>` and exit the loop. Under `--until-converged`, count it as a clean round instead and exit only on the second clean round in a row.
+   - **CLEAN detection:** `COUNT: 0` (empty `findings`) → print `STATUS=CLEAN ITERATIONS=<n>` and exit the loop. Under `--until-converged`, count it as a clean round instead and exit only when Round scope says the loop has converged.
    - **PARSE_ERROR with no result:** retry the review once, in a fresh `R`; if it still fails, `STATUS=FAIL ERROR="reviewer returned unparseable review"`. Never treat a parse failure as CLEAN.
    - Otherwise list the findings to the user (severity, `file:line`, issue) and proceed to 2d.
 
@@ -133,11 +148,11 @@ fi
    **e. Commit fixes:**
    - Stage only files you changed (never `git add -A`).
    - Conventional commit whose subject says what the fix changed, in the repo's own scope (`fix(api): keep the newest retry token instead of the first`), one commit per iteration.
-   - If every finding this iteration was rejected (no real issues), exit with `STATUS=CLEAN` instead of committing — the loop has converged. Under `--until-converged`, that is a clean round: exit on the second in a row; any committed fix resets the count.
+   - If every finding this iteration was rejected (no real issues), exit with `STATUS=CLEAN` instead of committing — the loop has converged. Under `--until-converged`, that is a clean round, and Round scope picks the next one; any committed fix sends the loop to a fixes round.
    - Do NOT push mid-loop — only after the loop exits CLEAN (see step 4). Under `--until-converged`, push each committed iteration instead.
 
 3. **Exit conditions:**
-   - `STATUS=CLEAN` — the reviewer returned zero findings, or every remaining finding was a rejected nit/flip-flop. Under `--until-converged`, CLEAN needs two such rounds in a row (or a flip-flop).
+   - `STATUS=CLEAN` — the reviewer returned zero findings, or every remaining finding was a rejected nit/flip-flop. Under `--until-converged`, CLEAN needs two such rounds in a row at one head, the second over the whole PR (or a flip-flop).
    - `STATUS=MAX_ITERATIONS` — hit cap with real findings remaining; print remaining findings for human review and DO NOT push.
    - `STATUS=FAIL ERROR="..."` — reviewer error (non-zero exit with no review output / auth failure / unparseable review), lint/test failure, or merge conflict; DO NOT push.
 
@@ -162,7 +177,7 @@ fi
 - **No explanatory comments** — keep diffs clean. No "// per review" or narrative comments. Comments only for non-obvious invariants.
 - **Push only on CLEAN exit** (each committed iteration under `--until-converged`) — never push mid-loop otherwise, never push on MAX_ITERATIONS or FAIL, never push to `master`/`main`, never force-push.
 - **Never skip hooks** (no `--no-verify`).
-- **Hard cap** iterations via `--max-iterations` to prevent infinite loops on flaky findings, unless `--until-converged` was passed; its two-clean-rounds and flip-flop exits end the loop instead.
+- **Hard cap** iterations via `--max-iterations` to prevent infinite loops on flaky findings, unless `--until-converged` was passed; its Round scope convergence and flip-flop exits end the loop instead.
 - **Do not rewrite/amend existing commits** — always create new commits per iteration.
 - **Fail closed** on a reviewer failure (non-zero exit with empty review output, auth/network error, or unparseable review) rather than guessing — never treat a failed run as CLEAN.
 - Idempotent re-entry: if re-run after a clean pass, loop exits immediately with `STATUS=CLEAN ITERATIONS=0` (no push needed; already up to date).
