@@ -37,7 +37,7 @@ A trivial edit with no choice in it and no behavior change gets no row.
 
 ## Pins
 
-`log.sh --pins` feeds the user's accepted answers to the reviewer as focus text. `RECAP_PIN_KEYS` (space-separated keys) adds other logs, read together so a row in one log retires pins in the rest. Two `result` forms retire a pin; each matches the decision text exactly, retires every pin with that text, and goes last in the result, after anything like verification. A row carries one form, not both.
+`log.sh --pins` feeds the user's accepted answers to the reviewer as focus text. `RECAP_PIN_KEYS` (space-separated keys) adds other logs, read together so a row in one log retires pins in the rest. Two `result` forms retire a pin; each matches the decision text exactly, retires every pin with that text, and goes last in the result, after anything like verification. A row carries one form, not both: everything after the first tag is decision text, even if it names the other tag.
 
 - **The user changes an answer:** log the new answer with a `result` that ends in `supersedes: <the old row's decision text>` (`accepted, tests green; supersedes: quotes above the alert text`).
 - **A pin was never the user's answer** (it credited them with someone else's call): log a correction, from any source, with a `result` of `accepted; retracts: <that row's decision text>`. The old row stays as history, and a later answer from the user with the same text pins it again. A retraction does not restore a decision the retracted row superseded; log that decision again.

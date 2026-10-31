@@ -82,16 +82,21 @@ case "${1:-}" in
         for (g in gone) for (x in live) if (dec[x] == g) delete live[x]
         split("", gone); gn = 0
       }
-      function after(tag) { return match($10, tag ".*$") ? substr($10, RSTART + length(tag)) : "" }
+      # The first tag in the result is the directive; everything after it is decision text.
+      $10 ~ /^accepted/ {
+        sp = index($10, "supersedes: "); rp = index($10, "retracts: "); verb = ""
+        if (sp && (!rp || sp < rp)) { verb = "supersedes"; target = substr($10, sp + 12) }
+        else if (rp) { verb = "retracts"; target = substr($10, rp + 10) }
+      }
       # A retraction lands after its second'"'"'s pins, so write order within a second never decides it.
-      $10 ~ /^accepted/ && (retracted = after("retracts: ")) != "" {
+      $10 ~ /^accepted/ && verb == "retracts" {
         if ($1 != cur) { flush(); cur = $1 }
-        gone[retracted] = 1
+        gone[target] = 1
       }
       $4 == "you" && $10 ~ /^accepted/ {
         if ($1 != cur) { flush(); cur = $1 }
         n++; gid[++gn] = n; dec[n] = $6; text[n] = "- " $6 " (" $7 ")"
-        if ((s = after("supersedes: ")) != "") old[n] = s
+        if (verb == "supersedes") old[n] = target
       }
       END { flush(); for (i = 1; i <= n; i++) if (i in live) print text[i] }
     '

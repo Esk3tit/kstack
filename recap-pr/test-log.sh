@@ -64,6 +64,8 @@ correction RX1 $T x "accepted; retracts: A"; row RX2 $T A accepted
 check "cross-log same-second retraction, one log order" "$(RECAP_KEY=RX1 RECAP_PIN_KEYS='RX1 RX2' pins)" ""
 check "cross-log same-second retraction, other log order" "$(RECAP_KEY=RX2 RECAP_PIN_KEYS='RX2 RX1' pins)" ""
 row SR1 $T C "accepted; supersedes: B"; correction SR1 $T x "accepted; retracts: Q"; row SR2 $T B accepted
+row TX $T keep accepted; row TX $T "say retracts: keep" accepted; row TX 2026-01-01T00:00:05Z new "accepted; supersedes: say retracts: keep"
+check "a superseded decision naming the retract tag retires only itself" "$(RECAP_KEY=TX pins)" "- keep (why) - new (why)"
 check "split chain with a stray retraction, one log order" "$(RECAP_KEY=SR1 RECAP_PIN_KEYS='SR1 SR2' pins)" "- C (why)"
 check "split chain with a stray retraction, other log order" "$(RECAP_KEY=SR2 RECAP_PIN_KEYS='SR2 SR1' pins)" "- C (why)"
 check "non-UTC RECAP_TS refused" "$(RECAP_TS=2026-01-01T00:00:00-07:00 "$L" user you yes x w none e accepted 2>/dev/null; echo $?)" "2"
