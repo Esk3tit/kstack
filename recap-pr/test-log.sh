@@ -49,6 +49,9 @@ correction RE 2026-01-01T00:00:01Z "early" "accepted; retracts: A"; row RE 2026-
 check "a retraction only retires earlier pins" "$(RECAP_KEY=RE pins)" "- A (why)"
 row RA $T A accepted; correction RA 2026-01-01T00:00:05Z x "accepted; retracts: A"; row RA 2026-01-01T00:00:09Z A accepted
 check "a pin re-confirmed after its retraction is back" "$(RECAP_KEY=RA pins)" "- A (why)"
+row RC $T A accepted; row RC $T B accepted
+correction RC 2026-01-01T00:00:05Z x "accepted; retracts: A"; correction RC 2026-01-01T00:00:09Z y "accepted; retracts: B"
+check "retractions in consecutive seconds each retire their own pin" "$(RECAP_KEY=RC pins)" ""
 row RS $T A accepted; correction RS $T x "accepted; retracts: A"
 check "a same-second retraction written after its pin retires it" "$(RECAP_KEY=RS pins)" ""
 correction RB $T x "accepted; retracts: A"; row RB $T A accepted
