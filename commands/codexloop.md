@@ -77,13 +77,13 @@ A branch-scope round reviews one of two scopes. (A `--scope working-tree` run re
 - **Whole PR:** the branch against its merge-base with `origin/<base>`. Its focus text also says what the PR is for (its ticket, or the PR summary), so the reviewer can tell when the code doesn't do it.
 - **Fixes:** only the commits since the last reviewed head. In Claude Code, the review call passes `--base <last reviewed head>` in place of `origin/<base>`; in Codex, the round's diff is `git diff <last reviewed head> HEAD`. The focus text adds, for each finding those commits fix, `Fixed since the last round: <title> (<file>:<line>), <the fix in one line>.`, then: `Check that each fix resolves its finding and breaks nothing the change reaches; read whole files, callers and tests, and report a defect wherever the change reaches. If the change needs the whole PR reviewed again, put WHOLE_PR in your summary.`
 
-Log every round as one decision-log row as it finishes (`phase codexloop`, decision `round <n>, <scope>: <k> findings`, evidence `head <sha>, merge-base <sha>`), clean or not; the last such row on the branch is the **last reviewed head**, and it survives a compacted context. A run's first round is whole-PR unless the log holds an earlier round on this branch; then the run picks up from that row.
+Log every round as one decision-log row once its findings are triaged: `phase codexloop`, decision `round <n>, <scope>: <k> findings, <a> accepted`, adding `, WHOLE_PR` when its reviewer asked for one; evidence `head <sha>, merge-base <sha>`; result `clean` when it accepted nothing, else `fixed`. The last such row on the branch holds the **last reviewed head**, and it survives a compacted context. A round with finding rows but no round row never finished: run it again. A run's first round is whole-PR unless the log holds an earlier round row on this branch; then the run picks up from that row.
 
 Take the next round's scope from the first rule that applies:
 
 1. The branch took in base changes since the last reviewed head (`git merge-base origin/<base> HEAD` differs from the logged one, or `git merge-base --is-ancestor <last reviewed head> HEAD` fails) → whole PR, since a fixes diff would carry the base's changes.
-2. HEAD has commits since the last reviewed head (an accepted fix from the reviewer or a bot) → fixes, unless that round's summary said `WHOLE_PR`.
-3. The last round was clean at this head → whole PR. When a whole-PR round is clean and the round before it at this head was clean too, the loop has converged.
+2. HEAD has commits since the last reviewed head (an accepted fix from the reviewer or a bot) → fixes, unless the last round row says `WHOLE_PR`.
+3. The last round row says clean at this head → whole PR. When a whole-PR round is clean and the round before it at this head was clean too, the loop has converged.
 
 So the loop always ends on two clean rounds at the final head, the second over the whole PR: each fix gets a look aimed at it, and unchanged code is not re-read after every one-line fix. Inside T3, each delegated round's brief names its scope and carries the same focus lines.
 
@@ -183,4 +183,4 @@ So the loop always ends on two clean rounds at the final head, the second over t
 - **Hard cap** iterations via `--max-iterations` to prevent infinite loops on flaky findings, unless `--until-converged` was passed; its Round scope convergence ends the loop instead.
 - **Do not rewrite/amend existing commits** — always create new commits per iteration.
 - **Fail closed** on a reviewer failure (non-zero exit with empty review output, auth/network error, or unparseable review) rather than guessing — never treat a failed run as CLEAN.
-- Idempotent re-entry: if re-run after a clean pass, loop exits immediately with `STATUS=CLEAN ITERATIONS=0` (no push needed; already up to date).
+- Idempotent re-entry: if re-run after a clean pass, loop exits immediately with `STATUS=CLEAN ITERATIONS=0` (no push needed; already up to date). Under `--until-converged`, only when the logged convergence is at the current head and merge-base; otherwise Round scope picks up from the last round row.
