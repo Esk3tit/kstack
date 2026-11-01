@@ -88,7 +88,7 @@ A branch-scope round reviews one of two scopes:
 Take the next round's scope from the first rule that applies:
 
 1. The branch took in base changes since the last reviewed head (`git merge-base origin/<base> HEAD` differs from the logged one, or `git merge-base --is-ancestor <last reviewed head> HEAD` fails) → whole PR, since a fixes diff would carry the base's changes.
-2. HEAD has commits since the last reviewed head → fixes, unless the last round row says `reviewer asks whole-PR next`.
+2. HEAD has commits since the last reviewed head → fixes, unless the last round row says `reviewer asks whole-PR next` or `git diff <last reviewed head> HEAD` is empty (an empty commit, or a fix and its revert), which take a whole-PR round instead.
 3. The last round row says `clean` at this head. When that row is a whole-PR round and the round row before it is also `clean` at this head, the loop has converged: exit `STATUS=CLEAN` (on a re-run, `ITERATIONS=0` and no push). Otherwise → whole PR.
 
 Inside T3, each delegated round's brief names its scope (for fixes, the last reviewed head) and carries the same focus lines.
