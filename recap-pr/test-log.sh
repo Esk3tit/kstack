@@ -70,6 +70,8 @@ row TS $T A accepted; correction TS 2026-01-01T00:00:05Z x "accepted, unretracts
 check "a tag inside a word or without '; ' retires nothing" "$(RECAP_KEY=TS pins)" "- A (why)"
 row TB $T A accepted; row TB 2026-01-01T00:00:05Z B "accepted, note retracts: Z; supersedes: A"
 check "a stray tag before '; supersedes:' leaves the supersession working" "$(RECAP_KEY=TB pins)" "- B (why)"
+row TC $T A accepted; row TC 2026-01-01T00:00:05Z B "accepted, supersedes: A"; correction TC 2026-01-01T00:00:09Z x "accepted, retracts: B"
+check "a tag after ', ' works as after '; '" "$(RECAP_KEY=TC pins)" ""
 check "split chain with a stray retraction, one log order" "$(RECAP_KEY=SR1 RECAP_PIN_KEYS='SR1 SR2' pins)" "- C (why)"
 check "split chain with a stray retraction, other log order" "$(RECAP_KEY=SR2 RECAP_PIN_KEYS='SR2 SR1' pins)" "- C (why)"
 check "non-UTC RECAP_TS refused" "$(RECAP_TS=2026-01-01T00:00:00-07:00 "$L" user you yes x w none e accepted 2>/dev/null; echo $?)" "2"
