@@ -75,4 +75,4 @@ Then refresh each PR body's `## Behavior changes vs master` section (the `/pr` t
 
 `Decided, no behavior change` holds accepted `asked yes` rows with `prod_delta none`.
 
-Done when every log row and every parity row appears in exactly one section: a superseded row in `Rejected or reverted`, an accepted `asked no` row in `Not asked for`, any other row in the first section above that fits.
+Done when every log row and every parity row appears in exactly one section: a superseded or retracted row in `Rejected or reverted`, an accepted `asked no` row in `Not asked for`, any other row in the first section above that fits.

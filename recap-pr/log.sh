@@ -82,11 +82,11 @@ case "${1:-}" in
         for (g in gone) for (x in live) if (dec[x] == g) delete live[x]
         split("", gone); gn = 0
       }
-      # The first tag in the result is the directive; everything after it is decision text.
+      # The first tag after "; " is the directive; everything after it is decision text.
       $10 ~ /^accepted/ {
-        sp = index($10, "supersedes: "); rp = index($10, "retracts: "); verb = ""
-        if (sp && (!rp || sp < rp)) { verb = "supersedes"; target = substr($10, sp + 12) }
-        else if (rp) { verb = "retracts"; target = substr($10, rp + 10) }
+        sp = index($10, "; supersedes: "); rp = index($10, "; retracts: "); verb = ""
+        if (sp && (!rp || sp < rp)) { verb = "supersedes"; target = substr($10, sp + 14) }
+        else if (rp) { verb = "retracts"; target = substr($10, rp + 12) }
       }
       # A retraction lands after its second'"'"'s pins, so write order within a second never decides it.
       $10 ~ /^accepted/ && verb == "retracts" {
