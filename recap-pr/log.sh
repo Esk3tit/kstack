@@ -59,9 +59,9 @@ case "${1:-}" in
       f="$HOME/.local/share/recap/$k/decisions.tsv"
       if [ -f "$f" ]; then tail -n +2 "$f"; fi
     done | sort -s -t$'\t' -k1,1 | awk '!seen[$0]++' | awk -F'\t' '
-      # Rows run in time order. Within one second, a row superseding a decision waits until that
-      # decision has been read; only a true cycle falls back to write order.
-      function flush(   a, b, k, x, pick, blocked, left) {
+      # Rows run in time order. Within one second a supersession waits for the decision it
+      # replaces (only a true cycle falls back to write order), and retractions land last.
+      function flush(   a, b, k, x, pick, blocked, left, g) {
         left = gn
         while (left) {
           pick = 0
@@ -79,12 +79,22 @@ case "${1:-}" in
           if (pick in old) for (x in live) if (dec[x] == old[pick]) delete live[x]
           live[pick] = 1; done[pick] = 1; left--
         }
-        gn = 0
+        for (g in gone) for (x in live) if (dec[x] == g) delete live[x]
+        split("", gone); gn = 0
       }
-      $4 == "you" && $10 ~ /^accepted/ {
+      # The first tag after "; " or ", " is the directive; everything after it is decision text.
+      $10 ~ /^accepted/ {
+        verb = ""
+        if (match($10, /[;,] (supersedes|retracts): /)) {
+          verb = substr($10, RSTART + 2, RLENGTH - 4); target = substr($10, RSTART + RLENGTH)
+        }
+        if ($4 != "you" && verb != "retracts") next
         if ($1 != cur) { flush(); cur = $1 }
-        n++; gid[++gn] = n; dec[n] = $6; text[n] = "- " $6 " (" $7 ")"
-        if (match($10, /supersedes: .*$/)) old[n] = substr($10, RSTART + 12)
+        if (verb == "retracts") gone[target] = 1
+        if ($4 == "you") {
+          n++; gid[++gn] = n; dec[n] = $6; text[n] = "- " $6 " (" $7 ")"
+          if (verb == "supersedes") old[n] = target
+        }
       }
       END { flush(); for (i = 1; i <= n; i++) if (i in live) print text[i] }
     '
