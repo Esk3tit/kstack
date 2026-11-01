@@ -40,7 +40,7 @@ For each surface, put master and the branch side by side on the same real input:
 - Backend: run both on the same stored input, or compare outputs the tests already pin down.
 - When neither can run, read the diff for that surface and mark the pair `read only`; it goes under Attention as unverified.
 
-Only an accepted row that nothing has retracted can explain a difference. Every difference no such row's `prod_delta` explains becomes a `parity` row (`source me`, `asked no`, `result open`), including one that matches a rejected, reverted, superseded or retracted row: that change is still in the code.
+Only an accepted row that nothing has superseded or retracted can explain a difference. Every difference no such row's `prod_delta` explains becomes a `parity` row (`source me`, `asked no`, `result open`), including one that matches a rejected, reverted, superseded or retracted row: that change is still in the code.
 
 Done when every listed surface has a master/branch pair or a stated reason it cannot be observed.
 
@@ -71,7 +71,7 @@ reviewed by <model>
 
 `Not asked for` holds accepted `asked no` rows, mechanisms first. `Attention` holds step 4's flags and any other `open` row, or "No flags".
 
-Then refresh each PR body's `## Behavior changes vs master` section (the `/pr` template) from the changes still in that PR's final diff: accepted rows nothing has retracted, with a `prod_delta` other than `none`, plus open parity divergences. Rejected, reverted, superseded and retracted rows stay in the recap's "Rejected or reverted" section only.
+Then refresh each PR body's `## Behavior changes vs master` section (the `/pr` template) from the changes still in that PR's final diff: accepted rows nothing has superseded or retracted, with a `prod_delta` other than `none`, plus open parity divergences. Rejected, reverted, superseded and retracted rows stay in the recap's "Rejected or reverted" section only.
 
 `Decided, no behavior change` holds accepted `asked yes` rows with `prod_delta none`.
 

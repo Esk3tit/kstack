@@ -63,15 +63,19 @@ check "a retraction keeps its second's supersession whole" "$(RECAP_KEY=RG pins)
 correction RX1 $T x "accepted; retracts: A"; row RX2 $T A accepted
 check "cross-log same-second retraction, one log order" "$(RECAP_KEY=RX1 RECAP_PIN_KEYS='RX1 RX2' pins)" ""
 check "cross-log same-second retraction, other log order" "$(RECAP_KEY=RX2 RECAP_PIN_KEYS='RX2 RX1' pins)" ""
-row SR1 $T C "accepted; supersedes: B"; correction SR1 $T x "accepted; retracts: Q"; row SR2 $T B accepted
 row TX $T keep accepted; row TX $T "say retracts: keep" accepted; row TX 2026-01-01T00:00:05Z new "accepted; supersedes: say retracts: keep"
 check "a superseded decision naming the retract tag retires only itself" "$(RECAP_KEY=TX pins)" "- keep (why) - new (why)"
 row TS $T A accepted; correction TS 2026-01-01T00:00:05Z x "accepted, unretracts: A"
-check "a tag inside a word or without '; ' retires nothing" "$(RECAP_KEY=TS pins)" "- A (why)"
+check "a tag inside a word retires nothing" "$(RECAP_KEY=TS pins)" "- A (why)"
+row TN $T A accepted; row TN 2026-01-01T00:00:05Z B "accepted;supersedes: A"
+check "a supersedes tag not right after '; ' or ', ' replaces nothing" "$(RECAP_KEY=TN pins)" "- A (why) - B (why)"
+row TZ $T A accepted; row TZ 2026-01-01T00:00:05Z B "accepted, note supersedes: Z; supersedes: A"
+check "a stray supersedes before the real one leaves the real one working" "$(RECAP_KEY=TZ pins)" "- B (why)"
 row TB $T A accepted; row TB 2026-01-01T00:00:05Z B "accepted, note retracts: Z; supersedes: A"
 check "a stray tag before '; supersedes:' leaves the supersession working" "$(RECAP_KEY=TB pins)" "- B (why)"
 row TC $T A accepted; row TC 2026-01-01T00:00:05Z B "accepted, supersedes: A"; correction TC 2026-01-01T00:00:09Z x "accepted, retracts: B"
 check "a tag after ', ' works as after '; '" "$(RECAP_KEY=TC pins)" ""
+row SR1 $T C "accepted; supersedes: B"; correction SR1 $T x "accepted; retracts: Q"; row SR2 $T B accepted
 check "split chain with a stray retraction, one log order" "$(RECAP_KEY=SR1 RECAP_PIN_KEYS='SR1 SR2' pins)" "- C (why)"
 check "split chain with a stray retraction, other log order" "$(RECAP_KEY=SR2 RECAP_PIN_KEYS='SR2 SR1' pins)" "- C (why)"
 check "non-UTC RECAP_TS refused" "$(RECAP_TS=2026-01-01T00:00:00-07:00 "$L" user you yes x w none e accepted 2>/dev/null; echo $?)" "2"
