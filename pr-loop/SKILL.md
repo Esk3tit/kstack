@@ -38,7 +38,7 @@ Done when the run-or-skip decision and its reason are logged, and every Fable fi
 
 ## 5. Verify in the running app, when the diff changes what renders
 
-When a diff changes what a user sees or does (components, routes, styles, copy, a UI-facing API), run `/no-mistakes` on the final head through a route that drives the browser (frontend or full-stack, never backend-only), with a case for the change on screen, and post its screenshots and recordings to the PR. When the pixels that change belong to another repo's PR, post them on the PR whose diff caused them. A diff that changes nothing on screen skips this; log the run-or-skip and why. A fix it causes goes back through step 3, and the evidence is retaken on the head that fix produces.
+When a diff changes what a user sees or does (components, routes, styles, copy, a UI-facing API), run `/no-mistakes` on the final head through a route that drives the browser (frontend or full-stack, never backend-only), with a case for the change on screen, and post its screenshots and recordings to the PR. In a cross-repo change, post the evidence on the PR whose diff caused what changed on screen. A diff that changes nothing on screen skips this; log the run-or-skip and why. A fix it causes goes back through step 3, and the evidence is retaken on the head that fix produces.
 
 Done when every PR whose diff changes what renders carries evidence from its final head, or a logged skip.
 
@@ -58,8 +58,7 @@ Reviewers on this head: <name: passed | failed: why | NOT_REVIEWED: reason>, one
 Open findings: <none | each one>
 CI on this head: <each check and its conclusion, with test counts where the check reports them>
 App evidence: <taken on <sha> | skipped: reason>
-Re-verify before merge: <no | yes: what, and why>
-Merge-ready: <yes | no: what blocks it>
+Merge-ready: <yes | yes, after <sibling PR> merges | no: what blocks it>
 ```
 
 A deploy job's result is reported but never sets `Merge-ready: no`; a failed reviewer, an open finding or a failing required check does.
@@ -69,7 +68,7 @@ Done when `recap.md` exists beside the log, every PR body's "Behavior changes vs
 ## When the user says merged
 
 1. Use the cleanup skill to retire this run's resources, deleting its merged branches, and stop any PR watch the run started.
-2. Close what the PRs finished: each ticket whose whole scope the merged PRs delivered and the merge did not close itself, and a parent once every child is closed, ticking the parent's checklist where it keeps one. A ticket with work left stays open, with a comment saying what remains.
+2. Close what the PRs finished: each ticket whose whole scope the merged PRs delivered and the merge did not close itself, and a parent once every child is closed and nothing on its checklist is left, ticking what the merge delivered. A ticket with work left stays open, with a comment saying what remains.
 3. Check production runs the merge, following the deploy check the repo documents (`docs/deploy.md` or similar): report the deployed commit and, where the merge carries migrations, whether they applied. With no documented check, say so rather than guess.
 
 Done when the cleanup inventory is empty or names a reason for each kept resource, the finished issues are closed, and the deploy state is reported.
