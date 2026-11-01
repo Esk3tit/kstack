@@ -77,7 +77,11 @@ A branch-scope round reviews one of two scopes. (A `--scope working-tree` run re
 - **Whole PR:** the branch against its merge-base with `origin/<base>`. Its focus text also says what the PR is for (its ticket, or the PR summary), so the reviewer can tell when the code doesn't do it.
 - **Fixes:** only the commits since the last reviewed head. In Claude Code, the review call passes `--base <last reviewed head>` in place of `origin/<base>`; in Codex, the round's diff is `git diff <last reviewed head> HEAD`. The focus text adds, for each finding those commits fix, `Fixed since the last round: <title> (<file>:<line>), <the fix in one line>.`, then: `Check that each fix resolves its finding and breaks nothing the change reaches; read whole files, callers and tests, and report a defect wherever the change reaches. If the change needs the whole PR reviewed again, put WHOLE_PR in your summary.`
 
-Log every round as one decision-log row once it is finished, its findings triaged and any accepted fix committed: `phase codexloop`, `source me`, `asked yes`, `prod_delta none`, result `accepted`; decision `round <n> (<whole-PR or fixes>): <k> findings, <a> accepted, <clean or fixed>`, adding `, reviewer asks whole-PR next` when its summary said `WHOLE_PR`; evidence `head <sha>, merge-base <sha>` for the head it reviewed. The last such row on the branch holds the **last reviewed head**, and it survives a compacted context. A round with finding rows but no round row never finished: run it again. A run's first round is whole-PR unless the log holds an earlier round row on this branch; then the run picks up from that row.
+**Round rows.** Once a round is finished (its findings triaged, any accepted fix committed), log one decision-log row: `phase codexloop`, `source me`, `asked yes`, `prod_delta none`, result `accepted`, decision `round <n> (<whole-PR or fixes>): <k> findings, <a> accepted, <clean or fixed>` (plus `, reviewer asks whole-PR next` when its summary said `WHOLE_PR`), evidence `head <sha>, merge-base <sha>` for the head it reviewed.
+
+- The last round row on the branch holds the **last reviewed head**, and survives a compacted context.
+- A round with finding rows but no round row never finished: run it again.
+- A run starts with a whole-PR round unless the branch already has a round row; then it picks up from that row.
 
 Take the next round's scope from the first rule that applies:
 
