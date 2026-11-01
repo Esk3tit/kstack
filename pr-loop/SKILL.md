@@ -1,6 +1,6 @@
 ---
 name: pr-loop
-description: Take an authorized finished branch or PR to merge-ready through review, valid comment fixes, affected checks, and recap. Use when asked to finish PR review or get a change ready to merge.
+description: Take an authorized finished branch or PR to merge-ready through review, valid comment fixes, affected checks, and recap. Use when asked to finish PR review or get a change ready to merge, or when the user says a PR it ran has merged.
 ---
 
 
@@ -36,17 +36,42 @@ Run it read-only, briefed with the diffs, the settled decisions, and what to loo
 
 Done when the run-or-skip decision and its reason are logged, and every Fable finding is fixed or logged as rejected.
 
-## 5. Affected tests
+## 5. Verify in the running app, when the diff changes what renders
 
-Run each repo's affected tests on the final heads, deriving the set from the diff as `/implement` does. Fix a failure that predates the branch too, in its own commit, logged with `asked no`; any fix goes back through step 3.
+When a diff changes what a user sees or does (components, routes, styles, copy, a UI-facing API), run `/no-mistakes` on the final head through a route that drives the browser (frontend or full-stack, never backend-only), with a case for the change on screen, and post its screenshots and recordings to the PR. In a cross-repo change, post the evidence on the PR whose diff caused what changed on screen. A diff that changes nothing on screen skips this; log the run-or-skip and why. A fix it causes goes back through step 3, and the evidence is retaken on the head that fix produces.
+
+Done when every PR whose diff changes what renders carries evidence from its final head, or a logged skip.
+
+## 6. Affected tests
+
+Run each repo's affected tests on the final heads, deriving the set from the diff as `/implement` does. Fix a failure that predates the branch too, in its own commit, logged with `asked no`; any fix goes back through step 3, and through step 5 when it changes what renders.
 
 Record each final head, affected commands and collected/executed test results, review state, and unresolved items together in the decision log. Reuse evidence for unchanged inputs and revisions; a relevant fix reruns its affected checks. Done when the affected tests pass on the heads being handed back.
 
-## 6. Recap
+## 7. Recap and hand-back
 
-Follow `~/.claude/skills/recap-pr/SKILL.md`. Hand back the PR URLs, the merge order, each PR's convergence state, the test results, and the recap.
+Follow `~/.claude/skills/recap-pr/SKILL.md`. Then hand back this block for each PR, every line filled from the final head:
 
-Done when `recap.md` exists beside the log and every PR body's "Behavior changes vs master" section matches it.
+```text
+PR <url>: <what it changes, in a user's words> · head <sha> · merge order <n>
+Reviewers on this head: <name: passed | failed: why | NOT_REVIEWED: reason>, one per reviewer
+Open findings: <none | each one>
+CI on this head: <each check and its conclusion, with test counts where the check reports them>
+App evidence: <taken on <sha> | skipped: reason>
+Merge-ready: <yes | yes, after <sibling PR> merges | no: what blocks it>
+```
+
+A deploy job's result is reported but never sets `Merge-ready: no`; a failed reviewer, an open finding or a failing required check does.
+
+Done when `recap.md` exists beside the log, every PR body's "Behavior changes vs master" section matches it, and each PR's block is handed back.
+
+## When the user says merged
+
+1. Use the cleanup skill to retire this run's resources, deleting its merged branches, and stop any PR watch the run started.
+2. Close what the PRs finished: each ticket whose whole scope the merged PRs delivered and the merge did not close itself, and a parent once every child is closed and nothing on its checklist is left, ticking what the merge delivered. A ticket with work left stays open, with a comment saying what remains.
+3. Check production runs the merge, following the deploy check the repo documents (`docs/deploy.md` or similar): report the deployed commit and, where the merge carries migrations, whether they applied. With no documented check, say so rather than guess.
+
+Done when the cleanup inventory is empty or names a reason for each kept resource, the finished issues are closed, and the deploy state is reported.
 
 ## Runtime handoff and close-out
 

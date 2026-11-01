@@ -65,7 +65,9 @@ nothing to lose and needs no prompt.
   machine-local additions that stay out of the repo (e.g. pointers to private local guidance). Make
   shared changes here, then sync them per
   [Syncing kstack onto a local install](#syncing-kstack-onto-a-local-install--the-human-decides-what-is-lost).
-- Contents (10 sections): **Technical decisions** (quality over dev-cost), **Operational work**
+- Contents (12 sections): **Writing to me** (plain English for a reader who hasn't seen the code),
+  **Acting on your own** (reversible steps without asking; production changes, money and taste calls
+  come to me), **Technical decisions** (quality over dev-cost), **Operational work**
   (simplest direct path; no machinery until it's justified), **Bug fixes** (reproduce E2E first),
   **Decision log** (hands-off work logs each decision and user-visible change for `/recap-pr`),
   **Quality bar** (fix what's broken, even if it's not yours; pixel-perfection), **Auto-generated
@@ -82,7 +84,7 @@ All user-authored, and the same files serve Claude Code and Codex. Reviews come 
 |---------|---------|
 | `/codexloop` | Run an adversarial review from the other model family on the current PR/branch, fix **real** findings, loop until clean, push on CLEAN. The running agent is the human-in-the-loop reviewing the review. Every finding becomes a decision-log row and the user's settled decisions go to the reviewer as focus. `--until-converged` drops the cap: after a fix the next round reviews only the fix, and the loop ends on a clean round followed by a clean whole-PR round at the same head. |
 | `/address-pr-comments` | Resolve open PR review-bot findings, both unresolved threads and review-body items such as CodeRabbit's nitpick and outside-diff sections, through bounded isolated fixers or serial parent edits. **Loops by default** (`--once` for a single pass), gating on **reviewers** — code-review bots + lint/test — never CI/CD deploys. A bot counts as green only once it has reviewed the head. |
-| `/pr-loop` | Take a finished branch to merge-ready without check-ins: open the PR(s), `/code-review`, `/codexloop` to convergence (cross-family) with bot comments handled alongside, an optional Fable pass, affected tests, then `/recap-pr`. Never merges. |
+| `/pr-loop` | Take a finished branch to merge-ready without check-ins: open the PR(s), `/code-review`, `/codexloop` to convergence (cross-family) with bot comments handled alongside, an optional Fable pass, `/no-mistakes` evidence when the diff changes what renders, affected tests, then `/recap-pr` and a per-PR merge-readiness block. Never merges; once you say it merged, it cleans up, closes the finished issues and reports the deployed commit. |
 | `/trim-code-comments` | Clean up over-commenting in code just written, per the `CLAUDE.md` comment rules. |
 
 ## 3. Custom skills (mine)

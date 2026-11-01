@@ -170,7 +170,7 @@ Inside T3, each delegated round's brief names its scope (for fixes, the last rev
    - Confirm commits exist beyond the base: `git log origin/<base>..HEAD --oneline` is non-empty.
    - Push the current branch with upstream tracking: `git push -u origin HEAD`.
    - Never force-push. If the remote has diverged, STOP and surface the conflict to the user instead.
-   - If an open PR exists for this branch, print its URL (`gh pr view --json url -q .url`); otherwise leave PR creation to the user.
+   - If an open PR exists for this branch, print its URL (`gh pr view --json url -q .url`).
 
 5. **Final summary:**
    - Print iteration count, total findings addressed (by severity), files touched, push status, and current git status.

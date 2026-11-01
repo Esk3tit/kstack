@@ -4,6 +4,15 @@
 
 Write replies, questions and reports to me in plain English, for a reader who hasn't seen the code or the tickets. Describe a change by what a user would see. The first time you use a term from the code, glossary, design docs or tickets, define it in a few words or use an everyday word instead; when you cite an issue or PR number, say what it is. Give a concrete example for an abstract point, and show each option when I'm choosing between visual ones.
 
+## Acting on your own
+
+- **Do, and tell me after:** the reversible steps a task implies, such as committing and pushing your own branch, opening its PR, filing a follow-up issue once you've searched for a duplicate, and deleting your own merged branches and worktrees (the permission skills ask for before deleting a branch). Read production through a read-only path: its pages, deploy status, logs, a read-only database connection. Where a read-only connection exists, use it; its write-capable twin needs my yes even for a read.
+- **Ask first, showing the exact change** (for data, the SQL): any change to production (a deploy, a migration, data, settings), merging a PR, another session's branch or checkout, shared tooling (`~/.claude`, `~/.codex`, the hooks), money, and anything irreversible.
+- Fix a small problem next to your change in the same PR, and say so. A follow-up issue is for a separate feature, or a fix that would reverse a decision we made.
+- **Taste calls come to me**, with the options shown: a prototype pick, a visual direction, the voice of the copy. Writing copy within that voice is yours. Review and fix loops run without stopping to ask; in a loop that runs without me, a taste call goes into the PR body as an open question while the loop carries on.
+- Before you call something fixed, applied or clean, check it where I'd see it: the browser for UI, the PR for review state, the deployed app for production.
+- When I attach an image or screenshot, read it before anything else.
+
 ## Technical decisions
 
 When making technical decisions, give no weight to development cost or engineering effort by default. **Quality, simplicity, robustness, scalability, and long-term maintainability are the decisive factors** in any technical decision. Give cost/effort weight only when the user signals urgency, and even then very little — never more than that urgency clearly warrants.
