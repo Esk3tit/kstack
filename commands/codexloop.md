@@ -63,12 +63,35 @@ fi
 ## Contract
 **Inputs:**
 - `--max-iterations N` — safety cap on loop count (default: 5)
-- `--until-converged` — no iteration cap. The loop has converged after two consecutive rounds with no accepted finding, or on a flip-flop. Each committed iteration is pushed right away, so bots and the next round review the same head. `/pr-loop` runs this mode.
+- `--until-converged` — no iteration cap; each round reviews the whole PR or only the fixes since the last round, and the loop ends as **Round scope** (below) says. Each committed iteration is pushed right away, so bots and the next round review the same head. `/pr-loop` runs this mode.
 - `--model MODEL` — reviewer model (default: the one its Reviewer section names)
 - `--base BRANCH` — base branch to diff against (default: auto-detect `master` or `main`)
 - `--scope auto|working-tree|branch` — review target (default: `auto`: branch when it has commits beyond base, else working-tree)
 
 **Outputs:** `STATUS=<CLEAN|MAX_ITERATIONS|FAIL> ITERATIONS=<N> FINDINGS_REMAINING=<N> [ERROR="..."]`
+
+## Round scope (`--until-converged`)
+
+The loop ends on two clean rounds at the final head, the second over the whole PR: each fix gets a look aimed at it, and unchanged code is not re-read after every one-line fix. A round is **clean** when it commits nothing: zero findings, or every finding rejected (a flip-flop is one more rejected finding, surfaced to the user). Under `--until-converged` a clean round never exits by itself; the rules below pick the next round or declare convergence. (A `--scope working-tree` run reviews the working tree every round and converges on two clean rounds in a row.)
+
+A branch-scope round reviews one of two scopes:
+
+- **Whole PR:** the branch against its merge-base with `origin/<base>`. Its focus text also says what the PR is for (its ticket, or the PR summary), so the reviewer can tell when the code doesn't do it.
+- **Fixes:** only the commits since the last reviewed head. In Claude Code, the review call passes `--base <last reviewed head>` in place of `origin/<base>`; in Codex, the round's diff is `git diff <last reviewed head> HEAD`. The focus text adds, for each finding those commits fix, `Fixed since the last round: <title> (<file>:<line>), <the fix in one line>.`, then: `Check that each fix resolves its finding and breaks nothing the change reaches; read whole files, callers and tests, and report a defect wherever the change reaches. If the change needs the whole PR reviewed again, put WHOLE_PR in your summary.`
+
+**Round rows.** Once a round is finished (its findings triaged, any accepted fix committed), log one decision-log row: `phase codexloop`, `source me`, `asked yes`, `prod_delta none`, result `accepted`, decision `round <n> (<whole-PR or fixes>) on <branch>: <k> findings, <a> accepted, <clean or fixed>` (plus `, reviewer asks whole-PR next` when its summary said `WHOLE_PR`), evidence `head <sha the review ran on, before this round's fixes>, merge-base <sha>`.
+
+- The last round row on the branch holds the **last reviewed head**, and survives a compacted context. Sibling repos and branches sharing a ticket can share one log, so read only this repo's and this branch's rows: `awk -F'\t' -v repo="$(basename -s .git "$(git remote get-url origin 2>/dev/null || git rev-parse --show-toplevel)")" -v on=" on $(git branch --show-current): " '$2 == repo && $3 == "codexloop" && $6 ~ /^round / && index($6, on)' "$(~/.claude/skills/recap-pr/log.sh --path)" | tail -2` (the last line is the last round row, the one above it the round before; `repo` is computed as `log.sh` stamps it). A round row without a branch counts for nothing.
+- A round with finding rows but no round row never finished: run it again.
+- A run starts with a whole-PR round unless the branch already has a round row; then it picks up from that row.
+
+Take the next round's scope from the first rule that applies:
+
+1. The branch took in base changes since the last reviewed head (`git merge-base origin/<base> HEAD` differs from the logged one, or `git merge-base --is-ancestor <last reviewed head> HEAD` fails) → whole PR, since a fixes diff would carry the base's changes.
+2. HEAD has commits since the last reviewed head → fixes, unless the last round row says `reviewer asks whole-PR next` or `git diff <last reviewed head> HEAD` is empty (an empty commit, or a fix and its revert), which take a whole-PR round instead.
+3. The last round row says `clean` at this head. When that row is a whole-PR round and the round row before it is also `clean` at this head, the loop has converged: exit `STATUS=CLEAN` (on a re-run, `ITERATIONS=0` and no push). Otherwise → whole PR.
+
+Inside T3, each delegated round's brief names its scope (for fixes, the last reviewed head) and carries the same focus lines.
 
 ## Instructions
 
@@ -91,7 +114,7 @@ fi
    git fetch origin <base> --quiet
    ```
 
-   **b. Run the review call** from the Reviewer section with this focus text:
+   **b. Run the review call** from the Reviewer section with this focus text, plus, under `--until-converged`, the round's scope and focus lines from **Round scope**:
    ```bash
    FOCUS='Review for real defects: logical errors, bugs, broken edge cases, security/race conditions, incorrect error handling, and genuine repo-convention violations. Report nits only when they meaningfully improve quality (naming clarity, dead-code removal, misleading comments). Do NOT report: formatting/style churn, bikeshedding, defensive code for impossible states, premature abstractions, or extra tests for trivial behavior.'
    PINS=$(~/.claude/skills/recap-pr/log.sh --pins)  # the user's settled decisions; /pr-loop puts RECAP_PIN_KEYS='<keys>' in front
@@ -108,13 +131,14 @@ fi
    const rank={critical:0,high:1,medium:2,low:3};
    console.log("VERDICT: "+((j.result&&j.result.verdict)||"n/a"));
    console.log("COUNT: "+f.length);
+   console.log("SUMMARY: "+((j.result&&j.result.summary)||"").replace(/\s+/g," "));
    f.sort((a,b)=>(rank[a.severity]??3)-(rank[b.severity]??3)).forEach(x=>{
      console.log(`- [${x.severity}] ${x.title} (${x.file}:${x.line_start||"?"})`);
      if(x.body)console.log("  "+x.body.replace(/\s+/g," "));
      if(x.recommendation)console.log("  rec: "+x.recommendation.replace(/\s+/g," "));
    });' "<the round's R path>"
    ```
-   - **CLEAN detection:** `COUNT: 0` (empty `findings`) → print `STATUS=CLEAN ITERATIONS=<n>` and exit the loop. Under `--until-converged`, count it as a clean round instead and exit only on the second clean round in a row.
+   - **CLEAN detection:** `COUNT: 0` (empty `findings`) → print `STATUS=CLEAN ITERATIONS=<n>` and exit the loop. Under `--until-converged`: a clean round (Round scope).
    - **PARSE_ERROR with no result:** retry the review once, in a fresh `R`; if it still fails, `STATUS=FAIL ERROR="reviewer returned unparseable review"`. Never treat a parse failure as CLEAN.
    - Otherwise list the findings to the user (severity, `file:line`, issue) and proceed to 2d.
 
@@ -122,7 +146,7 @@ fi
    - Do NOT agree with everything at face value. For each finding, decide: is this a real logical error / bug / edge case, OR a nit that meaningfully improves quality, OR is the reviewer inventing work?
    - **Accept** real issues (logic, bugs, edge cases, security) AND nits that meaningfully improve quality (clearer naming, repo-convention alignment, dead-code removal, fixing misleading comments).
    - **Reject and skip** findings that are: formatting/styling churn, pure bikeshedding, defensive code for impossible states, bloated fallbacks, premature abstractions, "while you're here" refactors, unnecessary extra tests for trivial behavior, or anything that adds complexity/bloat without fixing a real problem. Note the rejection in the summary — don't fabricate a change to silence it.
-   - **Watch for flip-flopping across iterations.** If the reviewer now suggests reverting or contradicting a change it (or a prior iteration) requested, STOP. Do not apply it. Treat flip-flop as a signal the loop has converged — exit with `STATUS=CLEAN` and surface the contradiction to the user. Cross-check each new finding against this repo's `codexloop` rows in the decision log from this run's first round on.
+   - **Watch for flip-flopping across iterations.** If the reviewer now suggests reverting or contradicting a change it (or a prior iteration) requested, STOP. Do not apply it. Treat flip-flop as a signal the loop has converged — exit with `STATUS=CLEAN` and surface the contradiction to the user. Under `--until-converged`: reject it as one more finding and surface it (Round scope). Cross-check each new finding against this repo's `codexloop` rows in the decision log from this run's first round on.
    - **Apply the mechanism rule** in `~/.claude/skills/recap-pr/LEDGER.md` to every finding that adds a mechanism.
    - **Log every finding**, accepted or rejected, as one decision-log row (`phase codexloop`, `source codex` or `claude`, `asked no`; format in LEDGER.md). The user audits these rows with `/recap-pr` before merge.
    - For findings you accept, read the referenced file and apply the **smallest correct fix** (prefer Edit over Write). Do NOT blindly apply the reviewer's `recommendation` — verify against the actual code and reject if wrong or out of scope.
@@ -133,11 +157,11 @@ fi
    **e. Commit fixes:**
    - Stage only files you changed (never `git add -A`).
    - Conventional commit whose subject says what the fix changed, in the repo's own scope (`fix(api): keep the newest retry token instead of the first`), one commit per iteration.
-   - If every finding this iteration was rejected (no real issues), exit with `STATUS=CLEAN` instead of committing — the loop has converged. Under `--until-converged`, that is a clean round: exit on the second in a row; any committed fix resets the count.
+   - If every finding this iteration was rejected (no real issues), exit with `STATUS=CLEAN` instead of committing — the loop has converged. Under `--until-converged`: a clean round (Round scope).
    - Do NOT push mid-loop — only after the loop exits CLEAN (see step 4). Under `--until-converged`, push each committed iteration instead.
 
 3. **Exit conditions:**
-   - `STATUS=CLEAN` — the reviewer returned zero findings, or every remaining finding was a rejected nit/flip-flop. Under `--until-converged`, CLEAN needs two such rounds in a row (or a flip-flop).
+   - `STATUS=CLEAN` — the reviewer returned zero findings, or every remaining finding was a rejected nit/flip-flop. Under `--until-converged`: Round scope rule 3's convergence.
    - `STATUS=MAX_ITERATIONS` — hit cap with real findings remaining; print remaining findings for human review and DO NOT push.
    - `STATUS=FAIL ERROR="..."` — reviewer error (non-zero exit with no review output / auth failure / unparseable review), lint/test failure, or merge conflict; DO NOT push.
 
@@ -158,11 +182,11 @@ fi
 - **Keep it simple** — reject any suggestion that adds complexity, abstractions, bloated fallbacks, or defensive checks for impossible states without fixing a real problem.
 - **Push back on the reviewer** — you are the human-in-the-loop, not a rubber stamp. Skip findings that aren't necessary and note the rejection. Don't fabricate changes to silence findings.
 - **Findings come as structured JSON** — parse `result.findings` (severity/title/body/file/line_start/recommendation); empty array = CLEAN. Never scrape prose and never treat a parse failure as CLEAN.
-- **Detect flip-flops** — if the reviewer contradicts a prior iteration's change (suggesting to revert or invert it), STOP and exit CLEAN. The decision log's `codexloop` rows are the history to cross-check.
+- **Detect flip-flops** — if the reviewer contradicts a prior iteration's change (suggesting to revert or invert it), STOP and exit CLEAN (under `--until-converged`, reject it as one more finding; Round scope). The decision log's `codexloop` rows are the history to cross-check.
 - **No explanatory comments** — keep diffs clean. No "// per review" or narrative comments. Comments only for non-obvious invariants.
 - **Push only on CLEAN exit** (each committed iteration under `--until-converged`) — never push mid-loop otherwise, never push on MAX_ITERATIONS or FAIL, never push to `master`/`main`, never force-push.
 - **Never skip hooks** (no `--no-verify`).
-- **Hard cap** iterations via `--max-iterations` to prevent infinite loops on flaky findings, unless `--until-converged` was passed; its two-clean-rounds and flip-flop exits end the loop instead.
+- **Hard cap** iterations via `--max-iterations` to prevent infinite loops on flaky findings, unless `--until-converged` was passed; its Round scope convergence ends the loop instead.
 - **Do not rewrite/amend existing commits** — always create new commits per iteration.
 - **Fail closed** on a reviewer failure (non-zero exit with empty review output, auth/network error, or unparseable review) rather than guessing — never treat a failed run as CLEAN.
-- Idempotent re-entry: if re-run after a clean pass, loop exits immediately with `STATUS=CLEAN ITERATIONS=0` (no push needed; already up to date).
+- Idempotent re-entry: if re-run after a clean pass, loop exits immediately with `STATUS=CLEAN ITERATIONS=0` (no push needed; already up to date). Under `--until-converged`, Round scope's rules decide, the first that applies: new commits or a moved base start a round, and only rule 3 at a converged head exits.
