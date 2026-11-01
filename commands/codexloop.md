@@ -81,7 +81,7 @@ A branch-scope round reviews one of two scopes:
 
 **Round rows.** Once a round is finished (its findings triaged, any accepted fix committed), log one decision-log row: `phase codexloop`, `source me`, `asked yes`, `prod_delta none`, result `accepted`, decision `round <n> (<whole-PR or fixes>): <k> findings, <a> accepted, <clean or fixed>` (plus `, reviewer asks whole-PR next` when its summary said `WHOLE_PR`), evidence `head <sha the review ran on, before this round's fixes>, merge-base <sha>`.
 
-- The last round row on the branch holds the **last reviewed head**, and survives a compacted context. Read it with `awk -F'\t' '$3 == "codexloop" && $6 ~ /^round /' "$(~/.claude/skills/recap-pr/log.sh --path)" | tail -1`.
+- The last round row on the branch holds the **last reviewed head**, and survives a compacted context. Sibling repos can share one log, so read this repo's rows only: `awk -F'\t' -v repo="$(basename -s .git "$(git remote get-url origin 2>/dev/null || git rev-parse --show-toplevel)")" '$2 == repo && $3 == "codexloop" && $6 ~ /^round /' "$(~/.claude/skills/recap-pr/log.sh --path)" | tail -2` (the last line is the last round row, the one above it the round before; `repo` is computed as `log.sh` stamps it).
 - A round with finding rows but no round row never finished: run it again.
 - A run starts with a whole-PR round unless the branch already has a round row; then it picks up from that row.
 
