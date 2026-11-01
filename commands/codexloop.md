@@ -72,7 +72,7 @@ fi
 
 ## Round scope (`--until-converged`)
 
-A branch-scope round reviews one of two scopes. (A `--scope working-tree` run reviews the working tree every round.)
+A branch-scope round reviews one of two scopes. (A `--scope working-tree` run reviews the working tree every round and converges on two clean rounds in a row.)
 
 - **Whole PR:** the branch against its merge-base with `origin/<base>`. Its focus text also says what the PR is for (its ticket, or the PR summary), so the reviewer can tell when the code doesn't do it.
 - **Fixes:** only the commits since the last reviewed head. In Claude Code, the review call passes `--base <last reviewed head>` in place of `origin/<base>`; in Codex, the round's diff is `git diff <last reviewed head> HEAD`. The focus text adds, for each finding those commits fix, `Fixed since the last round: <title> (<file>:<line>), <the fix in one line>.`, then: `Check that each fix resolves its finding and breaks nothing the change reaches; read whole files, callers and tests, and report a defect wherever the change reaches. If the change needs the whole PR reviewed again, put WHOLE_PR in your summary.`
