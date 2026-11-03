@@ -40,3 +40,17 @@ patch -p1 -d ~/.agents/skills/<skill> < ~/.claude/skills/update-mattpocock-skill
 
 - **What it does:** carries affected tests, stage-eval inputs, required prompt-writing skills, and shared-service ownership into child briefs. It preserves E2E bug reproduction and warranted integration checks.
 - **Why:** subagents repeatedly ran broad suites against the same dev database or replayed the full pipeline for a stage-only experiment.
+
+## 06 · research · notes outside the repo
+
+`patches/06-research-notes-outside-repo.patch`, added 2026-11-03.
+
+- **What it does:** `/research` saves its notes to `~/.local/share/research/<repo>/<topic>.md` instead of inside the repo. Codex can write there only because `codex/config.toml.example` lists the folder in `writable_roots`, so a change of folder has to change both.
+- **Why:** the notes are throwaway input to a decision, and a 109 KB notes file in one PR accounted for about $6.50 of its Macroscope review.
+
+## 07 · wayfinder · research answers on the ticket
+
+`patches/07-wayfinder-research-on-ticket.patch`, added 2026-11-03. Pairs with patch 06.
+
+- **What it does:** `/wayfinder`'s research subagents post the answer and its sources on their ticket and point to the notes file, instead of pushing a `research/<name>` branch.
+- **Why:** those branches kept throwaway notes in the GitHub repo long after the decision was made.
