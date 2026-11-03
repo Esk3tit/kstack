@@ -92,6 +92,32 @@ All user-authored, and the same files serve Claude Code and Codex. Reviews come 
 - **`cleanup/`**: inventory session resources, shut down authorized leftovers, preserve worktree artifacts and produce an archive verdict.
 - **`pr-loop/`**: the shared finishing workflow; `commands/pr-loop.md` is its alias. `HANDOFF.md` is the common child-brief contract.
 - **`update-mattpocock-skills/`** — the only supported way to update the mattpocock skills (`npx skills check -g` applies updates and wipes local edits). `PATCHES.md` lists each local patch in plain words; the skill reads upstream history for breaking changes, judges each patch against the new version (reapply, rewrite or drop), asks which to apply, then rebuilds the patch set. `/pr-loop` and the decision log depend on patches 03 (`/implement` logs decisions) and 04 (`/pr` gains "Behavior changes vs master"); on a new machine, install the mattpocock skills, then apply `patches/` in number order.
+
+  Patches **06–08** add project learning to Matt's existing `grilling`, `implement`, and
+  `implement-spec` skills. `grill-with-docs` already calls `grilling`, so it uses the same guide.
+  Learning starts **off**. Ask to turn it on in ordinary language, for example
+  “Use learning mode for this project,” or add that request to `/grill-with-docs` in Claude Code
+  (`$grill-with-docs` in Codex). The saved choice survives tasks and new conversations in the same
+  checkout; ask to turn it off to return to ordinary development.
+
+  One guide at `~/.agents/skills/grilling/LEARNING.md` defines corrective questioning, explanations,
+  and the implementation handoff. Project notes live in **`.learning/`**: `profile.md` stores
+  preferences, `progress.md` records demonstrated reasoning and task-specific pending decisions,
+  and `project-map.md` links to canonical design documents. New checkouts have separate notes.
+  The skills load state when invoked; no automatic startup hook is registered. Learning notes
+  stay out of commits unless explicitly chosen for tracking.
+
+  Ask grilling to reset learning for a preview and explicit confirmation. The helper backs up
+  the three notes and preserves the saved on/off choice. The adapted Vibe Wise helpers, MIT notice,
+  source revision, and regression tests are included in patch 06. Verify the installed helpers with:
+
+  ```bash
+  python3 -B -m unittest discover -s ~/.agents/skills/grilling/learning/tests -v
+  ```
+
+  Claude Code's `~/.claude/skills/<name>` links point at these same shared skill directories;
+  both agents use the same implementation and learning store. Reapply patches 06–08 through
+  `update-mattpocock-skills` after reinstalling or updating Matt's skills on another machine.
 - **`recap-pr/`** — `/recap-pr`, the pre-merge audit of hands-off work. `LEDGER.md` defines the **decision log** every hands-off step writes (one TSV per ticket in `~/.local/share/recap/`, never committed) and the mechanism rule; `log.sh` appends rows and prints the user's settled decisions for the reviewer. `/recap-pr` backfills the log from commits, findings and transcripts, compares master and the branch on the same real inputs to catch behavior changes nobody decided, gets a second opinion from another model family, and prints the recap.
 - **`no-mistakes/` (router) + `no-mistakes-frontend/` + `no-mistakes-backend/` + `no-mistakes-a11y/`** — agentic verification
   for app changes against a running app + its database. The router classifies a request and runs

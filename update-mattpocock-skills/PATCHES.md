@@ -40,3 +40,24 @@ patch -p1 -d ~/.agents/skills/<skill> < ~/.claude/skills/update-mattpocock-skill
 
 - **What it does:** carries affected tests, stage-eval inputs, required prompt-writing skills, and shared-service ownership into child briefs. It preserves E2E bug reproduction and warranted integration checks.
 - **Why:** subagents repeatedly ran broad suites against the same dev database or replayed the full pipeline for a stage-only experiment.
+
+## 06 · grilling · persistent project learning
+
+`patches/06-grilling-learning-mode.patch`, added 2026-11-03.
+
+- **What it does:** adds a shared corrective learning guide, saved project preferences and learning history in .learning, onboarding, a read-only state/resume helper, and a confirmed reset tool with backups. Learning starts off; enabling or pausing it is remembered per checkout across tasks and conversations. Ordinary grilling gives recommendations up front while learning is off. The source attribution, MIT notice, and adapted helper regression tests accompany the port. No host startup hook is registered.
+- **Why:** combine Matt's workflow with Vibe Wise's learning memory and lifecycle in one maintained source, so development teaches independent reasoning without losing candid technical correction or adding a competing plugin.
+
+## 07 · implement · learning handoff
+
+`patches/07-implement-learning-mode.patch`, added 2026-11-03. Apply after patch 05; requires patch 06 on `grilling`.
+
+- **What it does:** reads the shared learning guide at implementation entry to resolve the saved project mode. When active, implementation returns to discussion for substantial unresolved design decisions, briefly explains the result, and records learning evidence. It keeps all ordinary implementation steps and uses the same notes as grilling.
+- **Why:** resume learning across threads without adding a second teaching workflow, duplicate progress records, or duplicate approvals.
+
+## 08 · implement-spec · shared learning handoff
+
+`patches/08-implement-spec-learning-mode.patch`, added 2026-11-03. Apply after patch 02; requires patch 06 on `grilling`.
+
+- **What it does:** the parent coordinating a spec reads the same saved mode and learning guide as ordinary implementation. The parent owns the learning conversation and notes while workers report substantial unresolved decisions or contradictions in the agreed design.
+- **Why:** keep the normal spec implementation path in the same learning workflow without adding a second set of rules or progress records.
