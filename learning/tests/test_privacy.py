@@ -13,6 +13,41 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class PrivacyTests(unittest.TestCase):
+    def test_untracking_backup_survives_committed_branch_switches(self):
+        with tempfile.TemporaryDirectory(prefix="learning-untracking-") as directory:
+            project = Path(directory).resolve()
+
+            def git(*args):
+                return subprocess.run(["git", "-C", str(project), *args], check=True, capture_output=True, text=True)
+
+            git("init", "-q", "-b", "main")
+            git("config", "user.email", "test@example.com")
+            git("config", "user.name", "Test")
+            state = project / ".learning"
+            state.mkdir()
+            notes = {"profile.md": "Learning mode: active\n", "progress.md": "existing assessment\n"}
+            for name, text in notes.items():
+                (state / name).write_text(text)
+            git("add", ".")
+            git("commit", "-qm", "track learning notes")
+            git("switch", "-qc", "private-notes")
+            backup = state / "backups" / "before-untracking"
+            backup.mkdir(parents=True)
+            for name in notes:
+                shutil.copyfile(state / name, backup / name)
+                self.assertEqual((backup / name).read_bytes(), (state / name).read_bytes())
+            git("rm", "--cached", "--", *[str(state / name) for name in notes])
+            shutil.copyfile(ROOT / "templates/private.gitignore", state / ".gitignore")
+            git("add", "--all")
+            git("commit", "-qm", "untrack learning notes")
+            self.assertEqual(git("ls-files", "--", str(backup)).stdout, "")
+            (state / "progress.md").write_text("later private assessment\n")
+            git("switch", "main")
+            git("switch", "private-notes")
+            for name, text in notes.items():
+                self.assertFalse((state / name).exists())
+                self.assertEqual((backup / name).read_text(), text)
+
     def test_inspection_reports_tracked_private_notes(self):
         with tempfile.TemporaryDirectory(prefix="learning-tracking-") as directory:
             project = Path(directory).resolve()
