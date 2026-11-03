@@ -63,7 +63,7 @@ fi
 ## Contract
 **Inputs:**
 - `--max-iterations N` — safety cap on loop count (default: 5)
-- `--until-converged` — no iteration cap; each round reviews the whole PR or only the fixes since the last round, and the loop ends as **Round scope** (below) says. Each committed iteration is pushed right away, so bots and the next round review the same head. `/pr-loop` runs this mode.
+- `--until-converged` — no iteration cap; each round reviews the whole PR or only the fixes since the last round, and the loop ends as **Round scope** (below) says. Commits stay local until the loop converges, then step 4 pushes that head once, because bots and CI run on every push and bots bill per run. On a draft PR, also push any commit whose next step needs CI's answer. `/pr-loop` runs this mode.
 - `--model MODEL` — reviewer model (default: the one its Reviewer section names)
 - `--base BRANCH` — base branch to diff against (default: auto-detect `master` or `main`)
 - `--scope auto|working-tree|branch` — review target (default: `auto`: branch when it has commits beyond base, else working-tree)
@@ -76,7 +76,7 @@ The loop ends on two clean rounds at the final head, the second over the whole P
 
 A branch-scope round reviews one of two scopes:
 
-- **Whole PR:** the branch against its merge-base with `origin/<base>`. Its focus text also says what the PR is for (its ticket, or the PR summary), so the reviewer can tell when the code doesn't do it.
+- **Whole PR:** the branch against its merge-base with `origin/<base>`. Its focus text also says what the change is for (its ticket, or a summary of the branch), so the reviewer can tell when the code doesn't do it.
 - **Fixes:** only the commits since the last reviewed head. In Claude Code, the review call passes `--base <last reviewed head>` in place of `origin/<base>`; in Codex, the round's diff is `git diff <last reviewed head> HEAD`. The focus text adds, for each finding those commits fix, `Fixed since the last round: <title> (<file>:<line>), <the fix in one line>.`, then: `Check that each fix resolves its finding and breaks nothing the change reaches; read whole files, callers and tests, and report a defect wherever the change reaches. If the change needs the whole PR reviewed again, put WHOLE_PR in your summary.`
 
 **Round rows.** Once a round is finished (its findings triaged, any accepted fix committed), log one decision-log row: `phase codexloop`, `source me`, `asked yes`, `prod_delta none`, result `accepted`, decision `round <n> (<whole-PR or fixes>) on <branch>: <k> findings, <a> accepted, <clean or fixed>` (plus `, reviewer asks whole-PR next` when its summary said `WHOLE_PR`), evidence `head <sha the review ran on, before this round's fixes>, merge-base <sha>`.
@@ -89,7 +89,7 @@ Take the next round's scope from the first rule that applies:
 
 1. The branch took in base changes since the last reviewed head (`git merge-base origin/<base> HEAD` differs from the logged one, or `git merge-base --is-ancestor <last reviewed head> HEAD` fails) → whole PR, since a fixes diff would carry the base's changes.
 2. HEAD has commits since the last reviewed head → fixes, unless the last round row says `reviewer asks whole-PR next` or `git diff <last reviewed head> HEAD` is empty (an empty commit, or a fix and its revert), which take a whole-PR round instead.
-3. The last round row says `clean` at this head. When that row is a whole-PR round and the round row before it is also `clean` at this head, the loop has converged: exit `STATUS=CLEAN` (on a re-run, `ITERATIONS=0` and no push). Otherwise → whole PR.
+3. The last round row says `clean` at this head. When that row is a whole-PR round and the round row before it is also `clean` at this head, the loop has converged: exit `STATUS=CLEAN` (on a re-run, `ITERATIONS=0`, and step 4 pushes only what the remote lacks). Otherwise → whole PR.
 
 Inside T3, each delegated round's brief names its scope (for fixes, the last reviewed head) and carries the same focus lines.
 
@@ -158,7 +158,7 @@ Inside T3, each delegated round's brief names its scope (for fixes, the last rev
    - Stage only files you changed (never `git add -A`).
    - Conventional commit whose subject says what the fix changed, in the repo's own scope (`fix(api): keep the newest retry token instead of the first`), one commit per iteration.
    - If every finding this iteration was rejected (no real issues), exit with `STATUS=CLEAN` instead of committing — the loop has converged. Under `--until-converged`: a clean round (Round scope).
-   - Do NOT push mid-loop — only after the loop exits CLEAN (see step 4). Under `--until-converged`, push each committed iteration instead.
+   - Keep commits local until the loop exits CLEAN (step 4), apart from a draft PR's CI push under `--until-converged`.
 
 3. **Exit conditions:**
    - `STATUS=CLEAN` — the reviewer returned zero findings, or every remaining finding was a rejected nit/flip-flop. Under `--until-converged`: Round scope rule 3's convergence.
@@ -184,7 +184,7 @@ Inside T3, each delegated round's brief names its scope (for fixes, the last rev
 - **Findings come as structured JSON** — parse `result.findings` (severity/title/body/file/line_start/recommendation); empty array = CLEAN. Never scrape prose and never treat a parse failure as CLEAN.
 - **Detect flip-flops** — if the reviewer contradicts a prior iteration's change (suggesting to revert or invert it), STOP and exit CLEAN (under `--until-converged`, reject it as one more finding; Round scope). The decision log's `codexloop` rows are the history to cross-check.
 - **No explanatory comments** — keep diffs clean. No "// per review" or narrative comments. Comments only for non-obvious invariants.
-- **Push only on CLEAN exit** (each committed iteration under `--until-converged`) — never push mid-loop otherwise, never push on MAX_ITERATIONS or FAIL, never push to `master`/`main`, never force-push.
+- **Push only on CLEAN exit** (plus a draft PR's CI push under `--until-converged`) — never push mid-loop otherwise, never push on MAX_ITERATIONS or FAIL, never push to `master`/`main`, never force-push.
 - **Never skip hooks** (no `--no-verify`).
 - **Hard cap** iterations via `--max-iterations` to prevent infinite loops on flaky findings, unless `--until-converged` was passed; its Round scope convergence ends the loop instead.
 - **Do not rewrite/amend existing commits** — always create new commits per iteration.
