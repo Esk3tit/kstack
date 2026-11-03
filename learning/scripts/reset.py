@@ -1,4 +1,4 @@
-"""Preview by default; reset only a confirmed snapshot of local learning notes."""
+"""Preview by default; confirm only with exclusive access to local learning notes."""
 
 import argparse
 from datetime import datetime, timezone
@@ -84,6 +84,7 @@ def reset(cwd, confirmation=None):
     prefix = datetime.now(timezone.utc).strftime("reset-%Y%m%dT%H%M%SZ-")
     backup = Path(tempfile.mkdtemp(prefix=prefix, dir=backup_parent))
     try:
+        (backup / ".gitignore").write_bytes((TEMPLATES / "private.gitignore").read_bytes())
         for name, data in notes.items():
             (backup / name).write_bytes(data)
         for name, text in fresh.items():

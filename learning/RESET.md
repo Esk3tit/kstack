@@ -1,6 +1,6 @@
 # Reset project learning
 
-Use only for an explicit request to reset this project's learning history. Keep the reset in the main conversation. This replaces the three learning notes and restarts onboarding while preserving the saved active or paused mode; a missing profile stays off. The project's source and canonical design documents remain outside the reset.
+Use only for an explicit request to reset this project's learning history. Keep the reset in the main conversation. This replaces the three learning notes and restarts onboarding while preserving the saved active or paused mode; a missing profile stays off. The project's source and canonical design documents remain outside the reset. Reset requires exclusive access to these notes: pause note writers in other sessions before preview and keep them paused through the result. If exclusive access cannot be established, stop. The helper detects stale snapshots but does not lock out concurrent saves.
 
 1. Run the read-only preview with the actual absolute working directory, safely quoted:
 
@@ -9,7 +9,7 @@ Use only for an explicit request to reset this project's learning history. Keep 
    ```
 
    On an error, explain and stop. If no notes exist, explain that there is nothing to reset. Do not substitute deletion commands or select another state directory.
-2. Show the returned absolute project/state paths, all files that will be replaced or created, the mode after reset, and the backup parent. Read the existing map/progress when present and identify any map-only chosen but unimplemented designs and pending decisions that will leave the active notes. Explain that their originals remain in the backup; preserve desired decisions in canonical project documents before resetting if the user requests it, then obtain a fresh preview. Ask the user to choose Cancel or Reset learning for that named project. Wait for explicit confirmation; the reset request itself or permission to use tools does not confirm the preview.
+2. Show the returned absolute project/state paths, all files that will be replaced or created, the mode after reset, and the backup parent. Read the existing map/progress when present and identify any map-only chosen but unimplemented designs and pending decisions that will leave the active notes. Explain that their originals remain in the backup; preserve desired decisions in canonical project documents before resetting if the user requests it, then obtain a fresh preview. Ask the user to choose Cancel or Reset learning for that named project and confirm that other sessions have stopped writing its notes. Wait for explicit confirmation; the reset request itself or permission to use tools does not confirm the preview.
 3. After confirmation, use the original working directory and exact preview token:
 
    ```sh

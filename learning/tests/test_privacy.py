@@ -25,17 +25,30 @@ class PrivacyTests(unittest.TestCase):
             git("config", "user.name", "Test")
             state = project / ".learning"
             state.mkdir()
-            notes = {"profile.md": "Learning mode: active\n", "progress.md": "existing assessment\n"}
+            notes = {"profile.md": "Learning mode: active\nTrack learning notes: yes\n", "progress.md": "existing assessment\n", ".gitignore": "backups/\n"}
             for name, text in notes.items():
                 (state / name).write_text(text)
             git("add", ".")
             git("commit", "-qm", "track learning notes")
             git("switch", "-qc", "private-notes")
+            command = [sys.executable, "-B", str(ROOT / "scripts/reset.py"), "--cwd", str(project)]
+            preview = json.loads(subprocess.check_output(command, text=True))
+            reset_result = json.loads(subprocess.check_output(command + ["--confirm", preview["confirmation"]], text=True))
+            reset_backup = Path(reset_result["backup"])
+            notes["profile.md"] = "Learning mode: active\nTrack learning notes: no\n"
+            notes["progress.md"] = "never committed private assessment\n"
+            for name, text in notes.items():
+                (state / name).write_text(text)
             backup = state / "backups" / "before-untracking"
             backup.mkdir(parents=True)
+            shutil.copyfile(ROOT / "templates/private.gitignore", backup / ".gitignore")
+            copies = backup / "files"
+            copies.mkdir()
             for name in notes:
-                shutil.copyfile(state / name, backup / name)
-                self.assertEqual((backup / name).read_bytes(), (state / name).read_bytes())
+                shutil.copyfile(state / name, copies / name)
+                self.assertEqual((copies / name).read_bytes(), (state / name).read_bytes())
+            exclude = Path(git("rev-parse", "--path-format=absolute", "--git-path", "info/exclude").stdout.strip())
+            exclude.write_text(exclude.read_text() + "\n/.learning/\n")
             git("rm", "--cached", "--", *[str(state / name) for name in notes])
             shutil.copyfile(ROOT / "templates/private.gitignore", state / ".gitignore")
             git("add", "--all")
@@ -46,7 +59,11 @@ class PrivacyTests(unittest.TestCase):
             git("switch", "private-notes")
             for name, text in notes.items():
                 self.assertFalse((state / name).exists())
-                self.assertEqual((backup / name).read_text(), text)
+                self.assertEqual((copies / name).read_text(), text)
+            self.assertTrue((reset_backup / "progress.md").exists())
+            git("add", "--all")
+            self.assertEqual(git("diff", "--cached", "--name-only").stdout, "")
+            self.assertEqual(git("ls-files", "--", str(state / "backups")).stdout, "")
 
     def test_inspection_reports_tracked_private_notes(self):
         with tempfile.TemporaryDirectory(prefix="learning-tracking-") as directory:
