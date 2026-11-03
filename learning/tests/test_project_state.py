@@ -18,7 +18,7 @@ class ProjectStateTests(unittest.TestCase):
         self.root = Path(self.temp.name).resolve()
         self.project = self.root / "project with spaces"
         self.project.mkdir()
-        (self.project / ".git").mkdir()
+        subprocess.run(["git", "init", "-q", str(self.project)], check=True, capture_output=True)
 
     def state(self, project=None, name=".learning", text="Learning mode: active\n"):
         path = (project or self.project) / name

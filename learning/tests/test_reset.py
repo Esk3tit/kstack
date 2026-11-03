@@ -25,7 +25,7 @@ class ResetTests(unittest.TestCase):
         self.root = Path(self.temp.name).resolve()
         self.project = self.root / "project with spaces"
         self.project.mkdir()
-        (self.project / ".git").mkdir()
+        subprocess.run(["git", "init", "-q", str(self.project)], check=True, capture_output=True)
 
     def notes(self, project=None, legacy=False):
         state = (project or self.project) / (".sensible-vibes" if legacy else ".learning")
@@ -253,6 +253,34 @@ class ResetTests(unittest.TestCase):
         self.assertEqual(self.preview()["mode_after_reset"], "paused")
         self.confirm()
         self.assertIn("Learning mode: paused", (state / "profile.md").read_text())
+
+    def test_private_tracked_notes_block_reset_without_writes(self):
+        state, originals = self.notes()
+        subprocess.run(["git", "-C", str(self.project), "add", "-f", str(state / "profile.md")], check=True, capture_output=True)
+        command = [sys.executable, "-B", str(SCRIPT), "--cwd", str(self.project)]
+        result = subprocess.run(command, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("tracked by Git", json.loads(result.stdout)["message"])
+        self.assert_originals(state, originals)
+        self.assertFalse((state / "backups").exists())
+
+    def test_untracking_private_notes_allows_reset_and_keeps_local_files(self):
+        state, originals = self.notes()
+        profile = state / "profile.md"
+        subprocess.run(["git", "-C", str(self.project), "add", "-f", str(profile)], check=True, capture_output=True)
+        with self.assertRaisesRegex(ValueError, "tracked by Git"):
+            self.preview()
+        subprocess.run(["git", "-C", str(self.project), "rm", "--cached", "--", str(profile)], check=True, capture_output=True)
+        self.assert_originals(state, originals)
+        self.assertEqual(self.confirm()["status"], "reset")
+
+    def test_explicit_tracking_permission_allows_tracked_reset(self):
+        state, _ = self.notes()
+        profile = state / "profile.md"
+        profile.write_text("Learning mode: active\nTrack learning notes: yes\n")
+        subprocess.run(["git", "-C", str(self.project), "add", "-f", str(profile)], check=True, capture_output=True)
+        self.assertEqual(self.confirm()["status"], "reset")
+        self.assertIn("Track learning notes: yes", profile.read_text())
 
     def test_non_regular_notes_rejected(self):
         state, _ = self.notes()

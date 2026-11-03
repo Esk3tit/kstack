@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import re
 import stat
+import subprocess
 import sys
 
 
@@ -81,22 +82,39 @@ def note_files(state):
     return files
 
 
+def tracked_note_files(state):
+    root = git_root(state.parent)
+    if root is None:
+        return []
+    result = subprocess.run(
+        ["git", "-C", str(root), "ls-files", "-z", "--", str(state)],
+        capture_output=True, text=True,
+    )
+    if result.returncode:
+        raise ValueError("Cannot inspect Git tracking for learning notes: " + result.stderr.strip())
+    return [str(root / name) for name in result.stdout.split("\0") if name]
+
+
 def inspect_project(raw_cwd):
     cwd = project_directory(raw_cwd)
     state = state_directory(cwd)
     target = state or (git_root(cwd) or cwd) / ".learning"
     status = "missing"
     options = profile_options(())
+    tracked = []
     if state is not None:
         profile = note_files(state).get("profile.md")
         if profile is not None:
             with profile.open(encoding="utf-8") as stream:
                 options = profile_options(stream, legacy=state.name in LEGACY_DIRECTORIES)
             status = ("active" if options["active"] else "paused") if options["has_content"] else "empty"
+        tracked = tracked_note_files(state)
     return {
         "project": str(target.parent), "state": str(target),
         "exists": state is not None, "profile_status": status,
         "track_notes": options["track_notes"],
+        "tracked_files": tracked,
+        "private_notes_tracked": bool(tracked) and not options["track_notes"],
     }
 
 

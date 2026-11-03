@@ -12,7 +12,7 @@ import tempfile
 
 # Imports must not leave bytecode in the shared kstack checkout.
 sys.dont_write_bytecode = True
-from project_state import LEGACY_DIRECTORIES, NOTE_NAMES, note_files, profile_options, project_directory, state_directory
+from project_state import LEGACY_DIRECTORIES, NOTE_NAMES, note_files, profile_options, project_directory, state_directory, tracked_note_files
 
 
 TEMPLATES = Path(__file__).resolve().parents[1] / "templates"
@@ -57,6 +57,13 @@ def reset(cwd, confirmation=None):
         options = profile_options(notes.get("profile.md", b"").decode("utf-8").splitlines(), legacy=state.name in LEGACY_DIRECTORIES)
     except UnicodeError:
         options = profile_options(())
+    if not options["track_notes"]:
+        tracked = tracked_note_files(state)
+        if tracked:
+            raise ValueError(
+                "Private learning notes are tracked by Git: " + ", ".join(tracked)
+                + ". Choose tracking or remove these paths from the index before resetting."
+            )
     mode_after_reset = "active" if options["active"] else "paused"
     fresh = fresh_notes(options)
     result = {
