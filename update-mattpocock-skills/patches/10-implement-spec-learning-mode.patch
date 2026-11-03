@@ -5,7 +5,7 @@
  
  You have been provided a spec. This spec should have tickets associated with it, describing how to implement the spec.
 +
-+First read `~/.agents/skills/grilling/LEARNING.md` and resolve this project's saved mode, following its error handling and note-staging rules in every mode. When active, the parent follows its implementation handoff alongside the workflow below and owns the learning conversation and notes.
++First read `~/.agents/learning/LEARNING.md` and resolve the saved mode and note-privacy rules. When active, follow its implementation handoff alongside the workflow below. The parent owns the learning conversation and notes.
  
  The issue tracker should have been provided to you. If not, tell the user to run `/setup-matt-pocock-skills`.
  

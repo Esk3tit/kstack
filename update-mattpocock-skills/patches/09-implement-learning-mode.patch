@@ -5,7 +5,7 @@
  
  Implement the work described by the user in the spec or tickets.
 +
-+First read `~/.agents/skills/grilling/LEARNING.md` and resolve this project's saved mode, following its error handling and note-staging rules in every mode. When active, follow its implementation handoff alongside the workflow below. When learning is off, use the ordinary workflow below.
++First read `~/.agents/learning/LEARNING.md` and resolve the saved mode and note-privacy rules. When active, follow its implementation handoff alongside the workflow below.
  
  If the user passes a ticket reference, fetch it from the issue tracker and state its title before starting. If the reference is ambiguous, ask.
  

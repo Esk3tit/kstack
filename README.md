@@ -14,7 +14,7 @@ documents what's third-party (so I know what I'm dropping vs. keeping).
 
 This applies to every copy, overwrite, re-link, or `cp` from this repo onto a local install, even when
 the user asks for it directly: `~/.claude/CLAUDE.md`, `~/.claude/skills/`, `~/.claude/commands/`,
-`~/.agents/skills/`, `~/.codex/`. Local copies can hold changes kstack lacks (added sections, edited
+`~/.agents/skills/`, `~/.agents/learning/`, `~/.codex/`. Local copies can hold changes kstack lacks (added sections, edited
 skills, extra files), and a blind overwrite deletes them silently.
 
 Before writing anything:
@@ -47,6 +47,7 @@ nothing to lose and needs no prompt.
 | `recap-pr/` | Skill — `/recap-pr`: the pre-merge recap of a ticket's PRs from its **decision log** (`LEDGER.md`, `log.sh`): every decision made during hands-off work, a master-vs-branch parity sweep for unintended behavior changes, and anything nobody asked for. |
 | `update-mattpocock-skills/` | Skill — `/update-mattpocock-skills`: update the mattpocock skills installed with `npx skills`, check upstream commits and releases for breaking changes, and reapply the local patches you pick (`PATCHES.md`, `patches/`). |
 | `explain-code-change/` | Skill — turn a branch, PR, or diff into a layered interactive HTML page: a dense plain-language summary of what and why on top, then diagrams, stepped animations, and a pseudocode diff of every changed function below. |
+| `learning/` | Shared learning guide, templates, state/reset tools, and tests used by Matt Pocock's existing skills. Installed as `~/.agents/learning`; it has no independent skill entry point. |
 | `codex/config.toml.example` | My Codex CLI config, **token redacted**. |
 | `codex/bin/` | `claude-review` (one Claude Opus review round for `/codexloop` in Codex) and `claude-read` (one read-only Claude call), the only Claude entry points Codex runs outside the sandbox. |
 | `legacy/` | Retired commands and skills kept for reference, not installed: `/review-spec`, `/review-implementation-plan`, and the `codex-cli` recipe they used. |
@@ -100,24 +101,36 @@ All user-authored, and the same files serve Claude Code and Codex. Reviews come 
   (`$grill-with-docs` in Codex). The saved choice survives tasks and new conversations in the same
   checkout; ask to turn it off to return to ordinary development.
 
-  One guide at `~/.agents/skills/grilling/LEARNING.md` defines corrective questioning, explanations,
+  One guide at `~/.agents/learning/LEARNING.md` defines corrective questioning, explanations,
   and the implementation handoff. Project notes live in **`.learning/`**: `profile.md` stores
   preferences, `progress.md` records demonstrated reasoning and task-specific pending decisions,
   and `project-map.md` links to canonical design documents. New checkouts have separate notes.
-  The skills load state when invoked; no automatic startup hook is registered. Learning notes
-  stay out of commits unless explicitly chosen for tracking.
+  The skills load state when invoked; no automatic startup hook is registered. A local ignore
+  file keeps learning notes out of ordinary Git staging unless tracking is explicitly chosen.
 
   Ask grilling to reset learning for a preview and explicit confirmation. The helper backs up
-  the three notes and preserves the saved on/off choice. The adapted Vibe Wise helpers, MIT notice,
-  source revision, and regression tests are included in patch 08. Verify the installed helpers with:
+  the three notes and preserves the saved on/off and tracking choices. The adapted Vibe Wise
+  helpers, MIT notice, source revision, and regression tests live directly in `learning/`.
+  Verify the installed helpers with:
 
   ```bash
-  python3 -B -m unittest discover -s ~/.agents/skills/grilling/learning/tests -v
+  python3 -B -m unittest discover -s ~/.agents/learning/tests -v
   ```
 
   Claude Code's `~/.claude/skills/<name>` links point at these same shared skill directories;
-  both agents use the same implementation and learning store. Reapply patches 08–10 through
-  `update-mattpocock-skills` after reinstalling or updating Matt's skills on another machine.
+  both agents use the same implementation and learning store. From a kstack checkout, install
+  the shared module before applying its skill patches:
+
+  ```bash
+  mkdir -p ~/.agents
+  ln -s "$PWD/learning" ~/.agents/learning
+  ```
+
+  On a fresh Matt skill installation, apply patches in number order using each patch's named
+  target skill. For this extension, apply 08 to `grilling`, 09 to `implement` after 01/03/05,
+  and 10 to `implement-spec` after 02. The command form is listed in `PATCHES.md`.
+  `update-mattpocock-skills` preserves those installed patches during subsequent updates;
+  it does not apply missing patches to a fresh install that already matches upstream.
 - **`recap-pr/`** — `/recap-pr`, the pre-merge audit of hands-off work. `LEDGER.md` defines the **decision log** every hands-off step writes (one TSV per ticket in `~/.local/share/recap/`, never committed) and the mechanism rule; `log.sh` appends rows and prints the user's settled decisions for the reviewer. `/recap-pr` backfills the log from commits, findings and transcripts, compares master and the branch on the same real inputs to catch behavior changes nobody decided, gets a second opinion from another model family, and prints the recap.
 - **`no-mistakes/` (router) + `no-mistakes-frontend/` + `no-mistakes-backend/` + `no-mistakes-a11y/`** — agentic verification
   for app changes against a running app + its database. The router classifies a request and runs
