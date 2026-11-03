@@ -37,7 +37,7 @@ multi_agent = true
 js_repl = false
 
 [sandbox_workspace_write]
-writable_roots = ["/Users/khaiphan/.local/share/recap"]  # the /recap-pr decision log
+writable_roots = ["/Users/khaiphan/.local/share/recap", "/Users/khaiphan/.local/share/research"]  # the /recap-pr decision log, /research notes
 
 [projects."/Users/khaiphan/PromptArmor/TPRM-API"]
 trust_level = "trusted"

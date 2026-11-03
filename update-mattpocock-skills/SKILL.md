@@ -30,7 +30,7 @@ For the range from the installed version to upstream `HEAD`, read the commit log
 
 - a skill, or a file a skill reads or writes, renamed or removed. Precedent: v1.3.0 renamed `CONTEXT.md`/`CONTEXT-MAP.md` to `GLOSSARY.md`/`GLOSSARY-MAP.md`, which meant migrating TPRM-API, AI-ARG and AI-TPRM;
 - new setup a skill now expects (`/setup-matt-pocock-skills`, `docs/agents/*.md` in our repos);
-- a renamed skill or changed arguments for a skill that our own material calls by name. Grep `~/PromptArmor/kstack`, `~/.claude/CLAUDE.md`, `~/.claude/skills`, and each repo's `CLAUDE.md`/`AGENTS.md` for the names.
+- a renamed skill or changed arguments for a skill that our own material calls by name. Grep `~/code/kstack`, `~/.claude/CLAUDE.md`, `~/.claude/skills`, and each repo's `CLAUDE.md`/`AGENTS.md` for the names.
 
 Done when every updated or removed skill has its commits read and either a concrete migration (file, repo, change) or "no impact".
 
