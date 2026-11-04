@@ -13,6 +13,30 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class PrivacyTests(unittest.TestCase):
+    def test_tracked_guard_in_unicode_folder_is_metadata(self):
+        with tempfile.TemporaryDirectory(prefix="learning-unicode-guard-") as directory:
+            project = Path(directory).resolve()
+            subprocess.run(["git", "init", "-q", str(project)], check=True, capture_output=True)
+            subprocess.run(["git", "-C", str(project), "config", "core.precomposeunicode", "true"], check=True, capture_output=True)
+            state = project / "cafe\u0301" / ".learning"
+            state.mkdir(parents=True)
+            shutil.copyfile(ROOT / "templates/private.gitignore", state / ".gitignore")
+            profile = state / "profile.md"
+            profile.write_text("Learning mode: paused\nTrack learning notes: no\n")
+            subprocess.run(["git", "--literal-pathspecs", "-C", str(project), "add", "-f", "--", str(state / ".gitignore")], check=True, capture_output=True)
+            command = [sys.executable, "-B", str(ROOT / "scripts/project_state.py"), "--cwd", str(state.parent)]
+            result = json.loads(subprocess.check_output(command, text=True))
+            self.assertFalse(result["private_notes_tracked"])
+            self.assertEqual(result["tracked_files"], [])
+            reset_command = [sys.executable, "-B", str(ROOT / "scripts/reset.py"), "--cwd", str(state.parent)]
+            preview = json.loads(subprocess.check_output(reset_command, text=True))
+            subprocess.run(reset_command + ["--confirm", preview["confirmation"]], check=True, capture_output=True)
+            subprocess.run(["git", "--literal-pathspecs", "-C", str(project), "add", "-f", "--", str(profile)], check=True, capture_output=True)
+            result = json.loads(subprocess.check_output(command, text=True))
+            self.assertTrue(result["private_notes_tracked"])
+            self.assertEqual(len(result["tracked_files"]), 1)
+            self.assertTrue(Path(result["tracked_files"][0]).samefile(profile))
+
     def test_tracking_paths_preserve_carriage_returns(self):
         with tempfile.TemporaryDirectory(prefix="learning-path-bytes-") as directory:
             project = Path(directory).resolve()

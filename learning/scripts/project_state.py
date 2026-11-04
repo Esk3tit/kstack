@@ -93,8 +93,9 @@ def tracked_note_files(state):
     )
     if result.returncode:
         raise ValueError("Cannot inspect Git tracking for learning notes: " + os.fsdecode(result.stderr).strip())
-    return [str(root / os.fsdecode(name)) for name in result.stdout.split(b"\0")
-            if name and root / os.fsdecode(name) != state / ".gitignore"]
+    paths = (root / os.fsdecode(name) for name in result.stdout.split(b"\0") if name)
+    return [str(path) for path in paths
+            if not (path.name == ".gitignore" and path.parent.is_dir() and path.parent.samefile(state))]
 
 
 def inspect_project(raw_cwd):
