@@ -59,7 +59,7 @@ patch -p1 -d ~/.agents/skills/<skill> < ~/.claude/skills/update-mattpocock-skill
 
 `patches/08-grilling-learning-mode.patch`, added 2026-11-03.
 
-- **What it does:** connects grilling to the directly maintained `learning/` module in kstack, installed as `~/.agents/learning`. It supplies one shared corrective teaching workflow, private .learning notes, onboarding, read-only state lookup, and confirmed reset with backups. Learning starts off; enabling or pausing it is remembered per checkout. Ordinary grilling retains its recommended answers while off. The module contains the attribution, MIT notice, templates, and regression tests. No startup hook is registered.
+- **What it does:** connects grilling to the directly maintained `learning/` module in kstack, installed as `~/.agents/learning`. It supplies one shared corrective teaching workflow, private .learning notes, onboarding, read-only state lookup, and confirmed reset with backups. Learning starts off; enabling or pausing it is remembered per checkout. Off-mode entry reads only the mode-check guide and helper output; teaching and management instructions load on their respective branches, with privacy enforced before learning-note writes. Ordinary grilling retains its recommended answers while off. The module contains the attribution, MIT notice, templates, and regression tests. No startup hook is registered.
 - **Why:** combine Matt's workflow with Vibe Wise's learning memory and lifecycle in one maintained source, so development teaches independent reasoning without losing candid technical correction or adding a competing plugin.
 
 ## 09 · implement · learning handoff

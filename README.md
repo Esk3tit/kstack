@@ -101,8 +101,10 @@ All user-authored, and the same files serve Claude Code and Codex. Reviews come 
   (`$grill-with-docs` in Codex). The saved choice survives tasks and new conversations in the same
   checkout; ask to turn it off to return to ordinary development.
 
-  One guide at `~/.agents/learning/LEARNING.md` defines corrective questioning, explanations,
-  and the implementation handoff. Project notes live in **`.learning/`**: `profile.md` stores
+  The small entry guide at `~/.agents/learning/LEARNING.md` checks the saved mode. Off-mode
+  work loads no other learning references and leaves notes untouched. Active mode loads
+  teaching and task-restoration guidance; explicit control and reset requests load their own
+  management guide. Privacy instructions load before learning-note writes. Project notes live in **`.learning/`**: `profile.md` stores
   preferences, `progress.md` records demonstrated reasoning and task-specific pending decisions,
   and `project-map.md` links to canonical design documents. New checkouts have separate notes.
   The skills load state when invoked; no automatic startup hook is registered. For untracked notes, a local ignore
