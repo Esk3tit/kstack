@@ -13,6 +13,25 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class PrivacyTests(unittest.TestCase):
+    def test_tracked_guard_alone_allows_private_notes_and_reset(self):
+        with tempfile.TemporaryDirectory(prefix="learning-tracked-guard-") as directory:
+            project = Path(directory).resolve()
+            subprocess.run(["git", "init", "-q", str(project)], check=True, capture_output=True)
+            state = project / ".learning"
+            state.mkdir()
+            shutil.copyfile(ROOT / "templates/private.gitignore", state / ".gitignore")
+            (state / "profile.md").write_text("Learning mode: paused\nTrack learning notes: no\n")
+            subprocess.run(["git", "-C", str(project), "add", "-f", str(state / ".gitignore")], check=True, capture_output=True)
+            output = subprocess.check_output([sys.executable, "-B", str(ROOT / "scripts/project_state.py"), "--cwd", str(project)], text=True)
+            result = json.loads(output)
+            self.assertFalse(result["private_notes_tracked"])
+            self.assertEqual(result["tracked_files"], [])
+            command = [sys.executable, "-B", str(ROOT / "scripts/reset.py"), "--cwd", str(project)]
+            preview = json.loads(subprocess.check_output(command, text=True))
+            reset_result = json.loads(subprocess.check_output(command + ["--confirm", preview["confirmation"]], text=True))
+            self.assertEqual(reset_result["status"], "reset")
+            self.assertEqual((state / ".gitignore").read_bytes(), (ROOT / "templates/private.gitignore").read_bytes())
+
     def test_untracking_backup_survives_committed_branch_switches(self):
         with tempfile.TemporaryDirectory(prefix="learning-untracking-") as directory:
             project = Path(directory).resolve()
