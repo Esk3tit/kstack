@@ -1,0 +1,2 @@
+# Unified diffs use space-only context lines.
+update-mattpocock-skills/patches/*.patch -whitespace

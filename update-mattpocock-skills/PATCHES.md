@@ -54,3 +54,24 @@ patch -p1 -d ~/.agents/skills/<skill> < ~/.claude/skills/update-mattpocock-skill
 
 - **What it does:** `/wayfinder`'s research subagents post the answer and its sources on their ticket and point to the notes file, instead of pushing a `research/<name>` branch.
 - **Why:** those branches kept throwaway notes in the GitHub repo long after the decision was made.
+
+## 08 · grilling · persistent project learning
+
+`patches/08-grilling-learning-mode.patch`, added 2026-11-03.
+
+- **What it does:** connects grilling to the directly maintained `learning/` module in kstack, installed as `~/.agents/learning`. It supplies one shared corrective teaching workflow, private .learning notes, onboarding, read-only state lookup, and confirmed reset with backups. Learning starts off; enabling or pausing it is remembered per checkout. Off-mode entry reads only the mode-check guide and helper output; teaching and management instructions load on their respective branches, with privacy enforced before learning-note writes. Ordinary grilling retains its recommended answers while off. The module contains the attribution, MIT notice, templates, and regression tests. No startup hook is registered.
+- **Why:** combine Matt's workflow with Vibe Wise's learning memory and lifecycle in one maintained source, so development teaches independent reasoning without losing candid technical correction or adding a competing plugin.
+
+## 09 · implement · learning handoff
+
+`patches/09-implement-learning-mode.patch`, added 2026-11-03. Apply after patch 05; requires the shared `~/.agents/learning` module.
+
+- **What it does:** reads the shared learning guide at implementation entry to resolve the saved project mode. When active, implementation returns to discussion for substantial unresolved design decisions, briefly explains the result, and records learning evidence. It keeps all ordinary implementation steps and uses the same notes as grilling.
+- **Why:** resume learning across threads without adding a second teaching workflow, duplicate progress records, or duplicate approvals.
+
+## 10 · implement-spec · shared learning handoff
+
+`patches/10-implement-spec-learning-mode.patch`, added 2026-11-03. Apply after patch 02; requires the shared `~/.agents/learning` module.
+
+- **What it does:** the parent coordinating a spec reads the same saved mode and learning guide as ordinary implementation. The parent owns the learning conversation and notes while workers report substantial unresolved decisions or contradictions in the agreed design.
+- **Why:** keep the normal spec implementation path in the same learning workflow without adding a second set of rules or progress records.

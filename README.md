@@ -14,7 +14,7 @@ documents what's third-party (so I know what I'm dropping vs. keeping).
 
 This applies to every copy, overwrite, re-link, or `cp` from this repo onto a local install, even when
 the user asks for it directly: `~/.claude/CLAUDE.md`, `~/.claude/skills/`, `~/.claude/commands/`,
-`~/.agents/skills/`, `~/.codex/`. Local copies can hold changes kstack lacks (added sections, edited
+`~/.agents/skills/`, `~/.agents/learning/`, `~/.codex/`. Local copies can hold changes kstack lacks (added sections, edited
 skills, extra files), and a blind overwrite deletes them silently.
 
 Before writing anything:
@@ -47,6 +47,7 @@ nothing to lose and needs no prompt.
 | `recap-pr/` | Skill — `/recap-pr`: the pre-merge recap of a ticket's PRs from its **decision log** (`LEDGER.md`, `log.sh`): every decision made during hands-off work, a master-vs-branch parity sweep for unintended behavior changes, and anything nobody asked for. |
 | `update-mattpocock-skills/` | Skill — `/update-mattpocock-skills`: update the mattpocock skills installed with `npx skills`, check upstream commits and releases for breaking changes, and reapply the local patches you pick (`PATCHES.md`, `patches/`). |
 | `explain-code-change/` | Skill — turn a branch, PR, or diff into a layered interactive HTML page: a dense plain-language summary of what and why on top, then diagrams, stepped animations, and a pseudocode diff of every changed function below. |
+| `learning/` | Shared learning guide, templates, state/reset tools, and tests used by Matt Pocock's existing skills. Installed as `~/.agents/learning`; it has no independent skill entry point. |
 | `codex/config.toml.example` | My Codex CLI config, **token redacted**. |
 | `codex/bin/` | `claude-review` (one Claude Opus review round for `/codexloop` in Codex) and `claude-read` (one read-only Claude call), the only Claude entry points Codex runs outside the sandbox. |
 | `legacy/` | Retired commands and skills kept for reference, not installed: `/review-spec`, `/review-implementation-plan`, and the `codex-cli` recipe they used. |
@@ -91,7 +92,48 @@ All user-authored, and the same files serve Claude Code and Codex. Reviews come 
 
 - **`cleanup/`**: inventory session resources, shut down authorized leftovers, preserve worktree artifacts and produce an archive verdict.
 - **`pr-loop/`**: the shared finishing workflow; `commands/pr-loop.md` is its alias. `HANDOFF.md` is the common child-brief contract.
-- **`update-mattpocock-skills/`** — the only supported way to update the mattpocock skills (`npx skills check -g` applies updates and wipes local edits). `PATCHES.md` lists each local patch in plain words; the skill reads upstream history for breaking changes, judges each patch against the new version (reapply, rewrite or drop), asks which to apply, then rebuilds the patch set. `/pr-loop` and the decision log depend on patches 03 (`/implement` logs decisions) and 04 (`/pr` gains "Behavior changes vs master"); on a new machine, install the mattpocock skills, then apply `patches/` in number order.
+- **`update-mattpocock-skills/`** — the only supported way to update the mattpocock skills (`npx skills check -g` applies updates and wipes local edits). `PATCHES.md` lists each local patch in plain words; the skill reads upstream history for breaking changes, judges each patch against the new version (reapply, rewrite or drop), asks which to apply, then rebuilds the patch set. `/pr-loop` and the decision log depend on patches 03 (`/implement` logs decisions) and 04 (`/pr` gains "Behavior changes vs master"); on a new machine, first link the shared `learning/` module from a permanent kstack clone as shown below, then install the mattpocock skills and apply `patches/` in number order.
+
+  Patches **08–10** add project learning to Matt's existing `grilling`, `implement`, and
+  `implement-spec` skills. `grill-with-docs` already calls `grilling`, so it uses the same guide.
+  Learning starts **off**. Ask to turn it on in ordinary language, for example
+  “Use learning mode for this project,” or add that request to `/grill-with-docs` in Claude Code
+  (`$grill-with-docs` in Codex). The saved choice survives tasks and new conversations in the same
+  checkout; ask to turn it off to return to ordinary development.
+
+  The small entry guide at `~/.agents/learning/LEARNING.md` checks the saved mode. Off-mode
+  work loads no other learning references and leaves notes untouched. Active mode loads
+  teaching and task-restoration guidance; explicit control and reset requests load their own
+  management guide. Privacy instructions load before learning-note writes. Project notes live in **`.learning/`**: `profile.md` stores
+  preferences, `progress.md` records demonstrated reasoning and task-specific pending decisions,
+  and `project-map.md` links to canonical design documents. New checkouts have separate notes.
+  The skills load state when invoked; no automatic startup hook is registered. For untracked notes, a local ignore
+  file excludes them from ordinary Git staging. Already tracked private notes must be removed from
+  the index or explicitly allowed for tracking before learning can write them.
+
+  Ask grilling to reset learning for a preview and explicit confirmation. The helper backs up
+  the three notes and preserves the saved on/off and tracking choices. The adapted Vibe Wise
+  helpers, MIT notice, source revision, and regression tests live directly in `learning/`.
+  Verify the installed helpers with:
+
+  ```bash
+  python3 -B -m unittest discover -s ~/.agents/learning/tests -v
+  ```
+
+  Claude Code's `~/.claude/skills/<name>` links point at these same shared skill directories;
+  both agents use the same implementation and learning store. From the permanent kstack clone, not a temporary worktree, install
+  the shared module before applying its skill patches:
+
+  ```bash
+  mkdir -p ~/.agents
+  ln -s "$PWD/learning" ~/.agents/learning
+  ```
+
+  On a fresh Matt skill installation, apply patches in number order using each patch's named
+  target skill. For this extension, apply 08 to `grilling`, 09 to `implement` after 01/03/05,
+  and 10 to `implement-spec` after 02. The command form is listed in `PATCHES.md`.
+  `update-mattpocock-skills` preserves those installed patches during subsequent updates;
+  it does not apply missing patches to a fresh install that already matches upstream.
 - **`recap-pr/`** — `/recap-pr`, the pre-merge audit of hands-off work. `LEDGER.md` defines the **decision log** every hands-off step writes (one TSV per ticket in `~/.local/share/recap/`, never committed) and the mechanism rule; `log.sh` appends rows and prints the user's settled decisions for the reviewer. `/recap-pr` backfills the log from commits, findings and transcripts, compares master and the branch on the same real inputs to catch behavior changes nobody decided, gets a second opinion from another model family, and prints the recap.
 - **`no-mistakes/` (router) + `no-mistakes-frontend/` + `no-mistakes-backend/` + `no-mistakes-a11y/`** — agentic verification
   for app changes against a running app + its database. The router classifies a request and runs
@@ -203,9 +245,10 @@ context-mode and superpowers. (Dropping those plugins drops their hooks too.)
 3. Link each command into both agents (`mkdir -p ~/.claude/commands ~/.codex/prompts`, then `ln -s "$PWD"/commands/<name>.md` into each), applying the sync rule above to any target that already exists. For Codex's cross-family reviews, copy `codex/bin/claude-review` and `codex/bin/claude-read` into `~/.codex/bin/` and allow only those two outside the sandbox: `mkdir -p ~/.codex/bin ~/.codex/rules ~/.local/share/recap && install -m 755 codex/bin/claude-review codex/bin/claude-read ~/.codex/bin/ && for s in claude-review claude-read; do printf 'prefix_rule(pattern=["%s/.codex/bin/%s"], decision="allow")\n' "$HOME" $s; done >> ~/.codex/rules/default.rules` (skip a rule the file already has). Copies, never links: a link into this checkout would let a Codex edit in the checkout run unsandboxed; re-copy under the sync rule after changing them. A rule on bare `claude -p` would let any Claude call, with any tools, run unsandboxed. Codex's sandbox keeps `.git` read-only, so a hands-off `/codexloop` in Codex also needs `git fetch`, `git add`, `git commit`, `git push` and `gh pr` allowed the same way (`for c in fetch add commit push; do printf 'prefix_rule(pattern=["git", "%s"], decision="allow")\n' $c; done >> ~/.codex/rules/default.rules`; `/pr-loop` adds `gh api graphql` and `gh-axi`). Keep those rules to the subcommands: a bare `gh` rule also runs aliases and extensions. An allowed `git commit`/`git push` runs the repo's tracked hooks (pre-commit, husky, lefthook) unsandboxed, which the sandboxed agent can edit; that is the price of a hands-off loop; without those rules Codex asks before each commit and push. The wrappers' guarantees also assume no Codex workspace or writable root contains `$HOME`, since the sandbox could then edit `~/.claude/settings.json`. The decision log also needs `~/.local/share/recap` in `[sandbox_workspace_write] writable_roots` (see `codex/config.toml.example`). Link each shared skill dir into
    `~/.agents/skills/` and then into `~/.claude/skills/` (plus `~/.codex/skills/` when that Codex
    installation does not scan `~/.agents/skills/`).
-4. `cp codex/config.toml.example ~/.codex/config.toml` → fill in tokens; `codex login` (ChatGPT mode).
-5. Install CLIs: `codex`, `gh` + the `gh-axi`/`lavish-axi` tooling, `agent-browser`, `ffmpeg`, `doppler`, `porter`,
+4. From the permanent kstack clone (not a temporary worktree), link `learning/` into `~/.agents/learning` with the command above before applying Matt skill patches 08–10. Verify with `python3 -B -m unittest discover -s ~/.agents/learning/tests -v`. This shared module is a plain reference directory, so it is not covered by the skill-directory links in step 3.
+5. `cp codex/config.toml.example ~/.codex/config.toml` → fill in tokens; `codex login` (ChatGPT mode).
+6. Install CLIs: `codex`, `gh` + the `gh-axi`/`lavish-axi` tooling, `agent-browser`, `ffmpeg`, `doppler`, `porter`,
    `neonctl`, `aws`. Authenticate each (`gh auth`, `doppler login`, `porter auth login`, `aws login`,
    `neonctl auth`).
-6. Wire MCP servers (Linear, Neon, …) into Claude Code and `~/.codex/config.toml`.
-7. (Optional, being phased out) reinstall plugins from their marketplaces.
+7. Wire MCP servers (Linear, Neon, …) into Claude Code and `~/.codex/config.toml`.
+8. (Optional, being phased out) reinstall plugins from their marketplaces.
