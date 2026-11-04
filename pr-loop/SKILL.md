@@ -24,7 +24,7 @@ Done when every branch has converged and its head is on the remote.
 
 ## 3. Open the PRs
 
-Open one PR per repo against `<base>` with the `/pr` template, marked as closing the spec and tickets it finishes, its "Behavior changes vs master" section filled from the log's accepted rows with a `prod_delta` other than `none`, and the log's `open` rows listed as open questions. A branch that already has a PR keeps it, with its body updated the same way, and a draft this run opened is marked ready. For a cross-repo change, name the merge order in every body and cross-link the PRs.
+Open one PR per repo against `<base>` with the `/pr` template, marked as closing the spec and tickets it finishes, its "Behavior changes vs master" section filled from the log's accepted rows with a `prod_delta` other than `none`, and the log's `open` rows listed as open questions. A branch that already has a PR keeps it, with its body updated the same way, and a draft opened under step 2 is marked ready. For a cross-repo change, name the merge order in every body and cross-link the PRs.
 
 Done when every repo with commits on the branch has an open PR.
 
