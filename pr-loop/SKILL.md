@@ -24,13 +24,13 @@ Done when every branch has converged and its head is on the remote.
 
 ## 3. Open the PRs
 
-Open one PR per repo against `<base>` with the `/pr` template, its "Behavior changes vs master" section filled from the log's accepted rows with a `prod_delta` other than `none`, and the log's `open` rows listed as open questions. A branch that already has a PR keeps it, with its body updated the same way, and a draft this run opened is marked ready. For a cross-repo change, name the merge order in every body and cross-link the PRs.
+Open one PR per repo against `<base>` with the `/pr` template, marked as closing the spec and tickets it finishes, its "Behavior changes vs master" section filled from the log's accepted rows with a `prod_delta` other than `none`, and the log's `open` rows listed as open questions. A branch that already has a PR keeps it, with its body updated the same way, and a draft this run opened is marked ready. For a cross-repo change, name the merge order in every body and cross-link the PRs.
 
 Done when every repo with commits on the branch has an open PR.
 
 ## 4. Bot and CI findings
 
-A branch with unpushed commits, such as a fix from steps 5–7, first runs `/codexloop --until-converged`. Then follow `/address-pr-comments` on each PR, judging every bot finding and red check on the pushed head. Its accepted fixes stay local and go through `/codexloop`, which picks up from its last logged round (Round scope).
+Commit any fix from steps 5–7. A branch with unpushed commits first runs `/codexloop --until-converged --base <base>`. Then follow `/address-pr-comments` on each PR, judging every bot finding and red check on the pushed head. Its accepted fixes stay local and go through `/codexloop`, which picks up from its last logged round (Round scope).
 
 Done when every PR has converged, has no open bot finding (threads and review-body items alike), and every reviewer on its final pushed head has reviewed that head and passed, or is reported `NOT_REVIEWED` (the `/address-pr-comments` convergence gate).
 
