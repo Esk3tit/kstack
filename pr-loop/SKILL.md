@@ -30,7 +30,7 @@ Done when every repo with commits on the branch has an open PR.
 
 ## 4. Bot and CI findings
 
-Commit any fix from steps 5–7. A branch with unpushed commits first runs `/codexloop --until-converged --base <base>`. Then follow `/address-pr-comments` on each PR, judging every bot finding and red check on the pushed head. Its accepted fixes stay local and go through `/codexloop`, which picks up from its last logged round (Round scope).
+Commit any fix from steps 5–7. A branch with unpushed commits first runs `/codexloop --until-converged --base <base>`. Then follow `/address-pr-comments` on each PR, judging every bot finding and red check on the pushed head. Its finalize step sends accepted fixes through `/codexloop`, which picks up from its last logged round (Round scope).
 
 Done when every PR has converged, has no open bot finding (threads and review-body items alike), and every reviewer on its final pushed head has reviewed that head and passed, or is reported `NOT_REVIEWED` (the `/address-pr-comments` convergence gate).
 
