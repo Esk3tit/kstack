@@ -120,6 +120,8 @@ def tracked_note_files(state):
         name = Path(os.fsdecode(raw))
         if len(name.parts) < depth:
             continue
+        if any(root.joinpath(*name.parts[:i]).is_symlink() for i in range(1, depth + 1)):
+            continue
         indexed_state = root.joinpath(*name.parts[:depth])
         if indexed_state != state and (not indexed_state.is_dir() or not indexed_state.samefile(state)):
             continue

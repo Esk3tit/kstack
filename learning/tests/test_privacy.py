@@ -14,6 +14,38 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class PrivacyTests(unittest.TestCase):
+    def test_linked_sibling_namespace_is_not_a_spelling_alias(self):
+        for linked_component in ["namespace", "ancestor"]:
+            with self.subTest(linked_component=linked_component), tempfile.TemporaryDirectory(prefix="learning-sibling-link-") as directory:
+                project = Path(directory).resolve()
+                subprocess.run(["git", "init", "-q", str(project)], check=True, capture_output=True)
+                for folder in ["a", "b"]:
+                    state = project / folder / ".learning"
+                    state.mkdir(parents=True)
+                    (state / "profile.md").write_text("Learning mode: paused\nTrack learning notes: no\n")
+                selected = project / "a" / ".learning"
+                sibling = project / "b" / ".learning"
+                subprocess.run(["git", "-C", str(project), "add", "-f", "--", str(sibling / "profile.md")], check=True, capture_output=True)
+                (sibling / "profile.md").unlink()
+                sibling.rmdir()
+                if linked_component == "namespace":
+                    sibling.symlink_to(selected, target_is_directory=True)
+                else:
+                    sibling.parent.rmdir()
+                    sibling.parent.symlink_to(selected.parent, target_is_directory=True)
+                command = [sys.executable, "-B", str(ROOT / "scripts/project_state.py"), "--cwd", str(selected.parent)]
+                result = json.loads(subprocess.check_output(command, text=True))
+                self.assertFalse(result["private_notes_tracked"])
+                self.assertEqual(result["tracked_files"], [])
+                self.assertEqual(result["tracked_relative_paths"], {})
+                reset = [sys.executable, "-B", str(ROOT / "scripts/reset.py"), "--cwd", str(selected.parent)]
+                preview = json.loads(subprocess.check_output(reset, text=True))
+                subprocess.run(reset + ["--confirm", preview["confirmation"]], check=True, capture_output=True)
+                subprocess.run(["git", "-C", str(project), "add", "-f", "--", str(selected / "profile.md")], check=True, capture_output=True)
+                result = json.loads(subprocess.check_output(command, text=True))
+                self.assertTrue(result["private_notes_tracked"])
+                self.assertEqual(result["tracked_files"], [str(selected / "profile.md")])
+
     def test_index_paths_use_native_checkout_spelling(self):
         cases = [("De\u0301veloppement", "repo", "Développement", "repo"),
                  ("parent", "proje\u0301t", "parent", "projét")]
