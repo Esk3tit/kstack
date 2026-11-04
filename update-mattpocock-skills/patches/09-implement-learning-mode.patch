@@ -1,0 +1,11 @@
+--- a/SKILL.md
++++ b/SKILL.md
+@@ -5,6 +5,8 @@
+ ---
+ 
+ Implement the work described by the user in the spec or tickets.
++
++First read `~/.agents/learning/LEARNING.md` and follow its mode routing. When active, follow its implementation handoff alongside the workflow below.
+ 
+ If the user passes a ticket reference, fetch it from the issue tracker and state its title before starting. If the reference is ambiguous, ask.
+ 
