@@ -63,7 +63,7 @@ fi
 ## Contract
 **Inputs:**
 - `--max-iterations N` — safety cap on loop count (default: 5)
-- `--until-converged` — no iteration cap; each round reviews the whole PR or only the fixes since the last round, and the loop ends as **Round scope** (below) says. Commits stay local until the loop converges, then step 4 pushes that head once, because bots and CI run on every push and bots bill per run. On a draft PR, also push any commit whose next step needs CI's answer. `/pr-loop` runs this mode.
+- `--until-converged` — no iteration cap; each round reviews the whole PR or only the fixes since the last round, and the loop ends as **Round scope** (below) says. Commits stay local until the loop converges, then step 4 pushes that head once, because bots and CI run on every push and bots bill per run. `/pr-loop` runs this mode.
 - `--model MODEL` — reviewer model (default: the one its Reviewer section names)
 - `--base BRANCH` — base branch to diff against (default: auto-detect `master` or `main`)
 - `--scope auto|working-tree|branch` — review target (default: `auto`: branch when it has commits beyond base, else working-tree)
@@ -158,7 +158,7 @@ Inside T3, each delegated round's brief names its scope (for fixes, the last rev
    - Stage only files you changed (never `git add -A`).
    - Conventional commit whose subject says what the fix changed, in the repo's own scope (`fix(api): keep the newest retry token instead of the first`), one commit per iteration.
    - If every finding this iteration was rejected (no real issues), exit with `STATUS=CLEAN` instead of committing — the loop has converged. Under `--until-converged`: a clean round (Round scope).
-   - Keep commits local until the loop exits CLEAN (step 4), apart from a draft PR's CI push under `--until-converged`.
+   - Keep commits local until the loop exits CLEAN (step 4). Under `--until-converged` on a draft PR opened so CI can judge the change, also push a commit whose next step needs CI's answer; review bots can bill for that push too.
 
 3. **Exit conditions:**
    - `STATUS=CLEAN` — the reviewer returned zero findings, or every remaining finding was a rejected nit/flip-flop. Under `--until-converged`: Round scope rule 3's convergence.
@@ -184,9 +184,9 @@ Inside T3, each delegated round's brief names its scope (for fixes, the last rev
 - **Findings come as structured JSON** — parse `result.findings` (severity/title/body/file/line_start/recommendation); empty array = CLEAN. Never scrape prose and never treat a parse failure as CLEAN.
 - **Detect flip-flops** — if the reviewer contradicts a prior iteration's change (suggesting to revert or invert it), STOP and exit CLEAN (under `--until-converged`, reject it as one more finding; Round scope). The decision log's `codexloop` rows are the history to cross-check.
 - **No explanatory comments** — keep diffs clean. No "// per review" or narrative comments. Comments only for non-obvious invariants.
-- **Push only on CLEAN exit** (plus a draft PR's CI push under `--until-converged`) — never push mid-loop otherwise, never push on MAX_ITERATIONS or FAIL, never push to `master`/`main`, never force-push.
+- **Push only on CLEAN exit** (plus step 2e's draft PR push) — never push mid-loop otherwise, never push on MAX_ITERATIONS or FAIL, never push to `master`/`main`, never force-push.
 - **Never skip hooks** (no `--no-verify`).
 - **Hard cap** iterations via `--max-iterations` to prevent infinite loops on flaky findings, unless `--until-converged` was passed; its Round scope convergence ends the loop instead.
 - **Do not rewrite/amend existing commits** — always create new commits per iteration.
 - **Fail closed** on a reviewer failure (non-zero exit with empty review output, auth/network error, or unparseable review) rather than guessing — never treat a failed run as CLEAN.
-- Idempotent re-entry: if re-run after a clean pass, loop exits immediately with `STATUS=CLEAN ITERATIONS=0` (no push needed; already up to date). Under `--until-converged`, Round scope's rules decide, the first that applies: new commits or a moved base start a round, and only rule 3 at a converged head exits, through step 4's push.
+- Idempotent re-entry: if re-run after a clean pass, loop exits immediately with `STATUS=CLEAN ITERATIONS=0` (no push needed; already up to date). Under `--until-converged`, Round scope's rules decide instead.
