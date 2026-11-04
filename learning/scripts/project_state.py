@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import os
 from pathlib import Path
 import re
 import stat
@@ -88,12 +89,12 @@ def tracked_note_files(state):
         return []
     result = subprocess.run(
         ["git", "--literal-pathspecs", "-C", str(root), "ls-files", "-z", "--", str(state)],
-        capture_output=True, text=True,
+        capture_output=True,
     )
     if result.returncode:
-        raise ValueError("Cannot inspect Git tracking for learning notes: " + result.stderr.strip())
-    return [str(root / name) for name in result.stdout.split("\0")
-            if name and root / name != state / ".gitignore"]
+        raise ValueError("Cannot inspect Git tracking for learning notes: " + os.fsdecode(result.stderr).strip())
+    return [str(root / os.fsdecode(name)) for name in result.stdout.split(b"\0")
+            if name and root / os.fsdecode(name) != state / ".gitignore"]
 
 
 def inspect_project(raw_cwd):

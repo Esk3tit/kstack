@@ -13,6 +13,23 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class PrivacyTests(unittest.TestCase):
+    def test_tracking_paths_preserve_carriage_returns(self):
+        with tempfile.TemporaryDirectory(prefix="learning-path-bytes-") as directory:
+            project = Path(directory).resolve()
+            subprocess.run(["git", "init", "-q", str(project)], check=True, capture_output=True)
+            state = project / "line\rbreak" / ".learning"
+            state.mkdir(parents=True)
+            profile = state / "profile.md"
+            profile.write_text("Learning mode: paused\nTrack learning notes: no\n")
+            subprocess.run(["git", "--literal-pathspecs", "-C", str(project), "add", "--", str(profile)], check=True, capture_output=True)
+            command = [sys.executable, "-B", str(ROOT / "scripts/project_state.py"), "--cwd", str(state.parent)]
+            result = json.loads(subprocess.check_output(command, text=True))
+            self.assertTrue(result["private_notes_tracked"])
+            self.assertEqual(result["tracked_files"], [str(profile)])
+            subprocess.run(["git", "--literal-pathspecs", "-C", str(project), "rm", "--cached", "--", *result["tracked_files"]], check=True, capture_output=True)
+            self.assertEqual(subprocess.check_output(["git", "-C", str(project), "ls-files", "-z"]), b"")
+            self.assertTrue(profile.is_file())
+
     def test_tracking_lookup_uses_the_literal_selected_directory(self):
         with tempfile.TemporaryDirectory(prefix="learning-literal-path-") as directory:
             project = Path(directory).resolve()
