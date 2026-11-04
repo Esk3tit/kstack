@@ -13,6 +13,27 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class PrivacyTests(unittest.TestCase):
+    def test_nested_backup_guard_is_not_root_metadata_through_a_link(self):
+        with tempfile.TemporaryDirectory(prefix="learning-guard-boundary-") as directory:
+            project = Path(directory).resolve()
+            subprocess.run(["git", "init", "-q", str(project)], check=True, capture_output=True)
+            state = project / ".learning"
+            state.mkdir()
+            shutil.copyfile(ROOT / "templates/private.gitignore", state / ".gitignore")
+            (state / "profile.md").write_text("Learning mode: paused\nTrack learning notes: no\n")
+            alias = state / "backups" / "old" / "files"
+            alias.mkdir(parents=True)
+            snapshot = alias / ".gitignore"
+            snapshot.write_text("private backup content\n")
+            subprocess.run(["git", "--literal-pathspecs", "-C", str(project), "add", "-f", "--", str(snapshot)], check=True, capture_output=True)
+            snapshot.unlink()
+            alias.rmdir()
+            alias.symlink_to(state, target_is_directory=True)
+            command = [sys.executable, "-B", str(ROOT / "scripts/project_state.py"), "--cwd", str(project)]
+            result = json.loads(subprocess.check_output(command, text=True))
+            self.assertTrue(result["private_notes_tracked"])
+            self.assertEqual(result["tracked_files"], [str(snapshot)])
+
     def test_tracked_guard_in_unicode_folder_is_metadata(self):
         with tempfile.TemporaryDirectory(prefix="learning-unicode-guard-") as directory:
             project = Path(directory).resolve()
