@@ -13,6 +13,27 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class PrivacyTests(unittest.TestCase):
+    def test_tracking_lookup_uses_the_literal_selected_directory(self):
+        with tempfile.TemporaryDirectory(prefix="learning-literal-path-") as directory:
+            project = Path(directory).resolve()
+            subprocess.run(["git", "init", "-q", str(project)], check=True, capture_output=True)
+            state = project / "*" / ".learning"
+            state.mkdir(parents=True)
+            profile = state / "profile.md"
+            profile.write_text("Learning mode: paused\nTrack learning notes: no\n")
+            sibling = project / "zz"
+            sibling.mkdir()
+            (sibling / ".learning").write_text("unrelated tracked file\n")
+            subprocess.run(["git", "-C", str(project), "add", "--", "zz/.learning"], check=True, capture_output=True)
+            command = [sys.executable, "-B", str(ROOT / "scripts/project_state.py"), "--cwd", str(state.parent)]
+            result = json.loads(subprocess.check_output(command, text=True))
+            self.assertFalse(result["private_notes_tracked"])
+            self.assertEqual(result["tracked_files"], [])
+            subprocess.run(["git", "--literal-pathspecs", "-C", str(project), "add", "--", str(profile)], check=True, capture_output=True)
+            result = json.loads(subprocess.check_output(command, text=True))
+            self.assertTrue(result["private_notes_tracked"])
+            self.assertEqual(result["tracked_files"], [str(profile)])
+
     def test_tracked_guard_alone_allows_private_notes_and_reset(self):
         with tempfile.TemporaryDirectory(prefix="learning-tracked-guard-") as directory:
             project = Path(directory).resolve()

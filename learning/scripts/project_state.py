@@ -87,7 +87,7 @@ def tracked_note_files(state):
     if root is None:
         return []
     result = subprocess.run(
-        ["git", "-C", str(root), "ls-files", "-z", "--", str(state)],
+        ["git", "--literal-pathspecs", "-C", str(root), "ls-files", "-z", "--", str(state)],
         capture_output=True, text=True,
     )
     if result.returncode:
