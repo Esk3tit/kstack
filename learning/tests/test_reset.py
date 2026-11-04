@@ -234,6 +234,29 @@ class ResetTests(unittest.TestCase):
         self.assertEqual(self.confirm()["mode_after_reset"], "paused")
         self.assertIn("Learning mode: paused", (state / "profile.md").read_text())
 
+    def test_corrupt_profile_resets_to_paused_with_original_bytes_backed_up(self):
+        state, originals = self.notes()
+        originals["profile.md"] = b"Learning mode: active\n\xff"
+        (state / "profile.md").write_bytes(originals["profile.md"])
+        inspection = subprocess.run([sys.executable, "-B", str(ROOT / "scripts/project_state.py"), "--cwd", str(self.project)], capture_output=True, text=True)
+        self.assertEqual(inspection.returncode, 1)
+        preview = self.preview()
+        self.assertEqual(preview["mode_after_reset"], "paused")
+        result = reset_module.reset(self.project, preview["confirmation"])
+        self.assert_originals(Path(result["backup"]), originals)
+        inspection = subprocess.run([sys.executable, "-B", str(ROOT / "scripts/project_state.py"), "--cwd", str(self.project)], capture_output=True, text=True, check=True)
+        self.assertEqual(json.loads(inspection.stdout)["profile_status"], "paused")
+
+    def test_corrupt_tracked_profile_still_blocks_reset_before_writes(self):
+        state, _ = self.notes()
+        original = b"Learning mode: active\n\xff"
+        (state / "profile.md").write_bytes(original)
+        subprocess.run(["git", "-C", str(self.project), "add", "-f", str(state / "profile.md")], check=True, capture_output=True)
+        with self.assertRaisesRegex(ValueError, "tracked by Git"):
+            self.preview()
+        self.assertEqual((state / "profile.md").read_bytes(), original)
+        self.assertFalse((state / "backups").exists())
+
     def test_off_alias_stays_off_after_reset(self):
         state, _ = self.notes()
         (state / "profile.md").write_text("Learning mode: off\n")

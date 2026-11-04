@@ -2,7 +2,7 @@
 
 This is the shared entry guide for grilling and both implementation workflows. New projects keep learning off until explicitly enabled. Save natural-language enable/resume/off/pause requests as exactly one unformatted `Learning mode: active` or `Learning mode: paused` line in profile.md. The choice survives tasks and conversations in the same checkout.
 
-For a new explicit reset request, complete Resolve state step 1, then use [RESET.md](RESET.md) before changing controls or other notes. After reset, continue below with the preserved mode.
+For a new explicit reset request, read [PRIVACY.md](PRIVACY.md) and use [RESET.md](RESET.md) before changing controls or other notes. Use the reset preview's selected path to enforce privacy before resetting; a normal inspection error does not block this explicit recovery path. After reset, continue below with the preserved mode.
 
 ## Resolve state
 
