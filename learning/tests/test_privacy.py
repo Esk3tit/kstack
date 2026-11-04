@@ -24,7 +24,10 @@ class PrivacyTests(unittest.TestCase):
             sibling = project / "zz"
             sibling.mkdir()
             (sibling / ".learning").write_text("unrelated tracked file\n")
-            subprocess.run(["git", "-C", str(project), "add", "--", "zz/.learning"], check=True, capture_output=True)
+            other_notes = project / "ab" / ".learning"
+            other_notes.mkdir(parents=True)
+            (other_notes / "profile.md").write_text("other project notes\n")
+            subprocess.run(["git", "-C", str(project), "add", "--", "zz/.learning", "ab/.learning/profile.md"], check=True, capture_output=True)
             command = [sys.executable, "-B", str(ROOT / "scripts/project_state.py"), "--cwd", str(state.parent)]
             result = json.loads(subprocess.check_output(command, text=True))
             self.assertFalse(result["private_notes_tracked"])
@@ -33,6 +36,10 @@ class PrivacyTests(unittest.TestCase):
             result = json.loads(subprocess.check_output(command, text=True))
             self.assertTrue(result["private_notes_tracked"])
             self.assertEqual(result["tracked_files"], [str(profile)])
+            subprocess.run(["git", "--literal-pathspecs", "-C", str(project), "rm", "--cached", "--", str(profile)], check=True, capture_output=True)
+            tracked = subprocess.check_output(["git", "-C", str(project), "ls-files"], text=True).splitlines()
+            self.assertEqual(tracked, ["ab/.learning/profile.md", "zz/.learning"])
+            self.assertTrue(profile.is_file())
 
     def test_tracked_guard_alone_allows_private_notes_and_reset(self):
         with tempfile.TemporaryDirectory(prefix="learning-tracked-guard-") as directory:
