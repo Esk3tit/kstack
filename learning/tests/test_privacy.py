@@ -14,6 +14,62 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class PrivacyTests(unittest.TestCase):
+    def test_index_paths_use_native_checkout_spelling(self):
+        cases = [("De\u0301veloppement", "repo", "Développement", "repo"),
+                 ("parent", "proje\u0301t", "parent", "projét")]
+        for parent, checkout, entered_parent, entered_checkout in cases:
+            with self.subTest(parent=parent, checkout=checkout), tempfile.TemporaryDirectory(prefix="learning-checkout-spelling-") as directory:
+                base = Path(directory).resolve()
+                project = base / parent / checkout
+                project.mkdir(parents=True)
+                entered = base / entered_parent / entered_checkout
+                if not entered.is_dir():
+                    self.skipTest("Filesystem does not alias these Unicode spellings")
+                subprocess.run(["git", "init", "-q", str(project)], check=True, capture_output=True)
+                state = project / ".learning"
+                state.mkdir()
+                profile = state / "profile.md"
+                profile.write_text("Learning mode: paused\nTrack learning notes: no\n")
+                subprocess.run(["git", "-C", str(project), "add", "--", ".learning/profile.md"], check=True, capture_output=True)
+                result = json.loads(subprocess.check_output([sys.executable, "-B", str(ROOT / "scripts/project_state.py"), "--cwd", str(entered)], text=True))
+                self.assertTrue(result["private_notes_tracked"])
+                self.assertEqual(result["tracked_relative_paths"][result["tracked_files"][0]], "profile.md")
+                subprocess.run(["git", "-c", "core.precomposeunicode=false", "--literal-pathspecs", "-C", str(entered), "add", "-f", "--", *result["tracked_files"]], check=True, capture_output=True)
+                subprocess.run(["git", "-c", "core.precomposeunicode=false", "--literal-pathspecs", "-C", str(entered), "rm", "--cached", "--", *result["tracked_files"]], check=True, capture_output=True)
+                self.assertEqual(subprocess.check_output(["git", "-C", str(project), "ls-files", "-z"]), b"")
+                self.assertTrue(profile.is_file())
+
+    def test_checkout_spelling_preserves_line_characters(self):
+        for name in ["repo\r", "repo\n", "repo\r\n"]:
+            with self.subTest(name=name), tempfile.TemporaryDirectory(prefix="learning-checkout-lines-") as directory:
+                project = Path(directory).resolve() / name
+                project.mkdir()
+                subprocess.run(["git", "init", "-q", str(project)], check=True, capture_output=True)
+                state = project / ".learning"
+                state.mkdir()
+                profile = state / "profile.md"
+                profile.write_text("Learning mode: paused\nTrack learning notes: no\n")
+                subprocess.run(["git", "-C", str(project), "add", "--", ".learning/profile.md"], check=True, capture_output=True)
+                result = json.loads(subprocess.check_output([sys.executable, "-B", str(ROOT / "scripts/project_state.py"), "--cwd", str(project)], text=True))
+                self.assertEqual(result["tracked_files"], [str(profile)])
+                self.assertEqual(result["tracked_relative_paths"], {str(profile): "profile.md"})
+
+    def test_git_worktree_must_match_the_selected_checkout(self):
+        with tempfile.TemporaryDirectory(prefix="learning-worktree-scope-") as directory:
+            project = Path(directory).resolve() / "project"
+            project.mkdir()
+            subprocess.run(["git", "init", "-q", str(project)], check=True, capture_output=True)
+            state = project / ".learning"
+            state.mkdir()
+            (state / "profile.md").write_text("Learning mode: paused\nTrack learning notes: no\n")
+            other = project.parent / "other"
+            other.mkdir()
+            environment = os.environ.copy()
+            environment["GIT_WORK_TREE"] = str(other)
+            result = subprocess.run([sys.executable, "-B", str(ROOT / "scripts/project_state.py"), "--cwd", str(project)], text=True, capture_output=True, env=environment)
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("does not match", json.loads(result.stdout)["message"])
+
     def test_tracking_uses_native_case_aliases_and_index_paths(self):
         for parent, notes_name, entered in [("Sub", ".learning", "SUB"), ("Mixed", ".Learning", "Mixed")]:
             with self.subTest(parent=parent, notes_name=notes_name), tempfile.TemporaryDirectory(prefix="learning-case-alias-") as directory:

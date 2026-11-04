@@ -95,6 +95,17 @@ def tracked_note_files(state):
     git_environment = os.environ.copy()
     for key in ("GIT_LITERAL_PATHSPECS", "GIT_GLOB_PATHSPECS", "GIT_NOGLOB_PATHSPECS", "GIT_ICASE_PATHSPECS"):
         git_environment.pop(key, None)
+    checkout = subprocess.run(
+        ["git", "-c", "core.precomposeunicode=false", "-C", str(root), "rev-parse", "--show-toplevel"],
+        capture_output=True, env=git_environment,
+    )
+    if checkout.returncode:
+        raise ValueError("Cannot resolve Git checkout for learning notes: " + os.fsdecode(checkout.stderr).strip())
+    raw_root = checkout.stdout[:-1] if checkout.stdout.endswith(b"\n") else checkout.stdout
+    indexed_root = Path(os.fsdecode(raw_root))
+    if not indexed_root.is_absolute() or not indexed_root.is_dir() or not indexed_root.samefile(root):
+        raise ValueError("Git's working tree does not match the selected checkout.")
+    root = indexed_root
     # Git's index spelling can differ from the directory name accepted by the filesystem.
     result = subprocess.run(
         ["git", "--glob-pathspecs", "-C", str(root), "ls-files", "-z", "--", *pathspecs],
