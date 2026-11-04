@@ -12,6 +12,7 @@ import sys
 
 NOTE_NAMES = ("profile.md", "progress.md", "project-map.md")
 LEGACY_DIRECTORIES = (".vibe-wise", ".sensible-vibes")
+STATE_DIRECTORIES = (".learning", *LEGACY_DIRECTORIES)
 
 
 def profile_options(lines, legacy=False):
@@ -60,7 +61,7 @@ def state_directory(cwd):
         : len(cwd.relative_to(root).parts) + 1
     ]
     for directory in candidates:
-        for name in (".learning", *LEGACY_DIRECTORIES):
+        for name in STATE_DIRECTORIES:
             state = directory / name
             if state.exists() or state.is_symlink():
                 if state.is_dir() and not state.is_symlink():
@@ -84,19 +85,38 @@ def note_files(state):
 
 
 def tracked_note_files(state):
+    """Map index paths to their relative paths within the selected notes directory."""
     root = git_root(state.parent)
     if root is None:
-        return []
+        return {}
+    depth = len(state.relative_to(root).parts)
+    pathspecs = [f":(icase,glob)**/{name}{suffix}"
+                 for name in STATE_DIRECTORIES for suffix in ("", "/**")]
+    git_environment = os.environ.copy()
+    for key in ("GIT_LITERAL_PATHSPECS", "GIT_GLOB_PATHSPECS", "GIT_NOGLOB_PATHSPECS", "GIT_ICASE_PATHSPECS"):
+        git_environment.pop(key, None)
+    # Git's index spelling can differ from the directory name accepted by the filesystem.
     result = subprocess.run(
-        ["git", "--literal-pathspecs", "-C", str(root), "ls-files", "-z", "--", str(state)],
-        capture_output=True,
+        ["git", "--glob-pathspecs", "-C", str(root), "ls-files", "-z", "--", *pathspecs],
+        capture_output=True, env=git_environment,
     )
     if result.returncode:
         raise ValueError("Cannot inspect Git tracking for learning notes: " + os.fsdecode(result.stderr).strip())
-    paths = (root / os.fsdecode(name) for name in result.stdout.split(b"\0") if name)
-    return [str(path) for path in paths
-            if not (path.name == ".gitignore" and len(path.parts) == len(state.parts) + 1
-                    and path.parent.is_dir() and path.parent.samefile(state))]
+    tracked = {}
+    for raw in result.stdout.split(b"\0"):
+        if not raw:
+            continue
+        name = Path(os.fsdecode(raw))
+        if len(name.parts) < depth:
+            continue
+        indexed_state = root.joinpath(*name.parts[:depth])
+        if indexed_state != state and (not indexed_state.is_dir() or not indexed_state.samefile(state)):
+            continue
+        path = root / name
+        if path.name == ".gitignore" and path.parent == indexed_state:
+            continue
+        tracked[str(path)] = path.relative_to(indexed_state).as_posix()
+    return tracked
 
 
 def inspect_project(raw_cwd):
@@ -105,7 +125,7 @@ def inspect_project(raw_cwd):
     target = state or (git_root(cwd) or cwd) / ".learning"
     status = "missing"
     options = profile_options(())
-    tracked = []
+    tracked = {}
     if state is not None:
         profile = note_files(state).get("profile.md")
         if profile is not None:
@@ -117,7 +137,8 @@ def inspect_project(raw_cwd):
         "project": str(target.parent), "state": str(target),
         "exists": state is not None, "profile_status": status,
         "track_notes": options["track_notes"],
-        "tracked_files": tracked,
+        "tracked_files": list(tracked),
+        "tracked_relative_paths": tracked,
         "private_notes_tracked": bool(tracked) and not options["track_notes"],
     }
 

@@ -1,6 +1,7 @@
 """Check that normal Git staging cannot include private learning notes or backups."""
 
 import json
+import os
 from pathlib import Path
 import shutil
 import subprocess
@@ -13,6 +14,95 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class PrivacyTests(unittest.TestCase):
+    def test_tracking_uses_native_case_aliases_and_index_paths(self):
+        for parent, notes_name, entered in [("Sub", ".learning", "SUB"), ("Mixed", ".Learning", "Mixed")]:
+            with self.subTest(parent=parent, notes_name=notes_name), tempfile.TemporaryDirectory(prefix="learning-case-alias-") as directory:
+                project = Path(directory).resolve()
+                subprocess.run(["git", "init", "-q", str(project)], check=True, capture_output=True)
+                state = project / parent / notes_name
+                state.mkdir(parents=True)
+                if not (project / entered / ".learning").is_dir():
+                    self.skipTest("Filesystem does not provide these case aliases")
+                profile = state / "profile.md"
+                profile.write_text("Learning mode: paused\nTrack learning notes: no\n")
+                subprocess.run(["git", "--literal-pathspecs", "-C", str(project), "add", "--", str(profile)], check=True, capture_output=True)
+                command = [sys.executable, "-B", str(ROOT / "scripts/project_state.py"), "--cwd", str(project / entered)]
+                result = json.loads(subprocess.check_output(command, text=True))
+                self.assertTrue(result["private_notes_tracked"])
+                self.assertEqual(len(result["tracked_files"]), 1)
+                self.assertTrue(Path(result["tracked_files"][0]).samefile(profile))
+                self.assertEqual(result["tracked_relative_paths"][result["tracked_files"][0]], "profile.md")
+                reset = subprocess.run([sys.executable, "-B", str(ROOT / "scripts/reset.py"), "--cwd", str(project / entered)], capture_output=True, text=True)
+                self.assertEqual(reset.returncode, 1)
+                subprocess.run(["git", "-c", "core.precomposeunicode=false", "--literal-pathspecs", "-C", str(project), "rm", "--cached", "--", *result["tracked_files"]], check=True, capture_output=True)
+                self.assertFalse(json.loads(subprocess.check_output(command, text=True))["private_notes_tracked"])
+                self.assertTrue(profile.is_file())
+
+    def test_index_spelling_survives_unicode_policy_change(self):
+        with tempfile.TemporaryDirectory(prefix="learning-index-unicode-") as directory:
+            project = Path(directory).resolve()
+            subprocess.run(["git", "init", "-q", str(project)], check=True, capture_output=True)
+            state = project / "cafe\u0301" / ".learning"
+            state.mkdir(parents=True)
+            entered = project / "café"
+            if not entered.is_dir():
+                self.skipTest("Filesystem does not alias these Unicode spellings")
+            profile = state / "profile.md"
+            profile.write_text("Learning mode: paused\nTrack learning notes: no\n")
+            subprocess.run(["git", "-C", str(project), "config", "core.precomposeunicode", "false"], check=True, capture_output=True)
+            subprocess.run(["git", "--literal-pathspecs", "-C", str(project), "add", "--", str(profile)], check=True, capture_output=True)
+            subprocess.run(["git", "-C", str(project), "config", "core.precomposeunicode", "true"], check=True, capture_output=True)
+            command = [sys.executable, "-B", str(ROOT / "scripts/project_state.py"), "--cwd", str(entered)]
+            result = json.loads(subprocess.check_output(command, text=True))
+            self.assertTrue(result["private_notes_tracked"])
+            self.assertEqual(len(result["tracked_files"]), 1)
+            self.assertEqual(result["tracked_relative_paths"][result["tracked_files"][0]], "profile.md")
+            subprocess.run(["git", "-c", "core.precomposeunicode=false", "--literal-pathspecs", "-C", str(project), "add", "-f", "--", *result["tracked_files"]], check=True, capture_output=True)
+            self.assertEqual(len(subprocess.check_output(["git", "-C", str(project), "ls-files", "-z"]).split(b"\0")) - 1, 1)
+            reset = subprocess.run([sys.executable, "-B", str(ROOT / "scripts/reset.py"), "--cwd", str(entered)], capture_output=True, text=True)
+            self.assertEqual(reset.returncode, 1)
+            subprocess.run(["git", "-c", "core.precomposeunicode=false", "--literal-pathspecs", "-C", str(project), "rm", "--cached", "--", *result["tracked_files"]], check=True, capture_output=True)
+            self.assertFalse(json.loads(subprocess.check_output(command, text=True))["private_notes_tracked"])
+            self.assertTrue(profile.is_file())
+
+    def test_namespace_query_keeps_other_notes_directories_out_of_scope(self):
+        with tempfile.TemporaryDirectory(prefix="learning-index-scope-") as directory:
+            project = Path(directory).resolve()
+            subprocess.run(["git", "init", "-q", str(project)], check=True, capture_output=True)
+            state = project / "selected" / ".learning"
+            state.mkdir(parents=True)
+            profile = state / "profile.md"
+            profile.write_text("Learning mode: paused\nTrack learning notes: no\n")
+            for folder, namespace in [("other", ".learning"), ("deep/inner", ".learning"), ("legacy", ".vibe-wise")]:
+                other = project / folder / namespace
+                other.mkdir(parents=True)
+                (other / "profile.md").write_text("other notes\n")
+                subprocess.run(["git", "--literal-pathspecs", "-C", str(project), "add", "--", str(other / "profile.md")], check=True, capture_output=True)
+            command = [sys.executable, "-B", str(ROOT / "scripts/project_state.py"), "--cwd", str(state.parent)]
+            result = json.loads(subprocess.check_output(command, text=True))
+            self.assertEqual(result["tracked_files"], [])
+            self.assertEqual(result["tracked_relative_paths"], {})
+            subprocess.run(["git", "--literal-pathspecs", "-C", str(project), "add", "--", str(profile)], check=True, capture_output=True)
+            result = json.loads(subprocess.check_output(command, text=True))
+            self.assertEqual(result["tracked_files"], [str(profile)])
+            self.assertEqual(result["tracked_relative_paths"], {str(profile): "profile.md"})
+
+    def test_internal_query_has_explicit_pathspec_semantics(self):
+        with tempfile.TemporaryDirectory(prefix="learning-pathspec-environment-") as directory:
+            project = Path(directory).resolve()
+            subprocess.run(["git", "init", "-q", str(project)], check=True, capture_output=True)
+            state = project / ".learning"
+            state.mkdir()
+            profile = state / "profile.md"
+            profile.write_text("Learning mode: paused\nTrack learning notes: no\n")
+            subprocess.run(["git", "-C", str(project), "add", "--", str(profile)], check=True, capture_output=True)
+            environment = os.environ.copy()
+            environment.update({key: "1" for key in ["GIT_LITERAL_PATHSPECS", "GIT_GLOB_PATHSPECS", "GIT_NOGLOB_PATHSPECS", "GIT_ICASE_PATHSPECS"]})
+            command = [sys.executable, "-B", str(ROOT / "scripts/project_state.py"), "--cwd", str(project)]
+            result = json.loads(subprocess.check_output(command, text=True, env=environment))
+            self.assertTrue(result["private_notes_tracked"])
+            self.assertEqual(result["tracked_files"], [str(profile)])
+
     def test_nested_backup_guard_is_not_root_metadata_through_a_link(self):
         with tempfile.TemporaryDirectory(prefix="learning-guard-boundary-") as directory:
             project = Path(directory).resolve()
@@ -33,6 +123,7 @@ class PrivacyTests(unittest.TestCase):
             result = json.loads(subprocess.check_output(command, text=True))
             self.assertTrue(result["private_notes_tracked"])
             self.assertEqual(result["tracked_files"], [str(snapshot)])
+            self.assertEqual(result["tracked_relative_paths"], {str(snapshot): "backups/old/files/.gitignore"})
 
     def test_tracked_guard_in_unicode_folder_is_metadata(self):
         with tempfile.TemporaryDirectory(prefix="learning-unicode-guard-") as directory:
