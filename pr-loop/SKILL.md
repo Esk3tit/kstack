@@ -10,45 +10,51 @@ Run the whole pre-merge loop on the current branch, and on the same-named branch
 
 Resolve the log key once in the main repo (`log.sh --path` reuses the key the branch already logged under), then run `log.sh --bind <that key>` in each sibling repo's branch, so every repo writes to one log. Collect every key in every participating branch's key file and set them as `RECAP_PIN_KEYS='<keys>'` in front of each `log.sh --pins` call (shell variables do not survive between calls), so `--pins` in any repo reads all of those logs together and every review gets the same settled decisions, including ones logged in a sibling before binding.
 
-## 1. Open the PRs
+## 1. Two-axis review
 
-Push each repo's branch and open one PR per repo with the `/pr` template, its "Behavior changes vs master" section filled from the log's accepted rows with a `prod_delta` other than `none`. For a cross-repo change, name the merge order in every body and cross-link the PRs.
+Run `/code-review` on each repo's branch with the fixed point `origin/<base>` (the branch it merges into) and the spec given up front: the ticket plus the user's settled decisions (`log.sh --pins`). Fix every hard violation and every spec gap; take a judgement call only when it makes the change simpler or clearer. Log each finding with its outcome.
+
+Done when each branch's findings are fixed, logged as rejected with a reason, or logged with result `open` as questions for the user.
+
+## 2. Cross-family review to convergence
+
+When only CI can judge the change (a failure seen only on CI's runners, a suite too heavy to run locally), open a draft PR first. Run `/codexloop --until-converged --base <base>` on each branch; its reviewer is the other model family (Codex from Claude Code, Claude Opus 5.5 from Codex). In a native CLI, use the existing supported cross-family path and keep long Codex work on the plugin's background path.
+
+Done when every branch has converged and its head is on the remote.
+
+## 3. Open the PRs
+
+Open one PR per repo against `<base>` with the `/pr` template, marked as closing the spec and tickets it finishes, its "Behavior changes vs master" section filled from the log's accepted rows with a `prod_delta` other than `none`, and the log's `open` rows listed as open questions. A branch that already has a PR keeps it, with its body updated the same way, and a draft opened under step 2 is marked ready. For a cross-repo change, name the merge order in every body and cross-link the PRs.
 
 Done when every repo with commits on the branch has an open PR.
 
-## 2. Two-axis review
+## 4. Bot and CI findings
 
-Run `/code-review` on each PR with the fixed point `origin/<base>` and the spec given up front: the ticket plus the user's settled decisions (`log.sh --pins`). Fix every hard violation and every spec gap; take a judgement call only when it makes the change simpler or clearer. Log each finding with its outcome.
+Commit any fix from steps 5–7. A branch with unpushed commits first runs `/codexloop --until-converged --base <base>`. Then follow `/address-pr-comments` on each PR, judging every bot finding and red check on the pushed head. Its finalize step sends accepted fixes through `/codexloop`, which picks up from its last logged round (Round scope).
 
-Done when each PR's findings are fixed, logged as rejected with a reason, or listed in the PR body as open questions for the user.
+Done when every PR has converged, has no open bot finding (threads and review-body items alike), and every reviewer on its final pushed head has reviewed that head and passed, or is reported `NOT_REVIEWED` (the `/address-pr-comments` convergence gate).
 
-## 3. Cross-family review to convergence, bot comments between rounds
-
-Run `/codexloop --until-converged` on each PR; its reviewer is the other model family (Codex from Claude Code, Claude Opus 5.5 from Codex). Triage bot threads while reviews run, without concurrent writes. In a native CLI, use the existing supported cross-family path and keep long Codex work on the plugin's background path. Then apply the accepted reviewer and bot fixes together, commit, push, and start the next round on the new head.
-
-Done when every PR has converged, has no open bot finding (threads and review-body items alike), and every reviewer on its final pushed head has reviewed that head and passed, or is reported `NOT_REVIEWED` (the `/address-pr-comments` convergence gate). A fix made to get there sends that PR back through `/codexloop`, which picks up from its last logged round (Round scope).
-
-## 4. Fable pass, when it changes the outcome
+## 5. Fable pass, when it changes the outcome
 
 An explicit human `/pr-loop` invocation approves at most one Fable pass for that run, as does an explicit Fable request or approval. Automatic skill routing grants no Fable approval. When approved, run it when the diff carries a judgement the mechanical reviews keep circling, changes what customers or analysts see, or couples parts of the system in a way a reviewer has to hold in their head. Mechanical changes that have already converged skip it.
 
-Run it read-only, briefed with the diffs, the settled decisions, and what to look for: judgement calls, taste, simpler shapes of the problem and the code, edge cases, an adversarial read. In Claude Code that is a subagent with `model: fable`; in Codex, `/Users/<you>/.codex/bin/claude-read claude-fable-5-1 "<brief>" [<extra dirs to read>]` (a copy of kstack `codex/bin/`), pointing the brief at files to Read; Codex allows only that read-only wrapper outside the sandbox, as a plain command. Accepted Fable changes go back through step 3.
+Run it read-only, briefed with the diffs, the settled decisions, and what to look for: judgement calls, taste, simpler shapes of the problem and the code, edge cases, an adversarial read. In Claude Code that is a subagent with `model: fable`; in Codex, `/Users/<you>/.codex/bin/claude-read claude-fable-5-1 "<brief>" [<extra dirs to read>]` (a copy of kstack `codex/bin/`), pointing the brief at files to Read; Codex allows only that read-only wrapper outside the sandbox, as a plain command. Accepted Fable changes go back through step 4.
 
 Done when the run-or-skip decision and its reason are logged, and every Fable finding is fixed or logged as rejected.
 
-## 5. Verify in the running app, when the diff changes what renders
+## 6. Verify in the running app, when the diff changes what renders
 
-When a diff changes what a user sees or does (components, routes, styles, copy, a UI-facing API), run `/no-mistakes` on the final head through a route that drives the browser (frontend or full-stack, never backend-only), with a case for the change on screen, and post its screenshots and recordings to the PR. In a cross-repo change, post the evidence on the PR whose diff caused what changed on screen. A diff that changes nothing on screen skips this; log the run-or-skip and why. A fix it causes goes back through step 3, and the evidence is retaken on the head that fix produces.
+When a diff changes what a user sees or does (components, routes, styles, copy, a UI-facing API), run `/no-mistakes` on the final head through a route that drives the browser (frontend or full-stack, never backend-only), with a case for the change on screen, and post its screenshots and recordings to the PR. In a cross-repo change, post the evidence on the PR whose diff caused what changed on screen. A diff that changes nothing on screen skips this; log the run-or-skip and why. A fix it causes goes back through step 4, and the evidence is retaken on the head that fix produces.
 
 Done when every PR whose diff changes what renders carries evidence from its final head, or a logged skip.
 
-## 6. Affected tests
+## 7. Affected tests
 
-Run each repo's affected tests on the final heads, deriving the set from the diff as `/implement` does. Fix a failure that predates the branch too, in its own commit, logged with `asked no`; any fix goes back through step 3, and through step 5 when it changes what renders.
+Run each repo's affected tests on the final heads, deriving the set from the diff as `/implement` does. Fix a failure that predates the branch too, in its own commit, logged with `asked no`; any fix goes back through step 4, and through step 6 when it changes what renders.
 
 Record each final head, affected commands and collected/executed test results, review state, and unresolved items together in the decision log. Reuse evidence for unchanged inputs and revisions; a relevant fix reruns its affected checks. Done when the affected tests pass on the heads being handed back.
 
-## 7. Recap and hand-back
+## 8. Recap and hand-back
 
 Follow `~/.claude/skills/recap-pr/SKILL.md`. Then hand back this block for each PR, every line filled from the final head:
 

@@ -75,3 +75,10 @@ patch -p1 -d ~/.agents/skills/<skill> < ~/.claude/skills/update-mattpocock-skill
 
 - **What it does:** the parent coordinating a spec reads the same saved mode and learning guide as ordinary implementation. The parent owns the learning conversation and notes while workers report substantial unresolved decisions or contradictions in the agreed design.
 - **Why:** keep the normal spec implementation path in the same learning workflow without adding a second set of rules or progress records.
+
+## 11 · implement-spec · PR opens after review
+
+`patches/11-implement-spec-pr-after-review.patch`, added 2026-11-04. Apply after patches 02 and 10.
+
+- **What it does:** `/implement-spec` stops opening a draft PR after its first merge. It reports the integration branch and what its PR will close, and `/pr-loop` opens that PR once the cross-family review has converged.
+- **Why:** Bugbot and Macroscope reviewed drafts, so each integration push billed them before any cross-family review. wt-records PR #411's first Bugbot review came three hours before it was marked ready.
