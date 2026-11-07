@@ -30,9 +30,9 @@ Done when every repo with commits on the branch has an open PR.
 
 ## 4. Bot and CI findings
 
-Commit any fix from steps 5–7. A branch with unpushed commits first runs `/codexloop --until-converged --base <base>`. Then follow `/address-pr-comments` on each PR, judging every bot finding and red check on the pushed head. Its finalize step sends accepted fixes through `/codexloop`, which picks up from its last logged round (Round scope).
+Commit any fix from steps 5–8. A branch with unpushed commits first runs `/codexloop --until-converged --base <base>`. Then follow `/address-pr-comments` on each PR, judging every bot finding and red check on the pushed head. Its finalize step sends accepted fixes through `/codexloop`, which picks up from its last logged round (Round scope).
 
-Done when every PR has converged, has no open bot finding (threads and review-body items alike), and every reviewer on its final pushed head has reviewed that head and passed, or is reported `NOT_REVIEWED` (the `/address-pr-comments` convergence gate).
+Done when every PR has converged, has no open bot finding (threads and review-body items alike), and every reviewer on its final pushed head has reviewed that head and passed, or is reported `NOT_REVIEWED` (the `/address-pr-comments` convergence gate). A final-pass reviewer is judged in step 8.
 
 ## 5. Fable pass, when it changes the outcome
 
@@ -54,13 +54,19 @@ Run each repo's affected tests on the final heads, deriving the set from the dif
 
 Record each final head, affected commands and collected/executed test results, review state, and unresolved items together in the decision log. Reuse evidence for unchanged inputs and revisions; a relevant fix reruns its affected checks. Done when the affected tests pass on the heads being handed back.
 
-## 8. Recap and hand-back
+## 8. Final pass
+
+When the repo names a final-pass reviewer (`/address-pr-comments`, **The final pass**), post its request on each PR once steps 4–7 are done on that PR's final head, so it reviews last; a PR that already carries the request keeps that one. Then run step 4, which waits for its review and works its findings; steps 6 and 7 follow for the fixes they touch.
+
+Done when step 4 has converged with each final pass reviewed or reported `NOT_REVIEWED`, and steps 6 and 7 are done for its fixes. A repo that names none skips this step.
+
+## 9. Recap and hand-back
 
 Follow `~/.claude/skills/recap-pr/SKILL.md`. Then hand back this block for each PR, every line filled from the final head:
 
 ```text
 PR <url>: <what it changes, in a user's words> · head <sha> · merge order <n>
-Reviewers on this head: <name: passed | failed: why | NOT_REVIEWED: reason>, one per reviewer
+Reviewers on this head: <name: passed | failed: why | NOT_REVIEWED: reason | passed on <sha> (the final-pass reviewer)>, one per reviewer
 Open findings: <none | each one>
 CI on this head: <each check and its conclusion, with test counts where the check reports them>
 App evidence: <taken on <sha> | skipped: reason>
