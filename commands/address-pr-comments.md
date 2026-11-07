@@ -37,7 +37,7 @@ A repo can name a **final-pass reviewer** in `docs/agents/review-bots.md`, with 
 
 - **The request** is the one time it is tagged; the re-trigger above passes it over. It is due once the PR converges and carries no tag comment for it. Standalone, post the tag then; under `/pr-loop`, step 8 posts it.
 - **Before the request,** each pass leaves it out of the check on who has reviewed the head.
-- **After the request,** it gates convergence until it posts a review or summary newer than the tag comment; a check's state alone doesn't show that. A skip for cost, or 30 minutes from the tag with no review, ends the wait as `NOT_REVIEWED=<bot>:<reason>` rather than a loop failure; the repo doc says how to read a skip. Its findings are worked like any other.
+- **After the request,** it gates convergence until it posts a review or summary newer than the tag comment; a check's state alone doesn't show that. A skip for cost, or 30 minutes from the tag with no review, ends the wait as `NOT_REVIEWED=<bot>:<reason>` rather than a loop failure. From then on its check, even one still pending, drops out of step 1's green gate and step 6's wait. The repo doc says how to read a skip. Its findings are worked like any other.
 - **On later heads,** that one review stands. It counts as passed once every finding from it is fixed or answered, and is reported as `passed on <sha>`, naming the head it reviewed. Request it again only when the user asks.
 
 ## Each pass
