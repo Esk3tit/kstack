@@ -68,7 +68,7 @@ fi
 - `--base BRANCH` — base branch to diff against (default: auto-detect `master` or `main`)
 - `--scope auto|working-tree|branch` — review target (default: `auto`: branch when it has commits beyond base, else working-tree)
 
-**Outputs:** `STATUS=<CLEAN|MAX_ITERATIONS|FAIL> ITERATIONS=<N> FINDINGS_REMAINING=<N> [ERROR="..."]`
+**Outputs:** `STATUS=<CLEAN|MAX_ITERATIONS|PAUSED|FAIL> ITERATIONS=<N> FINDINGS_REMAINING=<N> [ERROR="..."]`
 
 ## Round scope (`--until-converged`)
 
@@ -90,6 +90,8 @@ Take the next round's scope from the first rule that applies:
 1. The branch took in base changes since the last reviewed head (`git merge-base origin/<base> HEAD` differs from the logged one, or `git merge-base --is-ancestor <last reviewed head> HEAD` fails) → whole PR, since a fixes diff would carry the base's changes.
 2. HEAD has commits since the last reviewed head → fixes, unless the last round row says `reviewer asks whole-PR next` or `git diff <last reviewed head> HEAD` is empty (an empty commit, or a fix and its revert), which take a whole-PR round instead.
 3. The last round row says `clean` at this head. When that row is a whole-PR round and the round row before it is also `clean` at this head, the loop has converged: exit `STATUS=CLEAN` (on a re-run, `ITERATIONS=0`, and step 4 pushes only what the remote lacks). Otherwise → whole PR.
+
+**Five fixing rounds are a design signal.** Before a sixth round, when five of the branch's round rows end `fixed` (counted from its first round row, or from its last `design pause` row), step back: lay their accepted findings side by side and judge whether they cluster, each an edge case of the same state, flow or component. A cluster says the design is edge-case-prone, and the next move is a simpler design, not round six: log a `codexloop` row with decision `design pause after round <n> on <branch>: <the area>` and result `open`, exit `STATUS=PAUSED` without pushing, and bring the user the cluster, its root cause and a simpler shape. Findings spread across unrelated code carry on, logged as a `design pause` row with result `accepted` so the count restarts.
 
 Inside T3, each delegated round's brief names its scope (for fixes, the last reviewed head) and carries the same focus lines.
 
@@ -163,6 +165,7 @@ Inside T3, each delegated round's brief names its scope (for fixes, the last rev
 3. **Exit conditions:**
    - `STATUS=CLEAN` — the reviewer returned zero findings, or every remaining finding was a rejected nit/flip-flop. Under `--until-converged`: Round scope rule 3's convergence.
    - `STATUS=MAX_ITERATIONS` — hit cap with real findings remaining; print remaining findings for human review and DO NOT push.
+   - `STATUS=PAUSED` — five fixing rounds clustered in one area (Round scope); bring the cluster and a simpler shape to the user, and DO NOT push.
    - `STATUS=FAIL ERROR="..."` — reviewer error (non-zero exit with no review output / auth failure / unparseable review), lint/test failure, or merge conflict; DO NOT push.
 
 4. **Post-loop push (only on `STATUS=CLEAN`):**
