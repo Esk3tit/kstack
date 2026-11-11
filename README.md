@@ -148,10 +148,12 @@ All user-authored, and the same files serve Claude Code and Codex. Reviews come 
   original PromptArmor setup (Neon project `round-unit-34763685`, Porter project 8417 / cluster 3429,
   PropelAuth/MOFFITT), `examples/supabase.no-mistakes.json` proves multi-BaaS generality.
   Each `SKILL.md` is the runtime playbook; `scripts/setup.sh` checks tooling. For a hands-off run to
-  post to the PR without a prompt, allow each poster by its absolute path in `~/.claude/settings.json`
-  (`Bash(node /Users/<you>/.claude/skills/no-mistakes-frontend/harness/post-evidence.mjs:*)`, and the
+  post to the PR without a prompt, allow each poster in `~/.claude/settings.json` by the absolute path
+  the skills print in their step 0 (on macOS with the links below,
+  `Bash(node /Users/<you>/.claude/skills/no-mistakes-frontend/harness/post-evidence.mjs:*)`, and the
   same for `no-mistakes/harness/post-fullstack.mjs` and `no-mistakes-backend/harness/post-results.mjs`).
-  The skills post with that path spelled out, because no rule matches a command holding a variable or `~`.
+  The skills post with that path spelled out, because Claude Code matches no rule against a command
+  holding a variable or `~`.
 
 - **`wide-event-logging/`** — implement wide event logging (canonical log lines) in Python/FastAPI:
   `SKILL.md` + reference modules (`config.py`, `context.py`, `middleware.py`, `security.py`, `usage.py`)

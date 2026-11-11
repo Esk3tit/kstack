@@ -220,11 +220,11 @@ bounded loop yourself instead of this helper.
 
 ## E — Post results to the PR
 
-One plain command with every value written out, no variable, `~` or `$(…)`, so an allow rule on
-the script's absolute path matches it (why: `SKILL.md`, the post step). `<H>` and `<HOME>` are what
-`echo "${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/no-mistakes-backend}" "$HOME"` prints:
+One plain command from the project checkout, with the `H`, `HOME` and `RUN` values `SKILL.md` §0
+and §1 print written out, no variable, `~` or `$(…)`, so an allow rule on the script's absolute path
+matches it (why: `SKILL.md`, the post step):
 
 ```bash
-node <H>/harness/post-results.mjs --pr <N> --repo <owner/name> --run-dir <HOME>/.no-mistakes-backend/<run> --results <HOME>/.no-mistakes-backend/<run>/results.json
+node <H>/harness/post-results.mjs --pr <N> --repo <owner/name> --run-dir <HOME>/.no-mistakes-backend/<RUN> --results <HOME>/.no-mistakes-backend/<RUN>/results.json
 # pr_post=posted | no-pr | failed   (verdict never lost; summary.md written on no-pr/failed)
 ```

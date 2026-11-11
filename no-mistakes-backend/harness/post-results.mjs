@@ -27,6 +27,7 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { loadConfig, expandHome } from './load-config.mjs';
 
 const MARKER_START = '<!-- no-mistakes-backend:start -->';
 const MARKER_END = '<!-- no-mistakes-backend:end -->';
@@ -52,9 +53,14 @@ let results;
 try { results = JSON.parse(readFileSync(resultsPath, 'utf8')); }
 catch (e) { die(`could not parse results json: ${e.message}`); }
 
+// A plain-command post runs without load-config's exports, so read the config itself.
+let cfg = null;
+try { ({ cfg } = loadConfig()); } catch {}
+const checkoutBase = process.env.NM_CHECKOUT_BASE || expandHome(cfg?.checkoutBase);
+
 const repoBase = repo ? repo.split('/')[1] : null;
 const repoCwd = process.env.NOMISTAKESBACKEND_REPO_DIR
-  || (repoBase && process.env.NM_CHECKOUT_BASE ? join(process.env.NM_CHECKOUT_BASE, repoBase) : null)
+  || (repoBase && checkoutBase ? join(checkoutBase, repoBase) : null)
   || (repoBase && process.env.HOME ? join(process.env.HOME, repoBase) : process.cwd());
 const gitCwd = existsSync(join(repoCwd, '.git')) ? repoCwd : process.cwd();
 
@@ -85,7 +91,7 @@ const esc = (s) => String(s ?? '').replace(/\\/g, '\\\\').replace(/\|/g, '\\|');
 // One sensitive-name set drives BOTH header-line and JSON-key redaction so they can't
 // drift; the project's custom API-key header ($NM_API_KEY_HEADER) is folded in dynamically.
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const apiKeyHeader = (process.env.NM_API_KEY_HEADER || '').toLowerCase().trim();
+const apiKeyHeader = (process.env.NM_API_KEY_HEADER || cfg?.auth?.apiKeyHeader || '').toLowerCase().trim();
 const NAMES = [
   'authorization', 'cookie', 'set-cookie', 'x-api-key',
   ...(apiKeyHeader ? [escapeRe(apiKeyHeader)] : []),

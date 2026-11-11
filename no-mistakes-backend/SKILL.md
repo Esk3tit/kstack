@@ -30,11 +30,12 @@ This file is the runtime playbook. Follow the steps in order. Stop and emit the 
 ```bash
 H="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/no-mistakes-backend}"
 eval "$(node "$H/harness/load-config.mjs" --export)"
+echo "H=$H HOME=$HOME"   # the post step writes these out
 ```
 
 All harness scripts are at `$H/harness/...`. The request / DB-verify / async-poll templates live in
 `$H/harness/snippets.md` — read it and copy the relevant block. Never hardcode `/Users/<name>/...`,
-except in the post command, which spells out the paths `$H` and `$HOME` print on this machine.
+except in the post command, which spells out the paths §0 prints on this machine.
 
 The loader discovers the project's `.no-mistakes.json` by walking up from the CWD, else
 `~/.no-mistakes/<project>.json`, and exports the targets this skill drives (`$NM_*`, `$PORTER_*`,
@@ -114,7 +115,8 @@ this file. The app under test is the config's **backend app** (`kind: backend`);
    profile needs its `keyEnv`. If unresolvable: `NOMISTAKESBACKEND_STATUS=BLOCKED reason=no-creds`.
 7. **Run id + evidence dir.** Host shell stamps the run id: `RUN="$(date +%Y%m%d-%H%M%S)-$$"`. Evidence
    dir = `~/.no-mistakes-backend/$RUN/`. Reject any caller-supplied dir that resolves **inside a product
-   checkout** (fall back to default). `mkdir -p ~/.no-mistakes-backend/$RUN`.
+   checkout** (fall back to default). `mkdir -p ~/.no-mistakes-backend/$RUN && echo "RUN=$RUN"` (the post
+   step writes it out).
 
 ## 2. Derive test cases (gate)
 
@@ -280,17 +282,15 @@ Collect the run's evidence into `~/.no-mistakes-backend/$RUN/` and build `result
 
 `request`/`response`/`dbCheck` are **already-redacted** strings (no `Authorization`, no secrets).
 
-Post with one plain command. Print the paths once (each shell starts fresh, so not `$H`):
-`echo "${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/no-mistakes-backend}" "$HOME"`. Then write the printed
-values, the run id, the PR number and the repo into the command as literals, with no variable, `~` or
-`$(…)`, and run it on its own. Allow rules (Claude Code's and Codex's) match only a plain command, and
-the rule that lets a hands-off run post is one on the script's absolute path
-(`Bash(node <H>/harness/post-results.mjs:*)`). Claude Code never pre-approves a command holding a
-shell variable, and `~/…` does not match a rule on the absolute path, so either form falls to a
-prompt, or to auto mode, which can block the GitHub write.
+Post with one plain command, from the project checkout: write the `H`, `HOME` and `RUN` values
+printed in §0 and §1, the PR number and the repo into it as literals, with no variable, `~` or `$(…)`,
+and run it on its own. A Claude Code allow rule on the script's absolute path
+(`Bash(node <H>/harness/post-results.mjs:*)`) then lets a hands-off run post; a command holding a
+variable or `~/…` never matches it and falls to a prompt, or to auto mode, which can block the GitHub
+write. The poster reads the project's `.no-mistakes.json` itself, so it needs none of §0's exports.
 
 ```bash
-node <H>/harness/post-results.mjs --pr <N> --run-dir <HOME>/.no-mistakes-backend/<run> --results <HOME>/.no-mistakes-backend/<run>/results.json --repo <owner/name>
+node <H>/harness/post-results.mjs --pr <N> --run-dir <HOME>/.no-mistakes-backend/<RUN> --results <HOME>/.no-mistakes-backend/<RUN>/results.json --repo <owner/name>
 ```
 
 It posts on **two idempotent surfaces** (uniform with `no-mistakes-frontend`, so a future fullstack router gets

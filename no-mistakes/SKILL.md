@@ -34,6 +34,7 @@ H="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/no-mistakes}"
 eval "$(node "$H/harness/load-config.mjs" --export)"   # targets come from .no-mistakes.json
 FE="$HOME/.claude/skills/no-mistakes-frontend"   # frontend specialist
 BE="$HOME/.claude/skills/no-mistakes-backend"    # backend specialist
+echo "H=$H FE=$FE BE=$BE HOME=$HOME"   # §5 writes these out
 ```
 
 The loader discovers `.no-mistakes.json` by walking up from CWD, else `~/.no-mistakes/<project>.json`,
@@ -165,13 +166,14 @@ only with positive product-misbehavior evidence, else `BLOCKED reason=indetermin
 
 ## 5. Results + posting
 
+Every post here is one plain command with the paths §0 prints and each run's dir written out, no
+variable, `~` or `$(…)`, so an allow rule on the poster's absolute path matches it (why:
+`$FE/SKILL.md` §8).
+
 - **Single-stack routes:** post the specialist's own detail to its repo's PR (the `$FE` gallery / the
   `$BE` request-response-SQL evidence). The router's status mirrors that run.
 - **Fullstack:** each layer's detail posts to its own repo's PR via the specialist posters, then post
-  **one combined verdict header to BOTH PRs**, as one plain command with every path written out, no
-  variable, `~` or `$(…)`, so an allow rule on the script's absolute path matches it (why:
-  `$FE/SKILL.md` §8). `<H>` is what `echo "${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/no-mistakes}"`
-  prints:
+  **one combined verdict header to BOTH PRs**:
   ```bash
   node <H>/harness/post-fullstack.mjs --results <absolute path to results.json>
   ```
