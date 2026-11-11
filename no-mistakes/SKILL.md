@@ -168,14 +168,15 @@ only with positive product-misbehavior evidence, else `BLOCKED reason=indetermin
 
 Every post here is one plain command with the paths §0 prints and each run's dir written out, no
 variable, `~` or `$(…)`, so an allow rule on the poster's absolute path matches it (why:
-`$FE/SKILL.md` §8). The `$BE` poster also takes `--config <CONFIG>`.
+`$FE/SKILL.md` §8), each path argument single-quoted. The `$BE` poster also takes
+`--config '<CONFIG>'`.
 
 - **Single-stack routes:** post the specialist's own detail to its repo's PR (the `$FE` gallery / the
   `$BE` request-response-SQL evidence). The router's status mirrors that run.
 - **Fullstack:** each layer's detail posts to its own repo's PR via the specialist posters, then post
   **one combined verdict header to BOTH PRs**:
   ```bash
-  node <H>/harness/post-fullstack.mjs --results <absolute path to results.json>
+  node <H>/harness/post-fullstack.mjs --results '<absolute path to results.json>'
   ```
   `results.json`:
   ```json

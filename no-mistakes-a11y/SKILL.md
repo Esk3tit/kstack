@@ -179,7 +179,7 @@ case; axe violations and other findings go in `findings`; `revision` = the teste
 frontend repo's PR with `$FE/harness/post-evidence.mjs --marker no-mistakes-a11y` (its own
 `<!-- no-mistakes-a11y:start/end -->` block), as one plain command with the `FE`, `HOME` and `RUN`
 values printed in §0 and §1 written out (why: `$FE/SKILL.md` §8):
-`node <FE>/harness/post-evidence.mjs --marker no-mistakes-a11y --pr <N> --run-dir <HOME>/.no-mistakes-a11y/<RUN> --results <HOME>/.no-mistakes-a11y/<RUN>/results.json --repo <owner/name>`. `pr_post=failed|no-pr` → `summary.md` in the run dir.
+`node <FE>/harness/post-evidence.mjs --marker no-mistakes-a11y --pr <N> --run-dir '<HOME>/.no-mistakes-a11y/<RUN>' --results '<HOME>/.no-mistakes-a11y/<RUN>/results.json' --repo <owner/name>`. `pr_post=failed|no-pr` → `summary.md` in the run dir.
 Verdict is never lost.
 
 ## 9. Confidentiality & data handling

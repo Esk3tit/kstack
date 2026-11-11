@@ -225,6 +225,6 @@ out, no variable, `~` or `$(…)`, so an allow rule on the script's absolute pat
 `SKILL.md`, the post step):
 
 ```bash
-node <H>/harness/post-results.mjs --pr <N> --repo <owner/name> --run-dir <HOME>/.no-mistakes-backend/<RUN> --results <HOME>/.no-mistakes-backend/<RUN>/results.json --config <CONFIG>
+node <H>/harness/post-results.mjs --pr <N> --repo <owner/name> --run-dir '<HOME>/.no-mistakes-backend/<RUN>' --results '<HOME>/.no-mistakes-backend/<RUN>/results.json' --config '<CONFIG>'
 # pr_post=posted | no-pr | failed   (verdict never lost; summary.md written on no-pr/failed)
 ```

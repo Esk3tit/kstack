@@ -251,14 +251,16 @@ Screenshots and clips are already in `~/.no-mistakes/$RUN/`. Build `results.json
 - `setup` — rendered collapsed. `previewUrl` (preview runs only) — rendered as **Open the preview UI →**.
 
 Post with one plain command: write the `H`, `HOME` and `RUN` values printed in §0 and §1, the PR
-number and the repo into it as literals, with no variable, `~` or `$(…)`, and run it on its own. The
+number and the repo into it as literals, with no variable, `~` or `$(…)`, and run it on its own.
+Single-quote each path argument, since a path can hold a space; the script path stays bare, as the
+rule names it. The
 rule that lets a hands-off run post is a Claude Code allow rule on the script's absolute path
 (`Bash(node <H>/harness/post-evidence.mjs:*)`), and it matches only that plain form: Claude Code
 never pre-approves a command holding a shell variable, and `~/…` does not match a rule on the
 absolute path, so either form falls to a prompt, or to auto mode, which can block the GitHub write.
 
 ```bash
-node <H>/harness/post-evidence.mjs --pr <N> --run-dir <HOME>/.no-mistakes/<RUN> --results <HOME>/.no-mistakes/<RUN>/results.json --repo <owner/name>
+node <H>/harness/post-evidence.mjs --pr <N> --run-dir '<HOME>/.no-mistakes/<RUN>' --results '<HOME>/.no-mistakes/<RUN>/results.json' --repo <owner/name>
 ```
 
 It posts on **two idempotent surfaces**:
