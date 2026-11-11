@@ -152,8 +152,9 @@ All user-authored, and the same files serve Claude Code and Codex. Reviews come 
   the skills print in their step 0 (on macOS with the links below,
   `Bash(node /Users/<you>/.claude/skills/no-mistakes-frontend/harness/post-evidence.mjs:*)`, and the
   same for `no-mistakes/harness/post-fullstack.mjs` and `no-mistakes-backend/harness/post-results.mjs`).
-  The skills post with that path spelled out, because Claude Code matches no rule against a command
-  holding a variable or `~`.
+  The skills post with that path spelled out, because Claude Code matches rules against the command
+  as text, never one holding a variable or `~`. If the path holds a space, the skills single-quote it,
+  so write the rule with the same single quotes.
 
 - **`wide-event-logging/`** — implement wide event logging (canonical log lines) in Python/FastAPI:
   `SKILL.md` + reference modules (`config.py`, `context.py`, `middleware.py`, `security.py`, `usage.py`)

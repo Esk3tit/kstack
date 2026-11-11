@@ -284,8 +284,9 @@ Collect the run's evidence into `~/.no-mistakes-backend/$RUN/` and build `result
 
 Post with one plain command: write the `H`, `HOME`, `CONFIG` and `RUN` values printed in §0 and §1,
 the PR number and the repo into it as literals, with no variable, `~` or `$(…)`, and run it on its own.
-Single-quote each path argument, since a path can hold a space; the script path stays bare, as the
-rule names it. A Claude Code allow rule on the script's absolute path
+Single-quote each path argument, since a path can hold a space. Rules match the command as text, so
+write the script path as the rule spells it: bare, unless `<H>` holds a space; then single-quote it
+in both the command and the rule. A Claude Code allow rule on the script's absolute path
 (`Bash(node <H>/harness/post-results.mjs:*)`) then lets a hands-off run post; a command holding a
 variable or `~/…` never matches it and falls to a prompt, or to auto mode, which can block the GitHub
 write. The poster reads the config `--config` names (the one §0 selected), so it needs none of §0's
