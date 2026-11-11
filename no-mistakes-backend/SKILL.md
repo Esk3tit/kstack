@@ -30,7 +30,7 @@ This file is the runtime playbook. Follow the steps in order. Stop and emit the 
 ```bash
 H="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/no-mistakes-backend}"
 eval "$(node "$H/harness/load-config.mjs" --export)"
-echo "H=$H HOME=$HOME"   # the post step writes these out
+echo "H=$H HOME=$HOME CONFIG=$NM_CONFIG_PATH"   # the post step writes these out
 ```
 
 All harness scripts are at `$H/harness/...`. The request / DB-verify / async-poll templates live in
@@ -282,15 +282,15 @@ Collect the run's evidence into `~/.no-mistakes-backend/$RUN/` and build `result
 
 `request`/`response`/`dbCheck` are **already-redacted** strings (no `Authorization`, no secrets).
 
-Post with one plain command, from the project checkout: write the `H`, `HOME` and `RUN` values
-printed in §0 and §1, the PR number and the repo into it as literals, with no variable, `~` or `$(…)`,
-and run it on its own. A Claude Code allow rule on the script's absolute path
+Post with one plain command: write the `H`, `HOME`, `CONFIG` and `RUN` values printed in §0 and §1,
+the PR number and the repo into it as literals, with no variable, `~` or `$(…)`, and run it on its own. A Claude Code allow rule on the script's absolute path
 (`Bash(node <H>/harness/post-results.mjs:*)`) then lets a hands-off run post; a command holding a
 variable or `~/…` never matches it and falls to a prompt, or to auto mode, which can block the GitHub
-write. The poster reads the project's `.no-mistakes.json` itself, so it needs none of §0's exports.
+write. The poster reads the config `--config` names (the one §0 selected), so it needs none of §0's
+exports, and it stops before posting if that file does not load.
 
 ```bash
-node <H>/harness/post-results.mjs --pr <N> --run-dir <HOME>/.no-mistakes-backend/<RUN> --results <HOME>/.no-mistakes-backend/<RUN>/results.json --repo <owner/name>
+node <H>/harness/post-results.mjs --pr <N> --run-dir <HOME>/.no-mistakes-backend/<RUN> --results <HOME>/.no-mistakes-backend/<RUN>/results.json --repo <owner/name> --config <CONFIG>
 ```
 
 It posts on **two idempotent surfaces** (uniform with `no-mistakes-frontend`, so a future fullstack router gets

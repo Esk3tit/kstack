@@ -14,7 +14,7 @@
 // are expected to be ALREADY REDACTED by the harness (no Authorization, no secrets).
 //
 // Usage:
-//   node post-results.mjs --pr <N> --run-dir <dir> --results <results.json> [--repo owner/name]
+//   node post-results.mjs --pr <N> --run-dir <dir> --results <results.json> [--repo owner/name] [--config <.no-mistakes.json>]
 //
 // results.json: {
 //   revision, dbTarget, intentSource, status?,
@@ -53,9 +53,18 @@ let results;
 try { results = JSON.parse(readFileSync(resultsPath, 'utf8')); }
 catch (e) { die(`could not parse results json: ${e.message}`); }
 
-// A plain-command post runs without load-config's exports, so read the config itself.
+// A plain-command post runs without load-config's exports, so read the config itself: the file the
+// run selected (--config, or the exported path), which must load, else whatever discovery finds here.
+const configPath = arg('config') || process.env.NM_CONFIG_PATH;
 let cfg = null;
-try { ({ cfg } = loadConfig()); } catch {}
+if (configPath) {
+  const loaded = loadConfig({ configPath });
+  if (!loaded.cfg) die(`config ${configPath}: ${loaded.errors.join('; ')}`);
+  cfg = loaded.cfg;
+} else {
+  try { ({ cfg } = loadConfig()); } catch {}
+  if (!cfg) console.error('[post-results] no .no-mistakes.json found; posting without its API-key header or checkout base');
+}
 const checkoutBase = process.env.NM_CHECKOUT_BASE || expandHome(cfg?.checkoutBase);
 
 const repoBase = repo ? repo.split('/')[1] : null;
