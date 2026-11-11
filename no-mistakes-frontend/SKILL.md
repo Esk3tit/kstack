@@ -252,8 +252,8 @@ Screenshots and clips are already in `~/.no-mistakes/$RUN/`. Build `results.json
 
 Post with one plain command: write the `H`, `HOME` and `RUN` values printed in §0 and §1, the PR
 number and the repo into it as literals, with no variable, `~` or `$(…)`, and run it on its own.
-Single-quote each path argument, since a path can hold a space. The rule that lets a hands-off run
-post is a Claude Code allow rule on the script's absolute path
+Single-quote each path argument, since a path can hold a space, and write any `'` inside it as `'\''`.
+The rule that lets a hands-off run post is a Claude Code allow rule on the script's absolute path
 (`Bash(node <H>/harness/post-evidence.mjs:*)`), and rules match the command as text: a command
 holding a shell variable is never pre-approved, `~/…` does not match a rule on the absolute path,
 and a quoted script path matches only a rule quoted the same way. So write the script path as the
