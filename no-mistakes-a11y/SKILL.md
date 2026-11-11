@@ -176,7 +176,8 @@ or keys.** Build `results.json` in the poster's schema (`$FE/SKILL.md` §8): one
 axis (`"<screen> — keyboard"`, `pass`, `observed`, `evidence`), where an operability blocker is a failed
 case; axe violations and other findings go in `findings`; `revision` = the tested SHA. Post to the
 frontend repo's PR with `$FE/harness/post-evidence.mjs --marker no-mistakes-a11y` (its own
-`<!-- no-mistakes-a11y:start/end -->` block). `pr_post=failed|no-pr` → `summary.md` in the run dir.
+`<!-- no-mistakes-a11y:start/end -->` block), written as one plain command with every path spelled
+out, as `$FE/SKILL.md` §8 posts. `pr_post=failed|no-pr` → `summary.md` in the run dir.
 Verdict is never lost.
 
 ## 9. Confidentiality & data handling

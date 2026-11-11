@@ -168,9 +168,12 @@ only with positive product-misbehavior evidence, else `BLOCKED reason=indetermin
 - **Single-stack routes:** post the specialist's own detail to its repo's PR (the `$FE` gallery / the
   `$BE` request-response-SQL evidence). The router's status mirrors that run.
 - **Fullstack:** each layer's detail posts to its own repo's PR via the specialist posters, then post
-  **one combined verdict header to BOTH PRs**:
+  **one combined verdict header to BOTH PRs**, as one plain command with every path written out, no
+  variable, `~` or `$(…)`, so an allow rule on the script's absolute path matches it (why:
+  `$FE/SKILL.md` §8). `<H>` is what `echo "${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/no-mistakes}"`
+  prints:
   ```bash
-  node "$H/harness/post-fullstack.mjs" --results <results.json>
+  node <H>/harness/post-fullstack.mjs --results <absolute path to results.json>
   ```
   `results.json`:
   ```json

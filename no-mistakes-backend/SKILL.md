@@ -33,7 +33,8 @@ eval "$(node "$H/harness/load-config.mjs" --export)"
 ```
 
 All harness scripts are at `$H/harness/...`. The request / DB-verify / async-poll templates live in
-`$H/harness/snippets.md` — read it and copy the relevant block. Never hardcode `/Users/<name>/...`.
+`$H/harness/snippets.md` — read it and copy the relevant block. Never hardcode `/Users/<name>/...`,
+except in the post command, which spells out the paths `$H` and `$HOME` print on this machine.
 
 The loader discovers the project's `.no-mistakes.json` by walking up from the CWD, else
 `~/.no-mistakes/<project>.json`, and exports the targets this skill drives (`$NM_*`, `$PORTER_*`,
@@ -277,10 +278,19 @@ Collect the run's evidence into `~/.no-mistakes-backend/$RUN/` and build `result
 }
 ```
 
-`request`/`response`/`dbCheck` are **already-redacted** strings (no `Authorization`, no secrets). Post:
+`request`/`response`/`dbCheck` are **already-redacted** strings (no `Authorization`, no secrets).
+
+Post with one plain command. Print the paths once (each shell starts fresh, so not `$H`):
+`echo "${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/no-mistakes-backend}" "$HOME"`. Then write the printed
+values, the run id, the PR number and the repo into the command as literals, with no variable, `~` or
+`$(…)`, and run it on its own. Allow rules (Claude Code's and Codex's) match only a plain command, and
+the rule that lets a hands-off run post is one on the script's absolute path
+(`Bash(node <H>/harness/post-results.mjs:*)`). Claude Code never pre-approves a command holding a
+shell variable, and `~/…` does not match a rule on the absolute path, so either form falls to a
+prompt, or to auto mode, which can block the GitHub write.
 
 ```bash
-node "$H/harness/post-results.mjs" --pr <N> --run-dir ~/.no-mistakes-backend/$RUN --results ~/.no-mistakes-backend/$RUN/results.json --repo <owner/name>
+node <H>/harness/post-results.mjs --pr <N> --run-dir <HOME>/.no-mistakes-backend/<run> --results <HOME>/.no-mistakes-backend/<run>/results.json --repo <owner/name>
 ```
 
 It posts on **two idempotent surfaces** (uniform with `no-mistakes-frontend`, so a future fullstack router gets
