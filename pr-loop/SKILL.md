@@ -6,7 +6,7 @@ description: Take an authorized finished branch or PR to merge-ready through rev
 
 # /pr-loop
 
-Run the whole pre-merge loop on the current branch, and on the same-named branch in any sibling repo the change spans, without stopping to ask. The loop is the same in Claude Code and Codex; `/codexloop` and the recap's second opinion always come from the other model family. The shared skill is authoritative; slash commands are aliases. In Codex, read and follow `~/.codex/prompts/codexloop.md` and `~/.codex/prompts/address-pr-comments.md`; Codex does not execute those prompts itself. In Claude Code, use the corresponding commands under `~/.claude/commands/`. Inside T3, use the injected T3 Code orchestration instructions instead of native CLI transport; they govern delegated review rounds, task tracking and PR watches. The user is away; the recap at the end is how they audit the run, so write each decision to the decision log as it is made (`~/.claude/skills/recap-pr/LEDGER.md`). Every change accepted from any reviewer passes LEDGER's mechanism rule. The run ends with open, converged PRs; merging is the user's call.
+Run the whole pre-merge loop on the current branch, and on the same-named branch in any sibling repo the change spans, without stopping to ask. The loop is the same in Claude Code and Codex; `/codexloop` and the recap's second opinion always come from the other model family. The shared skill is authoritative; slash commands are aliases. In Codex, read and follow `~/.codex/prompts/codexloop.md` and `~/.codex/prompts/address-pr-comments.md`; Codex does not execute those prompts itself. In Claude Code, use the corresponding commands under `~/.claude/commands/`. Inside T3, use the injected T3 Code orchestration instructions instead of native CLI transport; they govern delegated review rounds, task tracking and PR watches. The user is away; the recap at the end is how they audit the run, so write each decision to the decision log as it is made (`~/.claude/skills/recap-pr/LEDGER.md`). Every change accepted from any reviewer passes LEDGER's mechanism rule. The run ends with open, converged PRs, or a design question handed back; merging is the user's call.
 
 Resolve the log key once in the main repo (`log.sh --path` reuses the key the branch already logged under), then run `log.sh --bind <that key>` in each sibling repo's branch, so every repo writes to one log. Collect every key in every participating branch's key file and set them as `RECAP_PIN_KEYS='<keys>'` in front of each `log.sh --pins` call (shell variables do not survive between calls), so `--pins` in any repo reads all of those logs together and every review gets the same settled decisions, including ones logged in a sibling before binding.
 
@@ -20,7 +20,9 @@ Done when each branch's findings are fixed, logged as rejected with a reason, or
 
 When only CI can judge the change (a failure seen only on CI's runners, a suite too heavy to run locally), open a draft PR first. Run `/codexloop --until-converged --base <base>` on each branch; its reviewer is the other model family (Codex from Claude Code, Claude Opus 5.5 from Codex). In a native CLI, use the existing supported cross-family path and keep long Codex work on the plugin's background path.
 
-Done when every branch has converged and its head is on the remote.
+Wherever this run calls `/codexloop`, a `PAUSED` exit (its design pause) stops the run on that branch. With a Fable pass approved, brief it on the cluster as step 5 does and carry its proposal to the user unapplied. Hand back the branch, and its PR if one is open, with the design question as the open item and `Merge-ready: no: design pause`.
+
+Done when every branch has converged and its head is on the remote, or has stopped on a design pause.
 
 ## 3. Open the PRs
 
