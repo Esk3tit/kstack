@@ -91,9 +91,17 @@ Take the next round's scope from the first rule that applies:
 2. HEAD has commits since the last reviewed head → fixes, unless the last round row says `reviewer asks whole-PR next` or `git diff <last reviewed head> HEAD` is empty (an empty commit, or a fix and its revert), which take a whole-PR round instead.
 3. The last round row says `clean` at this head. When that row is a whole-PR round and the round row before it is also `clean` at this head, the loop has converged: exit `STATUS=CLEAN` (on a re-run, `ITERATIONS=0`, and step 4 pushes only what the remote lacks). Otherwise → whole PR.
 
-**Five fixing rounds are a design signal.** Before each round, read the branch's last `design pause` row. While it is `open`, the user's answer is what lifts it: log one the user gave after that row as a row with a round row's fields, source `you`, decision `design pause answered on <branch>: <the answer>` and result `accepted`; with no answer yet, exit `STATUS=PAUSED`. Then, once five of the branch's round rows since its last `accepted` `design pause` row (or since its first round row) say `fixed`, step back: lay their accepted findings side by side and judge whether they cluster, each an edge case of the same state, flow or component. A cluster says the design is edge-case-prone, and the next move is a simpler design, not another round: log a row with a round row's fields, decision `design pause after round <n> on <branch>: <the area>` and result `open`, exit `STATUS=PAUSED` without pushing, and bring the user the cluster, its root cause and a simpler shape. Findings spread across unrelated code carry on, logged the same way with result `accepted`.
-
 Inside T3, each delegated round's brief names its scope (for fixes, the last reviewed head) and carries the same focus lines.
+
+### Design pause
+
+Five fixing rounds clustered in one area say the design is edge-case-prone, and the next move is a simpler design rather than another round. Once the rules above pick a round, run this check before it starts. A **pause row** is a decision-log row whose decision starts `design pause`, with a round row's fields apart from those named here.
+
+1. Read the branch's last pause row. While its result is `open`, only a reply the user gave after it lets the run go on: log that reply as a pause row with source `you`, decision `design pause answered on <branch>: <the answer>` and result `accepted`. With no reply, exit `STATUS=PAUSED`.
+2. Count the branch's round rows that say `fixed`, from its last `accepted` pause row, or else from its first round row. With fewer than five, the round starts.
+3. At five or more, lay those rounds' accepted findings side by side. When most are edge cases of the same state, flow or component, they cluster: log a pause row with decision `design pause after round <n> on <branch>: <the area>` and result `open`, exit `STATUS=PAUSED`, and bring the user the cluster, its root cause and a simpler shape. Otherwise log that row with result `accepted`, and the round starts.
+
+Done when the round has started or the run has exited `PAUSED`.
 
 ## Instructions
 
@@ -115,6 +123,8 @@ Inside T3, each delegated round's brief names its scope (for fixes, the last rev
    ```bash
    git fetch origin <base> --quiet
    ```
+
+   Under `--until-converged`, pick this iteration's round and run the **Design pause** check (Round scope) now.
 
    **b. Run the review call** from the Reviewer section with this focus text, plus, under `--until-converged`, the round's scope and focus lines from **Round scope**:
    ```bash
@@ -165,7 +175,7 @@ Inside T3, each delegated round's brief names its scope (for fixes, the last rev
 3. **Exit conditions:**
    - `STATUS=CLEAN` — the reviewer returned zero findings, or every remaining finding was a rejected nit/flip-flop. Under `--until-converged`: Round scope rule 3's convergence.
    - `STATUS=MAX_ITERATIONS` — hit cap with real findings remaining; print remaining findings for human review and DO NOT push.
-   - `STATUS=PAUSED` — under `--until-converged`, the design pause (Round scope); DO NOT push.
+   - `STATUS=PAUSED` — under `--until-converged`, the **Design pause** check stopped the run; DO NOT push.
    - `STATUS=FAIL ERROR="..."` — reviewer error (non-zero exit with no review output / auth failure / unparseable review), lint/test failure, or merge conflict; DO NOT push.
 
 4. **Post-loop push (only on `STATUS=CLEAN`):**
