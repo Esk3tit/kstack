@@ -18,7 +18,7 @@ Done when each branch's findings are fixed, logged as rejected with a reason, or
 
 ## 2. Cross-family review to convergence
 
-When only CI can judge the change (a failure seen only on CI's runners, a suite too heavy to run locally), open a draft PR first. Run `/codexloop --until-converged --base <base>` on each branch; its reviewer is the other model family (Codex from Claude Code, Claude Opus 5.5 from Codex). Wherever this run calls `/codexloop`, a `PAUSED` exit (five fixing rounds clustered in one area) stops the run on that branch: with a Fable pass approved, run it on the cluster first (step 5), then hand back with the design question as the open item and `Merge-ready: no: design pause`. In a native CLI, use the existing supported cross-family path and keep long Codex work on the plugin's background path.
+When only CI can judge the change (a failure seen only on CI's runners, a suite too heavy to run locally), open a draft PR first. Run `/codexloop --until-converged --base <base>` on each branch; its reviewer is the other model family (Codex from Claude Code, Claude Opus 5.5 from Codex). Wherever this run calls `/codexloop`, a `PAUSED` exit (five fixing rounds clustered in one area) stops the run on that branch. With a Fable pass approved, brief it on the cluster as step 5 does and carry its proposal to the user unapplied. Hand back with the design question as the open item and `Merge-ready: no: design pause`. In a native CLI, use the existing supported cross-family path and keep long Codex work on the plugin's background path.
 
 Done when every branch has converged and its head is on the remote.
 
