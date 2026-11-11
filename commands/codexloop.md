@@ -99,7 +99,7 @@ Five fixing rounds clustered in one area say the design is edge-case-prone, and 
 
 1. Read the branch's last pause row. While its result is `open`, only a reply the user gave after it lets the run go on: log that reply as a pause row with source `you`, decision `design pause answered on <branch>: <the answer>` and result `accepted`. With no reply, exit `STATUS=PAUSED`.
 2. Count the branch's round rows that say `fixed`, from its last `accepted` pause row, or else from its first round row. With fewer than five, the round starts.
-3. Lay those rounds' accepted findings side by side. Spread across unrelated code: log a pause row with decision `design pause after round <n> on <branch>: <the area>` and result `accepted`, and the round starts. Clustered, each an edge case of the same state, flow or component: log that row with result `open`, exit `STATUS=PAUSED` without pushing, and bring the user the cluster, its root cause and a simpler shape.
+3. Lay those rounds' accepted findings side by side. When most are edge cases of the same state, flow or component, they cluster: log a pause row with decision `design pause after round <n> on <branch>: <the area>` and result `open`, exit `STATUS=PAUSED`, and bring the user the cluster, its root cause and a simpler shape. Otherwise log that row with result `accepted`, and the round starts.
 
 Done when the round has started or the run has exited `PAUSED`.
 
@@ -119,12 +119,12 @@ Done when the round has started or the run has exited `PAUSED`.
 2. **Loop: review → fix → repeat.**
    For each iteration (1..max-iterations):
 
-   Under `--until-converged`, each iteration picks its round and runs the **Design pause** check (Round scope) before step b.
-
    **a. Refresh the base ref:**
    ```bash
    git fetch origin <base> --quiet
    ```
+
+   Under `--until-converged`, pick this iteration's round and run the **Design pause** check (Round scope) now.
 
    **b. Run the review call** from the Reviewer section with this focus text, plus, under `--until-converged`, the round's scope and focus lines from **Round scope**:
    ```bash
