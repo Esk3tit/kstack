@@ -257,8 +257,8 @@ The rule that lets a hands-off run post is a Claude Code allow rule on the scrip
 (`Bash(node <H>/harness/post-evidence.mjs:*)`), and rules match the command as text: a command
 holding a shell variable is never pre-approved, `~/…` does not match a rule on the absolute path,
 and a quoted script path matches only a rule quoted the same way. So write the script path as the
-rule spells it: bare, unless `<H>` holds a space; then single-quote it in both the command and the
-rule. Any other form falls to a prompt, or to auto mode, which can block the GitHub write.
+rule spells it: bare when `<H>` holds only letters, digits and `/._-`, otherwise single-quoted like
+the path arguments, in both the command and the rule. Any other form falls to a prompt, or to auto mode, which can block the GitHub write.
 
 ```bash
 node <H>/harness/post-evidence.mjs --pr <N> --run-dir '<HOME>/.no-mistakes/<RUN>' --results '<HOME>/.no-mistakes/<RUN>/results.json' --repo <owner/name>
