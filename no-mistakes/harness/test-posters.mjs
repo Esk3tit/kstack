@@ -82,10 +82,14 @@ function ghStub(home) {
 test('the evidence poster prints a bare command and its allow rule', () => {
   const { home, work } = sandbox();
   frontendRun(home);
-  const r = node(POSTERS.evidence, ['--print-command', '--pr', '25', '--run', RUN, '--repo', REPO], { home, cwd: work });
+  // A copy at a plain path, so the line is bare wherever this checkout lives.
+  const script = join(home, 'skills', 'harness', 'post-evidence.mjs');
+  mkdirSync(dirname(script), { recursive: true });
+  cpSync(POSTERS.evidence, script);
+  const r = node(script, ['--print-command', '--pr', '25', '--run', RUN, '--repo', REPO], { home, cwd: work });
   assert.equal(r.status, 0, r.stderr);
-  assert.equal(r.stdout.trim(), `node ${POSTERS.evidence} --pr 25 --run ${RUN} --repo ${REPO}`);
-  assert.match(r.stderr, new RegExp(`allow rule: Bash\\(node ${POSTERS.evidence.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}:\\*\\)`));
+  assert.equal(r.stdout.trim(), `node ${script} --pr 25 --run ${RUN} --repo ${REPO}`);
+  assert.ok(r.stderr.includes(`allow rule: Bash(node ${script}:*)`), r.stderr);
 });
 
 test('the a11y marker reads its own run root and keeps the marker in the command', () => {
@@ -365,7 +369,7 @@ test('the fullstack poster reads its results from the frontend run', () => {
   fullstackRun(home);
   const r = node(POSTERS.fullstack, ['--print-command', '--run', RUN], { home, cwd: work });
   assert.equal(r.status, 0, r.stderr);
-  assert.equal(r.stdout.trim(), `node ${POSTERS.fullstack} --run ${RUN}`);
+  assert.deepEqual(shellWords(r.stdout.trim()), [POSTERS.fullstack, '--run', RUN]);
   const missing = node(POSTERS.fullstack, ['--print-command', '--run', '20990101-000000-1'], { home, cwd: work });
   assert.equal(missing.status, 1);
   assert.match(missing.stderr, /fullstack\/results\.json/);
