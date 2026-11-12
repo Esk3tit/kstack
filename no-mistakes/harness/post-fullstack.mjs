@@ -5,7 +5,9 @@
 // reviewer on either PR sees the whole-stack status.
 //
 // Usage:
+//   node post-fullstack.mjs --run <id>   (reads ~/.no-mistakes/<id>/fullstack/results.json in the frontend layer's run)
 //   node post-fullstack.mjs --results <results.json>
+//   --print-command (with --run) checks the run and prints the plain command to post it.
 //
 // results.json:
 // {
@@ -23,6 +25,7 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
+import { homedir } from 'node:os';
 
 const MARK_START = '<!-- no-mistakes:start -->';
 const MARK_END = '<!-- no-mistakes:end -->';
@@ -31,8 +34,27 @@ const MARK_REGION = /<!-- no-mistakes:start -->[\s\S]*?<!-- no-mistakes:end -->/
 function die(m) { console.error(`[post-fullstack] ${m}`); process.exit(1); }
 function arg(name) { const i = process.argv.indexOf(`--${name}`); return i !== -1 ? process.argv[i + 1] : undefined; }
 
-const resultsPath = arg('results');
-if (!resultsPath || !existsSync(resultsPath)) die('required: --results <results.json>');
+// --run <id> names a run dir under this poster's root, so the post command holds no path but its own.
+const RUN_ID = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+function runDirFor(id, root) {
+  if (!RUN_ID.test(id)) die(`--run takes a run id such as 20261112-010700-4242, not: ${id}`);
+  return join(homedir(), root, id);
+}
+// Allow rules match the command as text, so each word is bare unless the shell would read it otherwise.
+const shellWord = (s) => (/^[\w@%+=:,./-]+$/.test(s) ? s : `'${s.replace(/'/g, `'\\''`)}'`);
+function printCommand(words) {
+  console.log(['node', process.argv[1], ...words].map(shellWord).join(' '));
+  console.error(`allow rule: Bash(node ${shellWord(process.argv[1])}:*)`);
+  process.exit(0);
+}
+
+const run = arg('run');
+const resultsPath = arg('results') ?? (run && join(runDirFor(run, '.no-mistakes'), 'fullstack', 'results.json'));
+if (!resultsPath || !existsSync(resultsPath)) die(`required: --run <id> with ~/.no-mistakes/<id>/fullstack/results.json, or --results <results.json>${resultsPath ? ` (not found: ${resultsPath})` : ''}`);
+if (process.argv.includes('--print-command')) {
+  if (!run) die('--print-command needs --run <id>');
+  printCommand(['--run', run]);
+}
 let r;
 try { r = JSON.parse(readFileSync(resultsPath, 'utf8')); } catch (e) { die(`bad results json: ${e.message}`); }
 

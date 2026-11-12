@@ -14,7 +14,10 @@
 // are expected to be ALREADY REDACTED by the harness (no Authorization, no secrets).
 //
 // Usage:
+//   node post-results.mjs --pr <N> --run <id> --repo owner/name [--config <.no-mistakes.json>]
 //   node post-results.mjs --pr <N> --run-dir <dir> --results <results.json> [--repo owner/name] [--config <.no-mistakes.json>]
+//   --print-command (with --pr, --run, --repo) checks the run and prints the plain command to post it,
+//   naming the config the run selected ($NM_CONFIG_PATH, else discovery from here or --project).
 //
 // results.json: {
 //   revision, dbTarget, intentSource, status?,
@@ -27,6 +30,7 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { homedir } from 'node:os';
 import { loadConfig, expandHome } from './load-config.mjs';
 
 const MARKER_START = '<!-- no-mistakes-backend:start -->';
@@ -35,19 +39,41 @@ const MARKER_REGION = /<!-- no-mistakes-backend:start -->[\s\S]*?<!-- no-mistake
 const MARKER_EVIDENCE = '<!-- no-mistakes-backend:evidence -->';
 
 function die(msg) { console.error(`[post-results] ${msg}`); process.exit(1); }
+
+// --run <id> names a run dir under this poster's root, so the post command holds no path but its own.
+const RUN_ID = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+function runDirFor(id, root) {
+  if (!RUN_ID.test(id)) die(`--run takes a run id such as 20261112-010700-4242, not: ${id}`);
+  return join(homedir(), root, id);
+}
+// Allow rules match the command as text, so each word is bare unless the shell would read it otherwise.
+const shellWord = (s) => (/^[\w@%+=:,./-]+$/.test(s) ? s : `'${s.replace(/'/g, `'\\''`)}'`);
+function printCommand(words) {
+  console.log(['node', process.argv[1], ...words].map(shellWord).join(' '));
+  console.error(`allow rule: Bash(node ${shellWord(process.argv[1])}:*)`);
+  process.exit(0);
+}
 function arg(name, fallback) {
   const i = process.argv.indexOf(`--${name}`);
   return i !== -1 && process.argv[i + 1] ? process.argv[i + 1] : fallback;
 }
 
 const pr = arg('pr');
-const runDir = arg('run-dir');
-const resultsPath = arg('results');
+const run = arg('run');
+const runDir = arg('run-dir') ?? (run && runDirFor(run, '.no-mistakes-backend'));
+const resultsPath = arg('results') ?? (runDir && join(runDir, 'results.json'));
 let repo = arg('repo');
 
-if (!runDir || !resultsPath) die('required: --run-dir <dir> --results <results.json>');
+if (!runDir || !resultsPath) die('required: --run <id>, or --run-dir <dir> --results <results.json>');
 if (!existsSync(runDir)) die(`run-dir not found: ${runDir}`);
 if (!existsSync(resultsPath)) die(`results not found: ${resultsPath}`);
+if (process.argv.includes('--print-command')) {
+  if (!/^\d+$/.test(pr ?? '') || !run || !/^[\w.-]+\/[\w.-]+$/.test(repo ?? '')) die('--print-command needs --pr <N> --run <id> --repo owner/name');
+  const selected = arg('config') || process.env.NM_CONFIG_PATH || loadConfig({ project: arg('project') }).path;
+  if (selected && !loadConfig({ configPath: selected }).cfg) die(`config ${selected} does not load`);
+  if (!selected) console.error('[post-results] no .no-mistakes.json found; the post will run without its API-key header');
+  printCommand(['--pr', pr, '--run', run, '--repo', repo, ...(selected ? ['--config', selected] : [])]);
+}
 
 let results;
 try { results = JSON.parse(readFileSync(resultsPath, 'utf8')); }

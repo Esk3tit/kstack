@@ -25,7 +25,6 @@ This file is the runtime playbook. Follow the steps in order. Stop and emit the 
 ```bash
 H="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/no-mistakes-frontend}"
 eval "$(node "$H/harness/load-config.mjs" --export)"   # NM_*, NMF_*, PORTER_*, NM_API_KEY_HEADER, …
-echo "H=$H HOME=$HOME"   # §8 writes these out
 ```
 
 The loader **discovers** `.no-mistakes.json` by walking up from CWD, else
@@ -43,8 +42,7 @@ under test with `node "$H/harness/load-config.mjs" --app <name>` (or `--app-map`
 All harness scripts are at `$H/harness/...`. The agent-browser templates (auth / recon / clip /
 capture+audit) live in `$H/harness/snippets.md` — read it, copy the relevant block, and fill its placeholders;
 they are verified-live and parameterized by the app's config fields. Never hardcode
-`/Users/<name>/...`; the only fixed local paths are the apps' `repoPath`s from config, and the post
-command in §8, which spells out the paths §0 prints on this machine.
+`/Users/<name>/...`; the only fixed local paths are the apps' `repoPath`s from config.
 
 ## 1. Preflight (gate)
 
@@ -78,7 +76,7 @@ command in §8, which spells out the paths §0 prints on this machine.
    profile's `secretsScopeDir`. If unresolvable: `NOMISTAKES_FRONTEND_STATUS=BLOCKED reason=no-creds`.
 6. **Run id + evidence dir.** Generate a run id, e.g. `RUN="$(date +%Y%m%d-%H%M%S)-$$"`. Evidence dir = `~/.no-mistakes/$RUN/`. Reject
    any caller-supplied evidence dir that resolves **inside a product checkout** (fall back to the
-   default). `mkdir -p ~/.no-mistakes/$RUN && echo "RUN=$RUN"` (§8 writes it out).
+   default). `mkdir -p ~/.no-mistakes/$RUN && echo "RUN=$RUN"`: §8 names the run by that id.
 
 ## 2. Derive test cases (gate)
 
@@ -250,19 +248,17 @@ Screenshots and clips are already in `~/.no-mistakes/$RUN/`. Build `results.json
   with its persona/data. Never a repeat of the automated cases.
 - `setup` — rendered collapsed. `previewUrl` (preview runs only) — rendered as **Open the preview UI →**.
 
-Post with one plain command: write the `H`, `HOME` and `RUN` values printed in §0 and §1, the PR
-number and the repo into it as literals, with no variable, `~` or `$(…)`, and run it on its own.
-Single-quote each path argument, since a path can hold a space, and write any `'` inside it as `'\''`.
-The rule that lets a hands-off run post is a Claude Code allow rule on the script's absolute path
-(`Bash(node <H>/harness/post-evidence.mjs:*)`), and rules match the command as text: a command
-holding a shell variable is never pre-approved, `~/…` does not match a rule on the absolute path,
-and a quoted script path matches only a rule quoted the same way. So write the script path as the
-rule spells it: bare when `<H>` holds only letters, digits and `/._-`, otherwise single-quoted like
-the path arguments, in both the command and the rule. Any other form falls to a prompt, or to auto mode, which can block the GitHub write.
+Post in two steps. First print the post command (this only checks the run and prints):
 
 ```bash
-node <H>/harness/post-evidence.mjs --pr <N> --run-dir '<HOME>/.no-mistakes/<RUN>' --results '<HOME>/.no-mistakes/<RUN>/results.json' --repo <owner/name>
+H="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/no-mistakes-frontend}"
+node "$H/harness/post-evidence.mjs" --print-command --pr <N> --run <RUN> --repo <owner/name>
 ```
+
+Then run the line it prints, exactly as printed and on its own. That line has every path written
+out, so an allow rule on the poster (stderr shows the rule's exact spelling) approves it without a
+prompt. A command holding a shell variable never matches a rule, so posting any other way falls to a
+prompt, or to auto mode, which can block the GitHub write.
 
 It posts on **two idempotent surfaces**:
 

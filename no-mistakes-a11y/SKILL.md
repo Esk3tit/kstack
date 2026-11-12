@@ -39,7 +39,6 @@ widget, reflow check) and `docs/adr/` for why this is a separate skill. Emit exa
 A="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/no-mistakes-a11y}"
 FE="$HOME/.claude/skills/no-mistakes-frontend"   # reuse its auth + recon snippets, evidence poster
 eval "$(node "$A/harness/load-config.mjs" --export)" || exit 2
-echo "FE=$FE HOME=$HOME"   # §8 writes these out
 ```
 
 The loader discovers the per-project config by walking up from CWD for `.no-mistakes.json`, else
@@ -177,9 +176,9 @@ or keys.** Build `results.json` in the poster's schema (`$FE/SKILL.md` §8): one
 axis (`"<screen> — keyboard"`, `pass`, `observed`, `evidence`), where an operability blocker is a failed
 case; axe violations and other findings go in `findings`; `revision` = the tested SHA. Post to the
 frontend repo's PR with `$FE/harness/post-evidence.mjs --marker no-mistakes-a11y` (its own
-`<!-- no-mistakes-a11y:start/end -->` block), as one plain command with the `FE`, `HOME` and `RUN`
-values printed in §0 and §1 written out (why: `$FE/SKILL.md` §8):
-`node <FE>/harness/post-evidence.mjs --marker no-mistakes-a11y --pr <N> --run-dir '<HOME>/.no-mistakes-a11y/<RUN>' --results '<HOME>/.no-mistakes-a11y/<RUN>/results.json' --repo <owner/name>`. `pr_post=failed|no-pr` → `summary.md` in the run dir.
+`<!-- no-mistakes-a11y:start/end -->` block), the way `$FE/SKILL.md` §8 posts: print the command with
+`node "$FE/harness/post-evidence.mjs" --print-command --marker no-mistakes-a11y --pr <N> --run <RUN> --repo <owner/name>`
+(with `FE` set as in §0), then run the line it prints, exactly as printed. `pr_post=failed|no-pr` → `summary.md` in the run dir.
 Verdict is never lost.
 
 ## 9. Confidentiality & data handling

@@ -147,14 +147,13 @@ All user-authored, and the same files serve Claude Code and Codex. Reviews come 
   examples live in `no-mistakes/config/` — `examples/promptarmor.no-mistakes.json` reproduces the
   original PromptArmor setup (Neon project `round-unit-34763685`, Porter project 8417 / cluster 3429,
   PropelAuth/MOFFITT), `examples/supabase.no-mistakes.json` proves multi-BaaS generality.
-  Each `SKILL.md` is the runtime playbook; `scripts/setup.sh` checks tooling. For a hands-off run to
-  post to the PR without a prompt, allow each poster in `~/.claude/settings.json` by the absolute path
-  the skills print in their step 0 (on macOS with the links below,
-  `Bash(node /Users/<you>/.claude/skills/no-mistakes-frontend/harness/post-evidence.mjs:*)`, and the
-  same for `no-mistakes/harness/post-fullstack.mjs` and `no-mistakes-backend/harness/post-results.mjs`).
-  The skills post with that path spelled out, because Claude Code matches rules against the command
-  as text, never one holding a variable or `~`. If the path holds anything besides letters, digits
-  and `/._-`, the skills single-quote it (a `'` inside as `'\''`), so write the rule the same way.
+  Each `SKILL.md` is the runtime playbook; `scripts/setup.sh` checks tooling. Each poster
+  (`post-evidence.mjs`, `post-results.mjs`, `post-fullstack.mjs`) takes a run id and, with
+  `--print-command`, prints the plain command that posts that run plus the allow rule that approves
+  it, e.g. `Bash(node /Users/<you>/.claude/skills/no-mistakes-frontend/harness/post-evidence.mjs:*)`.
+  Add those rules to `~/.claude/settings.json` so a hands-off run posts without a prompt; Claude Code
+  matches rules against the command as text and never approves one holding a shell variable. After
+  changing a poster, run `node --test no-mistakes/harness/test-posters.mjs`.
 
 - **`wide-event-logging/`** — implement wide event logging (canonical log lines) in Python/FastAPI:
   `SKILL.md` + reference modules (`config.py`, `context.py`, `middleware.py`, `security.py`, `usage.py`)
