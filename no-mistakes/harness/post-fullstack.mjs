@@ -61,7 +61,6 @@ const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v)
 if (!isObject(r) || ['frontend', 'backend', 'preview'].some((k) => r[k] != null && !isObject(r[k]))
   || (r.roundtrip != null && !(Array.isArray(r.roundtrip) && r.roundtrip.every(isObject))))
   die('results must be an object, with frontend/backend/preview objects and roundtrip a list of {name, pass}');
-if (printing) printCommand(['--run', run]);
 
 const badge = (s) => (s === 'PASS' ? '✅ PASS' : s === 'FAIL' ? '❌ FAIL' : s === 'BLOCKED' ? '⚠️ BLOCKED' : (s || '—'));
 const mark = (s) => (s === 'PASS' ? '✅' : s === 'FAIL' ? '❌' : s === 'BLOCKED' ? '⚠️' : '—');
@@ -112,7 +111,10 @@ function spliceBody(body, block) {
 
 function gh(args) { return execFileSync('gh', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim(); }
 
-const header = buildHeader();
+// Render once before printing, so results the post would crash on stop here.
+let header;
+try { header = buildHeader(); } catch (e) { die(`results do not render: ${e.message}`); }
+if (printing) printCommand(['--run', run]);
 const targets = [fe, be].filter((s) => s.repo && s.pr);
 if (targets.length === 0) {
   const f = join(dirname(resultsPath), 'summary.md');

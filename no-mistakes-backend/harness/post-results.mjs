@@ -178,7 +178,10 @@ function spliceIntoBody(currentBody, block) {
   return body ? `${block}\n\n${body}` : block;
 }
 
-const evidenceBody = buildEvidence();
+// Render once before printing, so results the post would crash on stop here.
+let evidenceBody;
+try { evidenceBody = buildEvidence(); buildBodyBlock(null); }
+catch (e) { die(`results do not render: ${e.message}`); }
 
 // --- No-PR path: persist both surfaces locally. -----------------------------
 const summaryFile = join(runDir, 'summary.md');

@@ -103,8 +103,6 @@ const present = new Set(readdirSync(runDir));
 // gh --attach reads '#' as the alt-text separator and markdown links break on spaces, so names stay plain.
 const unusable = media.filter((f) => !present.has(f) || !(IMAGE.test(f) || VIDEO.test(f)) || !/^[\w.-]+$/.test(f));
 if (unusable.length) die(`evidence must be a plain-named image/video in --run-dir: ${unusable.join(', ')}`);
-if (printing) printCommand([...(pr ? ['--pr', pr] : []), '--run', run, ...(repo ? ['--repo', repo] : []),
-  ...(marker === 'no-mistakes-frontend' ? [] : ['--marker', marker])]);
 const cell = (s) => String(s ?? '').replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\n/g, ' ');
 
 function findingsLines() {
@@ -197,7 +195,12 @@ function spliceIntoBody(currentBody, block) {
   return body ? `${block}\n\n${body}` : block;
 }
 
-const galleryBody = media.length || findings.length ? buildGallery() : null;
+// Render once before printing, so results the post would crash on stop here.
+let galleryBody;
+try { galleryBody = media.length || findings.length ? buildGallery() : null; buildBodyBlock({}); }
+catch (e) { die(`results do not render: ${e.message}`); }
+if (printing) printCommand([...(pr ? ['--pr', pr] : []), '--run', run, ...(repo ? ['--repo', repo] : []),
+  ...(marker === 'no-mistakes-frontend' ? [] : ['--marker', marker])]);
 
 const summaryFile = join(runDir, 'summary.md');
 function persistAndExit(status, ctx = {}) {

@@ -336,7 +336,8 @@ test('--print-command validates the results as the post would, and prints nothin
 });
 
 const MALFORMED = {
-  evidence: { root: '.no-mistakes', file: 'results.json', bad: [null, [], { cases: [null] }], args: ['--pr', '25', '--repo', REPO] },
+  evidence: { root: '.no-mistakes', file: 'results.json', args: ['--pr', '25', '--repo', REPO],
+    bad: [null, [], { cases: [null] }, { revision: 'abc1234', cases: [{ name: 'a', pass: false }], howToTest: [null] }] },
   results: { root: '.no-mistakes-backend', file: 'results.json', bad: [null, [], { cases: [null] }, { cases: 'x' }], args: ['--pr', '25', '--repo', REPO] },
   fullstack: { root: '.no-mistakes', file: 'fullstack/results.json', bad: [null, [], { frontend: 'x' }, { roundtrip: [null] }, { roundtrip: {} }], args: [] },
 };
