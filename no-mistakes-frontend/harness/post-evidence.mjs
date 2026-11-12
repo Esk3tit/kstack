@@ -71,6 +71,8 @@ if (printing && (!run || (pr && (!/^\d+$/.test(pr) || !repo)) || (repo && !/^[\w
 let results;
 try { results = JSON.parse(readFileSync(resultsPath, 'utf8')); }
 catch (e) { die(`could not parse results json: ${e.message}`); }
+const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+if (!isObject(results)) die('results json must be an object');
 
 const MARKER_START = `<!-- ${marker}:start -->`;
 const MARKER_END = `<!-- ${marker}:end -->`;
@@ -87,11 +89,12 @@ const VIDEO = /\.(mp4|webm|mov)$/i;
 const cases = Array.isArray(results.cases) ? results.cases : [];
 if (results.status && results.status !== 'BLOCKED') die('results.status only takes "BLOCKED"; PASS/FAIL come from the cases');
 const blocked = results.status === 'BLOCKED';
-if ((!cases.length && !blocked) || cases.some((c) => typeof c.pass !== 'boolean'))
+if ((!cases.length && !blocked) || cases.some((c) => typeof c?.pass !== 'boolean'))
   die('results.cases must be non-empty (unless BLOCKED), each with a boolean "pass"');
 const status = blocked ? 'BLOCKED' : cases.every((c) => c.pass) ? 'PASS' : 'FAIL';
 if (status === 'PASS' && !/^[0-9a-f]{7,40}\b/i.test(String(results.revision ?? ''))) die('a PASS needs results.revision to start with the tested commit SHA');
 const findings = Array.isArray(results.findings) ? results.findings : [];
+if (!findings.every(isObject)) die('results.findings must be a list of objects');
 const list = (v) => (Array.isArray(v) ? v : v ? [v] : []);
 // Only captures a case or finding names are published; anything else in the run dir stays local.
 const media = [...new Set([...cases.flatMap((c) => [...list(c.before), ...list(c.evidence)]),

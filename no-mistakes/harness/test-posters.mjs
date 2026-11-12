@@ -156,9 +156,9 @@ for (const [name, makeRun] of [['evidence', frontendRun], ['results', backendRun
     const { home } = sandbox();
     const dir = makeRun(home);
     const cwd = join(home, 'no-git');
-    mkdirSync(cwd);
+    config(cwd);
     const { printed, posted } = printThenRun(POSTERS[name], ['--run', RUN], { home, cwd });
-    assert.doesNotMatch(printed.stdout, /--pr|--repo/);
+    assert.doesNotMatch(printed.stdout, / --pr | --repo /);
     assert.match(posted.stdout, /pr_post=no-pr/);
     assert.ok(existsSync(join(dir, 'summary.md')));
   });
@@ -237,10 +237,11 @@ for (const [name, cfg] of Object.entries(BROKEN_CONFIGS)) {
   });
 }
 
-test('with no config found, the results poster posts nothing and keeps the summary', () => {
+test('with no config found, the results poster posts nothing and keeps the summary, PR or not', () => {
   const { home, work } = sandbox();
   const dir = backendRun(home);
   assertBlocked(home, dir, ['--pr', '25', '--run', RUN, '--repo', REPO], { home, cwd: work }, /no \.no-mistakes\.json found/);
+  assertBlocked(home, dir, ['--run', RUN], { home, cwd: work }, /no \.no-mistakes\.json found/);
 });
 
 test('the printer takes the loader\'s --project and --cwd, and names the config they select', () => {
@@ -329,6 +330,28 @@ test('--print-command validates the results as the post would, and prints nothin
   assert.match(r.stderr, /results\.status only takes "BLOCKED"/);
   assert.equal(r.stdout, '');
 });
+
+const MALFORMED = {
+  evidence: { root: '.no-mistakes', file: 'results.json', bad: [null, [], { cases: [null] }], args: ['--pr', '25', '--repo', REPO] },
+  results: { root: '.no-mistakes-backend', file: 'results.json', bad: [null, [], { cases: [null] }, { cases: 'x' }], args: ['--pr', '25', '--repo', REPO] },
+  fullstack: { root: '.no-mistakes', file: 'fullstack/results.json', bad: [null, [], { frontend: 'x' }, { roundtrip: [null] }, { roundtrip: {} }], args: [] },
+};
+for (const [name, { root, file, bad, args }] of Object.entries(MALFORMED)) {
+  test(`the ${name} poster refuses malformed results before printing`, () => {
+    const { home, work } = sandbox();
+    config(work);
+    const path = join(home, root, RUN, file);
+    mkdirSync(dirname(path), { recursive: true });
+    for (const results of bad) {
+      writeFileSync(path, JSON.stringify(results));
+      const r = node(POSTERS[name], ['--print-command', '--run', RUN, ...args], { home, cwd: work });
+      assert.equal(r.status, 1, JSON.stringify(results));
+      assert.equal(r.stdout, '', JSON.stringify(results));
+      assert.match(r.stderr, /results/, JSON.stringify(results));
+      assert.doesNotMatch(r.stderr, /TypeError/, JSON.stringify(results));
+    }
+  });
+}
 
 test('an unknown marker is fine when --run-dir names the run', () => {
   const { home, work } = sandbox();

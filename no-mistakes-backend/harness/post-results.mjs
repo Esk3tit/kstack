@@ -77,6 +77,9 @@ if (printing && (!run || (pr && (!/^\d+$/.test(pr) || !repo)) || (repo && !/^[\w
 let results;
 try { results = JSON.parse(readFileSync(resultsPath, 'utf8')); }
 catch (e) { die(`could not parse results json: ${e.message}`); }
+const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+if (!isObject(results) || (results.cases != null && !(Array.isArray(results.cases) && results.cases.every(isObject))))
+  die('results json must be an object whose cases are a list of objects');
 
 // A plain-command post runs without load-config's exports, so it loads the config itself.
 const selectedConfig = arg('config') || process.env.NM_CONFIG_PATH;
@@ -187,11 +190,11 @@ function persistAndExit(status, evidenceUrl = null) {
   process.exit(status === 'ok' ? 0 : 1);
 }
 
+if (configError) persistAndExit('failed');
 if (!pr) {
   if (printing) printCommand(['--run', run, ...(repo ? ['--repo', repo] : []), ...configWords]);
   persistAndExit('no-pr');
 }
-if (configError) persistAndExit('failed');
 if (printing) printCommand(['--pr', pr, '--run', run, '--repo', repo, ...configWords]);
 
 const checkoutBase = process.env.NM_CHECKOUT_BASE || expandHome(cfg?.checkoutBase);

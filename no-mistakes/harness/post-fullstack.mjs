@@ -57,6 +57,10 @@ if (!resultsPath || !existsSync(resultsPath)) die(`required: --run <id> with ~/.
 if (printing && !run) die('--print-command needs --run <id>');
 let r;
 try { r = JSON.parse(readFileSync(resultsPath, 'utf8')); } catch (e) { die(`bad results json: ${e.message}`); }
+const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+if (!isObject(r) || ['frontend', 'backend', 'preview'].some((k) => r[k] != null && !isObject(r[k]))
+  || (r.roundtrip != null && !(Array.isArray(r.roundtrip) && r.roundtrip.every(isObject))))
+  die('results must be an object, with frontend/backend/preview objects and roundtrip a list of {name, pass}');
 if (printing) printCommand(['--run', run]);
 
 const badge = (s) => (s === 'PASS' ? '✅ PASS' : s === 'FAIL' ? '❌ FAIL' : s === 'BLOCKED' ? '⚠️ BLOCKED' : (s || '—'));
