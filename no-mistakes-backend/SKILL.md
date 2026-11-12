@@ -292,7 +292,8 @@ node "$H/harness/post-results.mjs" --print-command --pr <N> --run <RUN> --repo <
 Then run the line it prints, exactly as printed and on its own. That line has every path written
 out, so an allow rule on the poster (stderr shows the rule's exact spelling) approves it without a
 prompt; posting any other way falls to a prompt, or to auto mode, which can block the GitHub write.
-The poster loads the config the line names for its redaction and stops if that config does not load.
+With no open PR, leave out `--pr <N>`. The poster loads the config the line names for its redaction;
+if that config does not load, it posts nothing and keeps `summary.md` (`pr_post=failed`).
 
 It posts on **two idempotent surfaces** (uniform with `no-mistakes-frontend`, so a future fullstack router gets
 one shape from both skills):

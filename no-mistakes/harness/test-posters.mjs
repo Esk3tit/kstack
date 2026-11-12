@@ -1,9 +1,9 @@
-// Checks the posters' --run and --print-command modes without touching GitHub: no case passes --pr
-// to a real post, so nothing reaches gh. Run with: node --test no-mistakes/harness/test-posters.mjs
+// Checks the posters' --run and --print-command modes without touching GitHub: a real post either has
+// no --pr or runs with PATH=/nonexistent, so nothing reaches gh. Run: node --test no-mistakes/harness/test-posters.mjs
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, cpSync, existsSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, cpSync, existsSync, realpathSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -18,7 +18,8 @@ const RUN = '20261112-010700-4242';
 const REPO = 'acme/api';
 
 function sandbox() {
-  const home = mkdtempSync(join(tmpdir(), 'nm-posters-'));
+  // realpath: macOS's temp dir is a symlink, and the posters print real paths.
+  const home = realpathSync(mkdtempSync(join(tmpdir(), 'nm-posters-')));
   const work = join(home, 'work');
   mkdirSync(work);
   return { home, work };
@@ -117,17 +118,41 @@ test('run ids that are not plain names are refused', () => {
   }
 });
 
-test('a missing run or missing --repo stops before printing', () => {
+test('a missing run, or a PR without --repo, stops before printing', () => {
   const { home, work } = sandbox();
   let r = node(POSTERS.evidence, ['--print-command', '--pr', '25', '--run', RUN, '--repo', REPO], { home, cwd: work });
   assert.equal(r.status, 1);
   assert.match(r.stderr, /run-dir not found/);
   frontendRun(home);
-  r = node(POSTERS.evidence, ['--print-command', '--pr', '25', '--run', RUN], { home, cwd: work });
-  assert.equal(r.status, 1);
-  assert.match(r.stderr, /needs --pr <N> --run <id> --repo owner\/name/);
-  assert.equal(r.stdout, '');
+  for (const args of [['--pr', '25'], ['--pr', 'x', '--repo', REPO], ['--repo', 'acme']]) {
+    r = node(POSTERS.evidence, ['--print-command', '--run', RUN, ...args], { home, cwd: work });
+    assert.equal(r.status, 1, args.join(' '));
+    assert.match(r.stderr, /needs --run <id>, plus --pr <N> --repo owner\/name/);
+    assert.equal(r.stdout, '');
+  }
 });
+
+// The print-first flow must reach the same local summary a direct post writes.
+function printThenRun(script, args, opts) {
+  const printed = node(script, ['--print-command', ...args], opts);
+  assert.equal(printed.status, 0, printed.stderr);
+  const words = shellWords(printed.stdout.trim());
+  assert.equal(words[0], script);
+  return { printed, posted: node(script, words.slice(1), { ...opts, env: { PATH: '/nonexistent', ...opts.env } }) };
+}
+
+for (const [name, makeRun] of [['evidence', frontendRun], ['results', backendRun]]) {
+  test(`with no PR, the ${name} poster prints a command that saves the local summary`, () => {
+    const { home } = sandbox();
+    const dir = makeRun(home);
+    const cwd = join(home, 'no-git');
+    mkdirSync(cwd);
+    const { printed, posted } = printThenRun(POSTERS[name], ['--run', RUN], { home, cwd });
+    assert.doesNotMatch(printed.stdout, /--pr|--repo/);
+    assert.match(posted.stdout, /pr_post=no-pr/);
+    assert.ok(existsSync(join(dir, 'summary.md')));
+  });
+}
 
 test('--run finds the evidence run without a PR, writing the local summary', () => {
   const { home, work } = sandbox();
@@ -166,31 +191,31 @@ test('a selected config that does not load blocks the post but keeps the local s
   const dir = backendRun(home);
   const bad = join(home, 'bad.json');
   writeFileSync(bad, '{oops');
-  const printed = node(POSTERS.results, ['--print-command', '--pr', '25', '--run', RUN, '--repo', REPO], { home, cwd: work, env: { NM_CONFIG_PATH: bad } });
-  assert.equal(printed.status, 1);
+  // --pr is given, but the config check stops the printed line before any gh call.
+  const { printed, posted } = printThenRun(POSTERS.results, ['--pr', '25', '--run', RUN, '--repo', REPO], { home, cwd: work, env: { NM_CONFIG_PATH: bad } });
   assert.match(printed.stderr, /does not load/);
-  assert.equal(printed.stdout, '');
-  // --pr is given, but the config check stops it before any gh call.
-  const posted = node(POSTERS.results, ['--pr', '25', '--run', RUN, '--repo', REPO, '--config', bad], { home, cwd: work, env: { PATH: '/nonexistent' } });
+  assert.deepEqual(shellWords(printed.stdout.trim()).slice(-2), ['--config', bad]);
   assert.equal(posted.status, 1);
   assert.match(posted.stdout, /pr_post=failed/);
   assert.match(posted.stderr, /does not load/);
   assert.ok(existsSync(join(dir, 'summary.md')));
 });
 
-test('a discovered config that does not load is named, not reported missing', () => {
+test('a discovered config that does not load is named and blocks the post', () => {
   const { home } = sandbox();
   backendRun(home);
   const project = join(home, 'project');
   mkdirSync(project);
   writeFileSync(join(project, '.no-mistakes.json'), JSON.stringify({ project: 'acme', auth: { apiKeyHeader: 'x-acme-key' } }));
-  const printed = node(POSTERS.results, ['--print-command', '--pr', '25', '--run', RUN, '--repo', REPO], { home, cwd: project });
-  assert.equal(printed.status, 1);
-  assert.match(printed.stderr, /does not load/);
-  const posted = node(POSTERS.results, ['--run', RUN, '--repo', REPO], { home, cwd: project });
-  assert.match(posted.stdout, /pr_post=no-pr/);
-  assert.match(posted.stderr, /\.no-mistakes\.json does not load/);
-  assert.doesNotMatch(posted.stderr, /no \.no-mistakes\.json found/);
+  const { printed, posted } = printThenRun(POSTERS.results, ['--pr', '25', '--run', RUN, '--repo', REPO], { home, cwd: project });
+  assert.match(printed.stderr, /\.no-mistakes\.json does not load/);
+  assert.doesNotMatch(printed.stderr, /no \.no-mistakes\.json found/);
+  assert.equal(posted.status, 1);
+  assert.match(posted.stdout, /pr_post=failed/);
+  // A direct post that finds the same config stops there too.
+  const direct = node(POSTERS.results, ['--pr', '25', '--run', RUN, '--repo', REPO], { home, cwd: project, env: { PATH: '/nonexistent' } });
+  assert.match(direct.stdout, /pr_post=failed/);
+  assert.match(direct.stderr, /\.no-mistakes\.json does not load/);
 });
 
 test('an exported header and the config\'s header are both redacted', () => {

@@ -10,8 +10,8 @@
 // Usage:
 //   node post-evidence.mjs --pr <N> --run <id> --repo owner/name [--marker <name>]
 //   node post-evidence.mjs --pr <N> --run-dir <dir> --results <results.json> [--repo owner/name] [--marker <name>]
-//   --print-command (with --pr, --run, --repo) validates the run as a post would, then prints the plain
-//   command that posts it (stdout) and the allow rule that approves that command (stderr).
+//   --print-command (with --run, plus --pr and --repo when the PR is open) validates the run as a post
+//   would, then prints the plain command that posts it (stdout) and the allow rule that approves it (stderr).
 //
 // results.json:
 //   { revision, intentSource, status?:"BLOCKED", previewUrl?, gaps?:[string], setup?:markdown,
@@ -65,7 +65,8 @@ let repo = arg('repo');
 if (!runDir || !resultsPath) die('required: --run <id>, or --run-dir <dir> --results <results.json>');
 if (!existsSync(runDir)) die(`run-dir not found: ${runDir}`);
 if (!existsSync(resultsPath)) die(`results not found: ${resultsPath}`);
-if (printing && (!/^\d+$/.test(pr ?? '') || !run || !/^[\w.-]+\/[\w.-]+$/.test(repo ?? ''))) die('--print-command needs --pr <N> --run <id> --repo owner/name');
+if (printing && (!run || (pr && (!/^\d+$/.test(pr) || !repo)) || (repo && !/^[\w.-]+\/[\w.-]+$/.test(repo))))
+  die('--print-command needs --run <id>, plus --pr <N> --repo owner/name when the PR is open');
 
 let results;
 try { results = JSON.parse(readFileSync(resultsPath, 'utf8')); }
@@ -99,7 +100,8 @@ const present = new Set(readdirSync(runDir));
 // gh --attach reads '#' as the alt-text separator and markdown links break on spaces, so names stay plain.
 const unusable = media.filter((f) => !present.has(f) || !(IMAGE.test(f) || VIDEO.test(f)) || !/^[\w.-]+$/.test(f));
 if (unusable.length) die(`evidence must be a plain-named image/video in --run-dir: ${unusable.join(', ')}`);
-if (printing) printCommand(['--pr', pr, '--run', run, '--repo', repo, ...(marker === 'no-mistakes-frontend' ? [] : ['--marker', marker])]);
+if (printing) printCommand([...(pr ? ['--pr', pr] : []), '--run', run, ...(repo ? ['--repo', repo] : []),
+  ...(marker === 'no-mistakes-frontend' ? [] : ['--marker', marker])]);
 const cell = (s) => String(s ?? '').replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\n/g, ' ');
 
 function findingsLines() {

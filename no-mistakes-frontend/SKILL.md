@@ -258,7 +258,8 @@ node "$H/harness/post-evidence.mjs" --print-command --pr <N> --run <RUN> --repo 
 Then run the line it prints, exactly as printed and on its own. That line has every path written
 out, so an allow rule on the poster (stderr shows the rule's exact spelling) approves it without a
 prompt. A command holding a shell variable never matches a rule, so posting any other way falls to a
-prompt, or to auto mode, which can block the GitHub write.
+prompt, or to auto mode, which can block the GitHub write. With no open PR, leave out `--pr <N>`: the
+printed line then keeps the evidence locally (`pr_post=no-pr`).
 
 It posts on **two idempotent surfaces**:
 

@@ -16,17 +16,17 @@
 // Usage:
 //   node post-results.mjs --pr <N> --run <id> --repo owner/name [--config <.no-mistakes.json>]
 //   node post-results.mjs --pr <N> --run-dir <dir> --results <results.json> [--repo owner/name] [--config <.no-mistakes.json>]
-//   --print-command (with --pr, --run, --repo) validates the run as a post would, then prints the plain
-//   command that posts it (stdout), naming the config the run selected ($NM_CONFIG_PATH, else discovery
-//   from here or --project), and the allow rule that approves that command (stderr).
+//   --print-command (with --run, plus --pr and --repo when the PR is open) validates the run as a post
+//   would, then prints the plain command that posts it (stdout), naming the config the run selected
+//   ($NM_CONFIG_PATH, else discovery from here or --project), and the allow rule that approves it (stderr).
 //
 // results.json: {
 //   revision, dbTarget, intentSource, status?,
 //   cases: [{ name, pass, request, response, dbCheck }]
 // }
 //
-// On no-PR / gh failure: writes <run-dir>/summary.md, prints pr_post=no-pr | pr_post=failed,
-// exits non-zero — the verdict is never lost.
+// On no-PR / a config that does not load / gh failure: writes <run-dir>/summary.md, prints
+// pr_post=no-pr | pr_post=failed, exits non-zero — the verdict is never lost.
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
@@ -70,7 +70,8 @@ let repo = arg('repo');
 if (!runDir || !resultsPath) die('required: --run <id>, or --run-dir <dir> --results <results.json>');
 if (!existsSync(runDir)) die(`run-dir not found: ${runDir}`);
 if (!existsSync(resultsPath)) die(`results not found: ${resultsPath}`);
-if (printing && (!/^\d+$/.test(pr ?? '') || !run || !/^[\w.-]+\/[\w.-]+$/.test(repo ?? ''))) die('--print-command needs --pr <N> --run <id> --repo owner/name');
+if (printing && (!run || (pr && (!/^\d+$/.test(pr) || !repo)) || (repo && !/^[\w.-]+\/[\w.-]+$/.test(repo))))
+  die('--print-command needs --run <id>, plus --pr <N> --repo owner/name when the PR is open');
 
 let results;
 try { results = JSON.parse(readFileSync(resultsPath, 'utf8')); }
@@ -83,29 +84,13 @@ let loaded;
 try { loaded = selectedConfig ? loadConfig({ configPath: selectedConfig }) : loadConfig({ project: arg('project') }); }
 catch (e) { loaded = { path: selectedConfig ?? null, cfg: null, errors: [e.message] }; }
 const cfg = loaded.cfg;
-// A selected config that does not load blocks posting (its redaction header is unknown); the summary is still kept.
+// A config that is found but does not load blocks posting (its redaction header is unknown); the
+// printed line still runs, so the summary is kept.
 const configError = loaded.path && !cfg ? `config ${loaded.path} does not load: ${loaded.errors.join('; ')}` : null;
-if (printing && configError) die(configError);
-if (configError && !selectedConfig) console.error(`[post-results] ${configError}; posting without its API-key header or checkout base`);
+if (configError) console.error(`[post-results] ${configError}; nothing is posted to the PR, the summary stays in the run dir`);
 if (!loaded.path) console.error('[post-results] no .no-mistakes.json found; posting without its API-key header or checkout base');
-if (printing) printCommand(['--pr', pr, '--run', run, '--repo', repo, ...(loaded.path ? ['--config', resolve(loaded.path)] : [])]);
-const checkoutBase = process.env.NM_CHECKOUT_BASE || expandHome(cfg?.checkoutBase);
-
-const repoBase = repo ? repo.split('/')[1] : null;
-const repoCwd = process.env.NOMISTAKESBACKEND_REPO_DIR
-  || (repoBase && checkoutBase ? join(checkoutBase, repoBase) : null)
-  || (repoBase && process.env.HOME ? join(process.env.HOME, repoBase) : process.cwd());
-const gitCwd = existsSync(join(repoCwd, '.git')) ? repoCwd : process.cwd();
-
-function gitQuiet(args) {
-  try { return execFileSync('git', args, { cwd: gitCwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim(); }
-  catch { return ''; }
-}
-if (!repo) {
-  const m = gitQuiet(['remote', 'get-url', 'origin']).match(/[:/]([^/:]+\/[^/]+?)(?:\.git)?$/);
-  if (m) repo = m[1];
-}
-if (!repo) die('could not determine --repo (owner/name) from origin remote');
+if (printing) printCommand([...(pr ? ['--pr', pr] : []), '--run', run, ...(repo ? ['--repo', repo] : []),
+  ...(loaded.path ? ['--config', resolve(loaded.path)] : [])]);
 
 // --- Build the two surfaces. ------------------------------------------------
 function overallStatus() {
@@ -207,8 +192,25 @@ function persistAndExit(status, evidenceUrl = null) {
   process.exit(status === 'ok' ? 0 : 1);
 }
 
-if (configError && selectedConfig) { console.error(`[post-results] ${configError}`); persistAndExit('failed'); }
 if (!pr) persistAndExit('no-pr');
+if (configError) persistAndExit('failed');
+
+const checkoutBase = process.env.NM_CHECKOUT_BASE || expandHome(cfg?.checkoutBase);
+const repoBase = repo ? repo.split('/')[1] : null;
+const repoCwd = process.env.NOMISTAKESBACKEND_REPO_DIR
+  || (repoBase && checkoutBase ? join(checkoutBase, repoBase) : null)
+  || (repoBase && process.env.HOME ? join(process.env.HOME, repoBase) : process.cwd());
+const gitCwd = existsSync(join(repoCwd, '.git')) ? repoCwd : process.cwd();
+
+function gitQuiet(args) {
+  try { return execFileSync('git', args, { cwd: gitCwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim(); }
+  catch { return ''; }
+}
+if (!repo) {
+  const m = gitQuiet(['remote', 'get-url', 'origin']).match(/[:/]([^/:]+\/[^/]+?)(?:\.git)?$/);
+  if (m) repo = m[1];
+}
+if (!repo) die('could not determine --repo (owner/name) from origin remote');
 
 // --- Idempotent post: evidence comment first (for its URL), then body block. -
 function gh(args) {

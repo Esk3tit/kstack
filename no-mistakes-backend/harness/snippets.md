@@ -225,6 +225,6 @@ Print the post command, then run the line it prints exactly as printed (why: `SK
 ```bash
 H="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/no-mistakes-backend}"
 eval "$(node "$H/harness/load-config.mjs" --export)"
-node "$H/harness/post-results.mjs" --print-command --pr <N> --run <RUN> --repo <owner/name>
+node "$H/harness/post-results.mjs" --print-command --pr <N> --run <RUN> --repo <owner/name>   # no open PR: drop --pr <N>
 # the printed line posts: pr_post=posted | no-pr | failed   (verdict never lost; summary.md written on no-pr/failed)
 ```
