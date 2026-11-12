@@ -14,19 +14,26 @@
 // are expected to be ALREADY REDACTED by the harness (no Authorization, no secrets).
 //
 // Usage:
-//   node post-results.mjs --pr <N> --run-dir <dir> --results <results.json> [--repo owner/name]
+//   node post-results.mjs --pr <N> --run <id> --repo owner/name [--config <file> | --project <name> | --cwd <dir>]
+//   node post-results.mjs --pr <N> --run-dir <dir> --results <results.json> [--repo owner/name] [--config <file>]
+//   The config is --config, else $NM_CONFIG_PATH, else the loader's discovery (--cwd, --project).
+//   --print-command (with --run, plus --pr and --repo when the PR is open) validates the run as a post
+//   would, then prints the plain command that posts it, pinned to that config by --config (stdout), and
+//   the allow rule that approves it (stderr). If the post is already blocked, it reports that instead.
 //
 // results.json: {
 //   revision, dbTarget, intentSource, status?,
 //   cases: [{ name, pass, request, response, dbCheck }]
 // }
 //
-// On no-PR / gh failure: writes <run-dir>/summary.md, prints pr_post=no-pr | pr_post=failed,
-// exits non-zero — the verdict is never lost.
+// On no-PR / no loaded config / gh failure: writes <run-dir>/summary.md, prints
+// pr_post=no-pr | pr_post=failed, exits non-zero — the verdict is never lost.
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
+import { homedir } from 'node:os';
+import { loadConfig, expandHome } from './load-config.mjs';
 
 const MARKER_START = '<!-- no-mistakes-backend:start -->';
 const MARKER_END = '<!-- no-mistakes-backend:end -->';
@@ -34,39 +41,54 @@ const MARKER_REGION = /<!-- no-mistakes-backend:start -->[\s\S]*?<!-- no-mistake
 const MARKER_EVIDENCE = '<!-- no-mistakes-backend:evidence -->';
 
 function die(msg) { console.error(`[post-results] ${msg}`); process.exit(1); }
+
+// --run <id> names a run dir under this poster's root, so the post command holds no path but its own.
+const RUN_ID = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+function runDirFor(id, root) {
+  if (!RUN_ID.test(id)) die(`--run takes a run id such as 20261112-010700-4242, not: ${id}`);
+  return join(homedir(), root, id);
+}
+// Allow rules match the command as text, so each word is bare unless the shell would read it otherwise.
+const shellWord = (s) => (/^[\w@%+=:,./-]+$/.test(s) ? s : `'${s.replace(/'/g, `'\\''`)}'`);
+function printCommand(words) {
+  console.log(['node', process.argv[1], ...words].map(shellWord).join(' '));
+  console.error(`allow rule: Bash(node ${shellWord(process.argv[1])}:*)`);
+  process.exit(0);
+}
 function arg(name, fallback) {
   const i = process.argv.indexOf(`--${name}`);
   return i !== -1 && process.argv[i + 1] ? process.argv[i + 1] : fallback;
 }
 
 const pr = arg('pr');
-const runDir = arg('run-dir');
-const resultsPath = arg('results');
+const run = arg('run');
+const printing = process.argv.includes('--print-command');
+if (printing && (arg('run-dir') || arg('results'))) die('--print-command takes --run, not --run-dir or --results');
+const runDir = arg('run-dir') ?? (run && runDirFor(run, '.no-mistakes-backend'));
+const resultsPath = arg('results') ?? (runDir && join(runDir, 'results.json'));
 let repo = arg('repo');
 
-if (!runDir || !resultsPath) die('required: --run-dir <dir> --results <results.json>');
+if (!runDir || !resultsPath) die('required: --run <id>, or --run-dir <dir> --results <results.json>');
 if (!existsSync(runDir)) die(`run-dir not found: ${runDir}`);
 if (!existsSync(resultsPath)) die(`results not found: ${resultsPath}`);
+if (printing && (!run || (pr && (!/^\d+$/.test(pr) || !repo)) || (repo && !/^[\w.-]+\/[\w.-]+$/.test(repo))))
+  die('--print-command needs --run <id>, plus --pr <N> --repo owner/name when the PR is open');
 
 let results;
 try { results = JSON.parse(readFileSync(resultsPath, 'utf8')); }
 catch (e) { die(`could not parse results json: ${e.message}`); }
+const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+if (!isObject(results) || (results.cases != null && !(Array.isArray(results.cases) && results.cases.every(isObject))))
+  die('results json must be an object whose cases are a list of objects');
 
-const repoBase = repo ? repo.split('/')[1] : null;
-const repoCwd = process.env.NOMISTAKESBACKEND_REPO_DIR
-  || (repoBase && process.env.NM_CHECKOUT_BASE ? join(process.env.NM_CHECKOUT_BASE, repoBase) : null)
-  || (repoBase && process.env.HOME ? join(process.env.HOME, repoBase) : process.cwd());
-const gitCwd = existsSync(join(repoCwd, '.git')) ? repoCwd : process.cwd();
-
-function gitQuiet(args) {
-  try { return execFileSync('git', args, { cwd: gitCwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim(); }
-  catch { return ''; }
-}
-if (!repo) {
-  const m = gitQuiet(['remote', 'get-url', 'origin']).match(/[:/]([^/:]+\/[^/]+?)(?:\.git)?$/);
-  if (m) repo = m[1];
-}
-if (!repo) die('could not determine --repo (owner/name) from origin remote');
+// A plain-command post runs without load-config's exports, so it loads the config itself.
+const selectedConfig = arg('config') || process.env.NM_CONFIG_PATH;
+const loaded = selectedConfig ? loadConfig({ configPath: selectedConfig }) : loadConfig({ cwd: arg('cwd'), project: arg('project') });
+const cfg = loaded.cfg;
+// The config names the API-key header to redact, so without one loaded nothing is posted.
+const configError = cfg ? null : loaded.path ? `config ${loaded.path} does not load: ${loaded.errors.join('; ')}` : loaded.errors.join('; ');
+if (configError) console.error(`[post-results] ${configError}; nothing is posted to the PR, the summary stays in the run dir`);
+const configWords = loaded.path ? ['--config', resolve(loaded.path)] : [];
 
 // --- Build the two surfaces. ------------------------------------------------
 function overallStatus() {
@@ -85,10 +107,11 @@ const esc = (s) => String(s ?? '').replace(/\\/g, '\\\\').replace(/\|/g, '\\|');
 // One sensitive-name set drives BOTH header-line and JSON-key redaction so they can't
 // drift; the project's custom API-key header ($NM_API_KEY_HEADER) is folded in dynamically.
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const apiKeyHeader = (process.env.NM_API_KEY_HEADER || '').toLowerCase().trim();
+const apiKeyHeaders = [...new Set([process.env.NM_API_KEY_HEADER, cfg?.auth?.apiKeyHeader]
+  .map((h) => (h || '').toLowerCase().trim()).filter(Boolean))];
 const NAMES = [
   'authorization', 'cookie', 'set-cookie', 'x-api-key',
-  ...(apiKeyHeader ? [escapeRe(apiKeyHeader)] : []),
+  ...apiKeyHeaders.map(escapeRe),
   'access[_-]?token', 'refresh[_-]?token', 'id[_-]?token', 'token',
   'api[_-]?key', 'client[_-]?secret', 'secret', 'password', 'private[_-]?key',
 ].join('|');
@@ -155,7 +178,10 @@ function spliceIntoBody(currentBody, block) {
   return body ? `${block}\n\n${body}` : block;
 }
 
-const evidenceBody = buildEvidence();
+// Render once before printing, so results the post would crash on stop here.
+let evidenceBody;
+try { evidenceBody = buildEvidence(); buildBodyBlock(null); }
+catch (e) { die(`results do not render: ${e.message}`); }
 
 // --- No-PR path: persist both surfaces locally. -----------------------------
 const summaryFile = join(runDir, 'summary.md');
@@ -167,7 +193,29 @@ function persistAndExit(status, evidenceUrl = null) {
   process.exit(status === 'ok' ? 0 : 1);
 }
 
-if (!pr) persistAndExit('no-pr');
+if (configError) persistAndExit('failed');
+if (!pr) {
+  if (printing) printCommand(['--run', run, ...(repo ? ['--repo', repo] : []), ...configWords]);
+  persistAndExit('no-pr');
+}
+if (printing) printCommand(['--pr', pr, '--run', run, '--repo', repo, ...configWords]);
+
+const checkoutBase = process.env.NM_CHECKOUT_BASE || expandHome(cfg?.checkoutBase);
+const repoBase = repo ? repo.split('/')[1] : null;
+const repoCwd = process.env.NOMISTAKESBACKEND_REPO_DIR
+  || (repoBase && checkoutBase ? join(checkoutBase, repoBase) : null)
+  || (repoBase && process.env.HOME ? join(process.env.HOME, repoBase) : process.cwd());
+const gitCwd = existsSync(join(repoCwd, '.git')) ? repoCwd : process.cwd();
+
+function gitQuiet(args) {
+  try { return execFileSync('git', args, { cwd: gitCwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim(); }
+  catch { return ''; }
+}
+if (!repo) {
+  const m = gitQuiet(['remote', 'get-url', 'origin']).match(/[:/]([^/:]+\/[^/]+?)(?:\.git)?$/);
+  if (m) repo = m[1];
+}
+if (!repo) die('could not determine --repo (owner/name) from origin remote');
 
 // --- Idempotent post: evidence comment first (for its URL), then body block. -
 function gh(args) {

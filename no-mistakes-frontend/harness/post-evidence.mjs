@@ -8,7 +8,10 @@
 //   The author's existing body is preserved.
 //
 // Usage:
+//   node post-evidence.mjs --pr <N> --run <id> --repo owner/name [--marker <name>]
 //   node post-evidence.mjs --pr <N> --run-dir <dir> --results <results.json> [--repo owner/name] [--marker <name>]
+//   --print-command (with --run, plus --pr and --repo when the PR is open) validates the run as a post
+//   would, then prints the plain command that posts it (stdout) and the allow rule that approves it (stderr).
 //
 // results.json:
 //   { revision, intentSource, status?:"BLOCKED", previewUrl?, gaps?:[string], setup?:markdown,
@@ -25,8 +28,23 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { homedir } from 'node:os';
 
 function die(msg) { console.error(`[post-evidence] ${msg}`); process.exit(1); }
+
+// --run <id> names a run dir under this poster's root, so the post command holds no path but its own.
+const RUN_ID = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+function runDirFor(id, root) {
+  if (!RUN_ID.test(id)) die(`--run takes a run id such as 20261112-010700-4242, not: ${id}`);
+  return join(homedir(), root, id);
+}
+// Allow rules match the command as text, so each word is bare unless the shell would read it otherwise.
+const shellWord = (s) => (/^[\w@%+=:,./-]+$/.test(s) ? s : `'${s.replace(/'/g, `'\\''`)}'`);
+function printCommand(words) {
+  console.log(['node', process.argv[1], ...words].map(shellWord).join(' '));
+  console.error(`allow rule: Bash(node ${shellWord(process.argv[1])}:*)`);
+  process.exit(0);
+}
 
 function arg(name, fallback) {
   const i = process.argv.indexOf(`--${name}`);
@@ -34,18 +52,27 @@ function arg(name, fallback) {
 }
 
 const pr = arg('pr');
-const runDir = arg('run-dir');
-const resultsPath = arg('results');
+const run = arg('run');
 const marker = arg('marker', 'no-mistakes-frontend');
+const RUN_ROOTS = { 'no-mistakes-frontend': '.no-mistakes', 'no-mistakes-a11y': '.no-mistakes-a11y' };
+const printing = process.argv.includes('--print-command');
+if (printing && (arg('run-dir') || arg('results'))) die('--print-command takes --run, not --run-dir or --results');
+if (run && !arg('run-dir') && !RUN_ROOTS[marker]) die(`--run knows no run root for marker ${marker}; pass --run-dir and --results`);
+const runDir = arg('run-dir') ?? (run && runDirFor(run, RUN_ROOTS[marker]));
+const resultsPath = arg('results') ?? (runDir && join(runDir, 'results.json'));
 let repo = arg('repo');
 
-if (!runDir || !resultsPath) die('required: --run-dir <dir> --results <results.json>');
+if (!runDir || !resultsPath) die('required: --run <id>, or --run-dir <dir> --results <results.json>');
 if (!existsSync(runDir)) die(`run-dir not found: ${runDir}`);
 if (!existsSync(resultsPath)) die(`results not found: ${resultsPath}`);
+if (printing && (!run || (pr && (!/^\d+$/.test(pr) || !repo)) || (repo && !/^[\w.-]+\/[\w.-]+$/.test(repo))))
+  die('--print-command needs --run <id>, plus --pr <N> --repo owner/name when the PR is open');
 
 let results;
 try { results = JSON.parse(readFileSync(resultsPath, 'utf8')); }
 catch (e) { die(`could not parse results json: ${e.message}`); }
+const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+if (!isObject(results)) die('results json must be an object');
 
 const MARKER_START = `<!-- ${marker}:start -->`;
 const MARKER_END = `<!-- ${marker}:end -->`;
@@ -62,11 +89,12 @@ const VIDEO = /\.(mp4|webm|mov)$/i;
 const cases = Array.isArray(results.cases) ? results.cases : [];
 if (results.status && results.status !== 'BLOCKED') die('results.status only takes "BLOCKED"; PASS/FAIL come from the cases');
 const blocked = results.status === 'BLOCKED';
-if ((!cases.length && !blocked) || cases.some((c) => typeof c.pass !== 'boolean'))
+if ((!cases.length && !blocked) || cases.some((c) => typeof c?.pass !== 'boolean'))
   die('results.cases must be non-empty (unless BLOCKED), each with a boolean "pass"');
 const status = blocked ? 'BLOCKED' : cases.every((c) => c.pass) ? 'PASS' : 'FAIL';
 if (status === 'PASS' && !/^[0-9a-f]{7,40}\b/i.test(String(results.revision ?? ''))) die('a PASS needs results.revision to start with the tested commit SHA');
 const findings = Array.isArray(results.findings) ? results.findings : [];
+if (!findings.every(isObject)) die('results.findings must be a list of objects');
 const list = (v) => (Array.isArray(v) ? v : v ? [v] : []);
 // Only captures a case or finding names are published; anything else in the run dir stays local.
 const media = [...new Set([...cases.flatMap((c) => [...list(c.before), ...list(c.evidence)]),
@@ -167,7 +195,12 @@ function spliceIntoBody(currentBody, block) {
   return body ? `${block}\n\n${body}` : block;
 }
 
-const galleryBody = media.length || findings.length ? buildGallery() : null;
+// Render once before printing, so results the post would crash on stop here.
+let galleryBody;
+try { galleryBody = media.length || findings.length ? buildGallery() : null; buildBodyBlock({}); }
+catch (e) { die(`results do not render: ${e.message}`); }
+if (printing) printCommand([...(pr ? ['--pr', pr] : []), '--run', run, ...(repo ? ['--repo', repo] : []),
+  ...(marker === 'no-mistakes-frontend' ? [] : ['--marker', marker])]);
 
 const summaryFile = join(runDir, 'summary.md');
 function persistAndExit(status, ctx = {}) {

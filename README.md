@@ -147,7 +147,18 @@ All user-authored, and the same files serve Claude Code and Codex. Reviews come 
   examples live in `no-mistakes/config/` — `examples/promptarmor.no-mistakes.json` reproduces the
   original PromptArmor setup (Neon project `round-unit-34763685`, Porter project 8417 / cluster 3429,
   PropelAuth/MOFFITT), `examples/supabase.no-mistakes.json` proves multi-BaaS generality.
-  Each `SKILL.md` is the runtime playbook; `scripts/setup.sh` checks tooling.
+  Each `SKILL.md` is the runtime playbook; `scripts/setup.sh` checks tooling. Each poster
+  (`post-evidence.mjs`, `post-results.mjs`, `post-fullstack.mjs`) takes a run id and, with
+  `--print-command`, prints the plain command that posts that run plus the allow rule that approves
+  it, e.g. `Bash(node /Users/<you>/.claude/skills/no-mistakes-frontend/harness/post-evidence.mjs:*)`.
+  Add those rules to `~/.claude/settings.json` so a hands-off run posts without a prompt; Claude Code
+  matches rules against the command as text and never approves one holding a shell variable. A rule
+  approves the poster with any arguments, so an agent can then post content it chose to any PR your
+  `gh` login reaches, without asking. A plugin install's path changes with each version, so its rule
+  needs redoing after an update. The backend poster posts only once it has loaded the project's
+  config, which names the API-key header to redact; otherwise it keeps `summary.md` locally. After
+  changing a poster, the loader or a skill's loader line, run
+  `node --test no-mistakes/harness/test-posters.mjs`.
 
 - **`wide-event-logging/`** — implement wide event logging (canonical log lines) in Python/FastAPI:
   `SKILL.md` + reference modules (`config.py`, `context.py`, `middleware.py`, `security.py`, `usage.py`)

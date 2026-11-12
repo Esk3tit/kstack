@@ -24,7 +24,7 @@ This file is the runtime playbook. Follow the steps in order. Stop and emit the 
 
 ```bash
 H="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/no-mistakes-frontend}"
-eval "$(node "$H/harness/load-config.mjs" --export)"   # NM_*, NMF_*, PORTER_*, NM_API_KEY_HEADER, …
+NM_ENV="$(node "$H/harness/load-config.mjs" --export)" && eval "$NM_ENV" || exit 2   # NM_*, NMF_*, PORTER_*, NM_API_KEY_HEADER, …
 ```
 
 The loader **discovers** `.no-mistakes.json` by walking up from CWD, else
@@ -76,7 +76,7 @@ they are verified-live and parameterized by the app's config fields. Never hardc
    profile's `secretsScopeDir`. If unresolvable: `NOMISTAKES_FRONTEND_STATUS=BLOCKED reason=no-creds`.
 6. **Run id + evidence dir.** Generate a run id, e.g. `RUN="$(date +%Y%m%d-%H%M%S)-$$"`. Evidence dir = `~/.no-mistakes/$RUN/`. Reject
    any caller-supplied evidence dir that resolves **inside a product checkout** (fall back to the
-   default). `mkdir -p ~/.no-mistakes/$RUN`.
+   default). `mkdir -p ~/.no-mistakes/$RUN && echo "RUN=$RUN"`: §8 names the run by that id.
 
 ## 2. Derive test cases (gate)
 
@@ -248,11 +248,18 @@ Screenshots and clips are already in `~/.no-mistakes/$RUN/`. Build `results.json
   with its persona/data. Never a repeat of the automated cases.
 - `setup` — rendered collapsed. `previewUrl` (preview runs only) — rendered as **Open the preview UI →**.
 
-Post:
+Post in two steps. First print the post command (this only checks the run and prints):
 
 ```bash
-node "$H/harness/post-evidence.mjs" --pr <N> --run-dir ~/.no-mistakes/$RUN --results ~/.no-mistakes/$RUN/results.json --repo <owner/name>
+H="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/no-mistakes-frontend}"
+node "$H/harness/post-evidence.mjs" --print-command --pr <N> --run <RUN> --repo <owner/name>
 ```
+
+Then run the line it prints, exactly as printed and on its own. That line has every path written
+out, so an allow rule on the poster (stderr shows the rule's exact spelling) approves it without a
+prompt. A command holding a shell variable never matches a rule, so posting any other way falls to a
+prompt, or to auto mode, which can block the GitHub write. With no open PR, leave out `--pr <N>`: the
+printed line then keeps the evidence locally (`pr_post=no-pr`).
 
 It posts on **two idempotent surfaces**:
 

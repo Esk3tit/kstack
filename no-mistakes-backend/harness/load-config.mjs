@@ -39,6 +39,7 @@ export function validationErrors(cfg) {
   }
   if (!Array.isArray(cfg.apps) || cfg.apps.length === 0) errs.push('"apps" must be a non-empty array')
   else cfg.apps.forEach((a, i) => {
+    if (!a || typeof a !== 'object') { errs.push(`apps[${i}] must be an object`); return }
     if (!a.name) errs.push(`apps[${i}] missing "name"`)
     if (!['frontend', 'backend'].includes(a.kind)) errs.push(`apps[${i}] "kind" must be frontend|backend`)
     if (a.auth && cfg.auth?.profiles && !cfg.auth.profiles[a.auth])
@@ -163,9 +164,12 @@ export function loadConfig({ cwd = process.cwd(), project, configPath } = {}) {
   let raw
   try { raw = JSON.parse(readFileSync(path, 'utf8')) }
   catch (e) { return { path, cfg: null, errors: [`could not read/parse ${path}: ${e.message}`] } }
-  const errors = validationErrors(raw)
-  if (errors.length) return { path, cfg: null, errors }
-  return { path, cfg: withDefaults(raw), errors: [] }
+  // Callers need the path even when the file's shape breaks validation or defaults.
+  try {
+    const errors = validationErrors(raw)
+    if (errors.length) return { path, cfg: null, errors }
+    return { path, cfg: withDefaults(raw), errors: [] }
+  } catch (e) { return { path, cfg: null, errors: [`invalid ${path}: ${e.message}`] } }
 }
 
 function runCli() {

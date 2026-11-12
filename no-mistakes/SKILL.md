@@ -31,7 +31,7 @@ fails.
 
 ```bash
 H="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/no-mistakes}"
-eval "$(node "$H/harness/load-config.mjs" --export)"   # targets come from .no-mistakes.json
+NM_ENV="$(node "$H/harness/load-config.mjs" --export)" && eval "$NM_ENV" || exit 2   # targets come from .no-mistakes.json
 FE="$HOME/.claude/skills/no-mistakes-frontend"   # frontend specialist
 BE="$HOME/.claude/skills/no-mistakes-backend"    # backend specialist
 ```
@@ -165,12 +165,17 @@ only with positive product-misbehavior evidence, else `BLOCKED reason=indetermin
 
 ## 5. Results + posting
 
+Every post here goes the specialists' way (`$FE/SKILL.md` §8): print the command with
+`--print-command`, then run the line it prints, exactly as printed.
+
 - **Single-stack routes:** post the specialist's own detail to its repo's PR (the `$FE` gallery / the
   `$BE` request-response-SQL evidence). The router's status mirrors that run.
 - **Fullstack:** each layer's detail posts to its own repo's PR via the specialist posters, then post
-  **one combined verdict header to BOTH PRs**:
+  **one combined verdict header to BOTH PRs**. Write its results to
+  `~/.no-mistakes/<RUN>/fullstack/results.json`, in the frontend layer's run, then print the command:
   ```bash
-  node "$H/harness/post-fullstack.mjs" --results <results.json>
+  H="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/no-mistakes}"
+  node "$H/harness/post-fullstack.mjs" --print-command --run <frontend RUN>
   ```
   `results.json`:
   ```json

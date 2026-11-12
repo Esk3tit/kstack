@@ -5,7 +5,10 @@
 // reviewer on either PR sees the whole-stack status.
 //
 // Usage:
+//   node post-fullstack.mjs --run <id>   (reads ~/.no-mistakes/<id>/fullstack/results.json in the frontend layer's run)
 //   node post-fullstack.mjs --results <results.json>
+//   --print-command (with --run) validates the run's results, then prints the plain command that posts
+//   it (stdout) and the allow rule that approves that command (stderr).
 //
 // results.json:
 // {
@@ -23,6 +26,7 @@
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
+import { homedir } from 'node:os';
 
 const MARK_START = '<!-- no-mistakes:start -->';
 const MARK_END = '<!-- no-mistakes:end -->';
@@ -31,10 +35,32 @@ const MARK_REGION = /<!-- no-mistakes:start -->[\s\S]*?<!-- no-mistakes:end -->/
 function die(m) { console.error(`[post-fullstack] ${m}`); process.exit(1); }
 function arg(name) { const i = process.argv.indexOf(`--${name}`); return i !== -1 ? process.argv[i + 1] : undefined; }
 
-const resultsPath = arg('results');
-if (!resultsPath || !existsSync(resultsPath)) die('required: --results <results.json>');
+// --run <id> names a run dir under this poster's root, so the post command holds no path but its own.
+const RUN_ID = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
+function runDirFor(id, root) {
+  if (!RUN_ID.test(id)) die(`--run takes a run id such as 20261112-010700-4242, not: ${id}`);
+  return join(homedir(), root, id);
+}
+// Allow rules match the command as text, so each word is bare unless the shell would read it otherwise.
+const shellWord = (s) => (/^[\w@%+=:,./-]+$/.test(s) ? s : `'${s.replace(/'/g, `'\\''`)}'`);
+function printCommand(words) {
+  console.log(['node', process.argv[1], ...words].map(shellWord).join(' '));
+  console.error(`allow rule: Bash(node ${shellWord(process.argv[1])}:*)`);
+  process.exit(0);
+}
+
+const run = arg('run');
+const printing = process.argv.includes('--print-command');
+if (printing && arg('results')) die('--print-command takes --run, not --results');
+const resultsPath = arg('results') ?? (run && join(runDirFor(run, '.no-mistakes'), 'fullstack', 'results.json'));
+if (!resultsPath || !existsSync(resultsPath)) die(`required: --run <id> with ~/.no-mistakes/<id>/fullstack/results.json, or --results <results.json>${resultsPath ? ` (not found: ${resultsPath})` : ''}`);
+if (printing && !run) die('--print-command needs --run <id>');
 let r;
 try { r = JSON.parse(readFileSync(resultsPath, 'utf8')); } catch (e) { die(`bad results json: ${e.message}`); }
+const isObject = (v) => v !== null && typeof v === 'object' && !Array.isArray(v);
+if (!isObject(r) || ['frontend', 'backend', 'preview'].some((k) => r[k] != null && !isObject(r[k]))
+  || (r.roundtrip != null && !(Array.isArray(r.roundtrip) && r.roundtrip.every(isObject))))
+  die('results must be an object, with frontend/backend/preview objects and roundtrip a list of {name, pass}');
 
 const badge = (s) => (s === 'PASS' ? '✅ PASS' : s === 'FAIL' ? '❌ FAIL' : s === 'BLOCKED' ? '⚠️ BLOCKED' : (s || '—'));
 const mark = (s) => (s === 'PASS' ? '✅' : s === 'FAIL' ? '❌' : s === 'BLOCKED' ? '⚠️' : '—');
@@ -85,7 +111,10 @@ function spliceBody(body, block) {
 
 function gh(args) { return execFileSync('gh', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim(); }
 
-const header = buildHeader();
+// Render once before printing, so results the post would crash on stop here.
+let header;
+try { header = buildHeader(); } catch (e) { die(`results do not render: ${e.message}`); }
+if (printing) printCommand(['--run', run]);
 const targets = [fe, be].filter((s) => s.repo && s.pr);
 if (targets.length === 0) {
   const f = join(dirname(resultsPath), 'summary.md');

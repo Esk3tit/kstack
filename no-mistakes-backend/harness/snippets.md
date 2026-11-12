@@ -1,7 +1,7 @@
 # no-mistakes-backend snippets
 
 Copy the matching block. Resolve `H="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/no-mistakes-backend}"`
-and load the project config first (`eval "$(node "$H/harness/load-config.mjs" --export)"`), so the
+and load the project config first (`NM_ENV="$(node "$H/harness/load-config.mjs" --export)" && eval "$NM_ENV"`), so the
 `$NM_*` / `$PORTER_*` targets below are populated. The Bearer/connection-string always travel via
 **env vars**, never argv — argv shows in `ps`. Pick `BASE` per target: the backend app's local
 `devUrl`, or the PR preview API base URL. Routes/tables/columns shown are **illustrative examples**
@@ -16,7 +16,7 @@ endpoint. Token stays in the env var. Run from the profile's `secretsScopeDir` u
 
 ```bash
 H="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/no-mistakes-backend}"
-eval "$(node "$H/harness/load-config.mjs" --export)"
+NM_ENV="$(node "$H/harness/load-config.mjs" --export)" && eval "$NM_ENV" || exit 2
 BASE="<backend app devUrl>"   # e.g. http://localhost:8090
 
 # Resolve the test email the minter requires from the profile's testEmailEnv, then mint once
@@ -53,7 +53,7 @@ the profile's `keyEnv` from its secrets scope straight into the env var.
 
 ```bash
 H="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/no-mistakes-backend}"
-eval "$(node "$H/harness/load-config.mjs" --export)"
+NM_ENV="$(node "$H/harness/load-config.mjs" --export)" && eval "$NM_ENV" || exit 2
 BASE="<backend app devUrl>"   # e.g. http://localhost:8090
 # when secretsTool=doppler:
 export NMB_BEARER="$(cd "<profile secretsScopeDir>" && doppler run -- printenv <profile keyEnv>)"
@@ -116,7 +116,7 @@ Priority (a) — a query function via the Convex CLI (`$NM_CONVEX_RUN_CMD`, e.g.
 
 ```bash
 H="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/no-mistakes-backend}"
-eval "$(node "$H/harness/load-config.mjs" --export)"
+NM_ENV="$(node "$H/harness/load-config.mjs" --export)" && eval "$NM_ENV" || exit 2
 # Deploy-key auth stays in the env var; never echo it. PR number drives the preview deployment name.
 export CONVEX_DEPLOY_KEY="$(cd "<secretsScopeDir>" && doppler run -- printenv "$NM_CONVEX_DEPLOY_KEY_ENV")"
 
@@ -220,11 +220,10 @@ bounded loop yourself instead of this helper.
 
 ## E — Post results to the PR
 
+Print the post command, then run the line it prints exactly as printed (why: `SKILL.md`, the post step):
+
 ```bash
 H="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/no-mistakes-backend}"
-node "$H/harness/post-results.mjs" \
-  --pr <N> --repo <owner/name> \
-  --run-dir ~/.no-mistakes-backend/"$RUN" \
-  --results ~/.no-mistakes-backend/"$RUN"/results.json
-# pr_post=posted | no-pr | failed   (verdict never lost; summary.md written on no-pr/failed)
+node "$H/harness/post-results.mjs" --print-command --pr <N> --run <RUN> --repo <owner/name>   # no open PR: drop --pr <N>
+# the printed line posts: pr_post=posted | no-pr | failed   (verdict never lost; summary.md written on no-pr/failed)
 ```

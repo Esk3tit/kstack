@@ -38,7 +38,7 @@ widget, reflow check) and `docs/adr/` for why this is a separate skill. Emit exa
 ```bash
 A="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/no-mistakes-a11y}"
 FE="$HOME/.claude/skills/no-mistakes-frontend"   # reuse its auth + recon snippets, evidence poster
-eval "$(node "$A/harness/load-config.mjs" --export)" || exit 2
+NM_ENV="$(node "$A/harness/load-config.mjs" --export)" && eval "$NM_ENV" || exit 2
 ```
 
 The loader discovers the per-project config by walking up from CWD for `.no-mistakes.json`, else
@@ -58,7 +58,7 @@ Own harness at `$A/harness/a11y-drive.js` (the in-page collectors). Reuse `$FE/h
 
 1. **Tooling.** Run `$A/scripts/setup.sh` (idempotent — ensures `agent-browser` + its Chrome,
    checks `gh`). Missing a required tool → `BLOCKED reason=needs-setup`.
-2. **Run id + evidence dir.** `RUN="$(date +%Y%m%d-%H%M%S)-$$"`. Then `EV=~/.no-mistakes-a11y/$RUN; mkdir -p "$EV"` and
+2. **Run id + evidence dir.** `RUN="$(date +%Y%m%d-%H%M%S)-$$"`. Then `EV=~/.no-mistakes-a11y/$RUN; mkdir -p "$EV"; echo "RUN=$RUN"` and
    `export AGENT_BROWSER_SESSION="<frontend browserProfile>-$RUN"`.
 3. **Target.** Same resolution as `$FE`: a preview `feUrl` (resolved via the configured preview
    platform, `$NM_PREVIEW_PLATFORM`) or the frontend app's `devUrl` from config. **Only a production
@@ -176,7 +176,10 @@ or keys.** Build `results.json` in the poster's schema (`$FE/SKILL.md` §8): one
 axis (`"<screen> — keyboard"`, `pass`, `observed`, `evidence`), where an operability blocker is a failed
 case; axe violations and other findings go in `findings`; `revision` = the tested SHA. Post to the
 frontend repo's PR with `$FE/harness/post-evidence.mjs --marker no-mistakes-a11y` (its own
-`<!-- no-mistakes-a11y:start/end -->` block). `pr_post=failed|no-pr` → `summary.md` in the run dir.
+`<!-- no-mistakes-a11y:start/end -->` block), the way `$FE/SKILL.md` §8 posts: print the command with
+`node "$FE/harness/post-evidence.mjs" --print-command --marker no-mistakes-a11y --pr <N> --run <RUN> --repo <owner/name>`
+(with `FE` set as in §0; no open PR → leave out `--pr <N>`), then run the line it prints, exactly as printed.
+`pr_post=failed|no-pr` → `summary.md` in the run dir.
 Verdict is never lost.
 
 ## 9. Confidentiality & data handling
