@@ -61,12 +61,22 @@ function fullstackRun(home) {
   return dir;
 }
 
-function config(dir, apiKeyHeader = 'x-acme-key') {
+const VALID_CONFIG = { project: 'acme', db: { platform: 'supabase' }, apps: [{ name: 'api', kind: 'backend' }], auth: { apiKeyHeader: 'x-acme-key' } };
+
+function config(dir, cfg = VALID_CONFIG, name = '.no-mistakes.json') {
   mkdirSync(dir, { recursive: true });
-  const cfg = { project: 'acme', db: { platform: 'supabase' }, apps: [{ name: 'api', kind: 'backend' }], auth: { apiKeyHeader } };
-  const path = join(dir, '.no-mistakes.json');
-  writeFileSync(path, JSON.stringify(cfg));
+  const path = join(dir, name);
+  writeFileSync(path, typeof cfg === 'string' ? cfg : JSON.stringify(cfg));
   return path;
+}
+
+// A gh that records each call and fails, for asserting a post never reached GitHub.
+function ghStub(home) {
+  const bin = join(home, 'bin');
+  const log = join(home, 'gh-calls.log');
+  mkdirSync(bin, { recursive: true });
+  writeFileSync(join(bin, 'gh'), `#!/bin/sh\necho "$*" >> '${log}'\nexit 1\n`, { mode: 0o755 });
+  return { PATH: bin, calls: () => (existsSync(log) ? readFileSync(log, 'utf8') : '') };
 }
 
 test('the evidence poster prints a bare command and its allow rule', () => {
@@ -88,7 +98,7 @@ test('the a11y marker reads its own run root and keeps the marker in the command
 
 const ODD_INSTALL = {
   evidence: { files: ['post-evidence.mjs'], args: ['--pr', '25', '--run', RUN, '--repo', REPO], setup: (home) => frontendRun(home) },
-  results: { files: ['post-results.mjs', 'load-config.mjs'], args: ['--pr', '25', '--run', RUN, '--repo', REPO], setup: (home) => backendRun(home) },
+  results: { files: ['post-results.mjs', 'load-config.mjs'], args: ['--pr', '25', '--run', RUN, '--repo', REPO], setup: (home) => { backendRun(home); config(join(home, 'work')); } },
   fullstack: { files: ['post-fullstack.mjs'], args: ['--run', RUN], setup: (home) => fullstackRun(home) },
 };
 for (const [name, { files, args, setup }] of Object.entries(ODD_INSTALL)) {
@@ -186,36 +196,93 @@ test('without an exported path, the results poster finds the config from the pro
   assert.deepEqual(shellWords(r.stdout.trim()).slice(-2), ['--config', cfgPath]);
 });
 
-test('a selected config that does not load blocks the post but keeps the local summary', () => {
+// A post needs the run's config to know which header to redact: without one, nothing reaches gh,
+// whether the print step or a direct post finds that out, and summary.md is kept.
+function assertBlocked(home, dir, args, opts, why) {
+  const gh = ghStub(home);
+  const env = { ...opts.env, PATH: gh.PATH };
+  const printed = node(POSTERS.results, ['--print-command', ...args], { ...opts, env });
+  assert.equal(printed.status, 1, printed.stderr);
+  assert.match(printed.stdout, /^pr_post=failed$/m);
+  assert.doesNotMatch(printed.stdout, /^node /m);
+  assert.match(printed.stderr, why);
+  assert.ok(existsSync(join(dir, 'summary.md')));
+  const posted = node(POSTERS.results, args, { ...opts, env });
+  assert.equal(posted.status, 1);
+  assert.match(posted.stdout, /pr_post=failed/);
+  assert.match(posted.stderr, why);
+  assert.equal(gh.calls(), '');
+}
+
+test('a selected config that does not load blocks the post and keeps the local summary', () => {
   const { home, work } = sandbox();
   const dir = backendRun(home);
-  const bad = join(home, 'bad.json');
-  writeFileSync(bad, '{oops');
-  // --pr is given, but the config check stops the printed line before any gh call.
-  const { printed, posted } = printThenRun(POSTERS.results, ['--pr', '25', '--run', RUN, '--repo', REPO], { home, cwd: work, env: { NM_CONFIG_PATH: bad } });
-  assert.match(printed.stderr, /does not load/);
-  assert.deepEqual(shellWords(printed.stdout.trim()).slice(-2), ['--config', bad]);
-  assert.equal(posted.status, 1);
-  assert.match(posted.stdout, /pr_post=failed/);
-  assert.match(posted.stderr, /does not load/);
-  assert.ok(existsSync(join(dir, 'summary.md')));
+  const bad = config(home, '{oops', 'bad.json');
+  assertBlocked(home, dir, ['--pr', '25', '--run', RUN, '--repo', REPO], { home, cwd: work, env: { NM_CONFIG_PATH: bad } }, /bad\.json does not load/);
+  assertBlocked(home, dir, ['--pr', '25', '--run', RUN, '--repo', REPO, '--config', bad], { home, cwd: work }, /bad\.json does not load/);
 });
 
-test('a discovered config that does not load is named and blocks the post', () => {
-  const { home } = sandbox();
+const BROKEN_CONFIGS = {
+  'fails validation': { project: 'acme', auth: { apiKeyHeader: 'x-acme-key' } },
+  'has a null app': { ...VALID_CONFIG, apps: [null] },
+  'has a string preview': { ...VALID_CONFIG, preview: 'x' },
+};
+for (const [name, cfg] of Object.entries(BROKEN_CONFIGS)) {
+  test(`a found config that ${name} is named and blocks the post`, () => {
+    const { home } = sandbox();
+    const dir = backendRun(home);
+    const project = join(home, 'project');
+    config(project, cfg);
+    assertBlocked(home, dir, ['--pr', '25', '--run', RUN, '--repo', REPO], { home, cwd: project }, /project\/\.no-mistakes\.json does not load/);
+  });
+}
+
+test('with no config found, the results poster posts nothing and keeps the summary', () => {
+  const { home, work } = sandbox();
+  const dir = backendRun(home);
+  assertBlocked(home, dir, ['--pr', '25', '--run', RUN, '--repo', REPO], { home, cwd: work }, /no \.no-mistakes\.json found/);
+});
+
+test('the printer takes the loader\'s --project and --cwd, and names the config they select', () => {
+  const { home, work } = sandbox();
   backendRun(home);
-  const project = join(home, 'project');
-  mkdirSync(project);
-  writeFileSync(join(project, '.no-mistakes.json'), JSON.stringify({ project: 'acme', auth: { apiKeyHeader: 'x-acme-key' } }));
-  const { printed, posted } = printThenRun(POSTERS.results, ['--pr', '25', '--run', RUN, '--repo', REPO], { home, cwd: project });
-  assert.match(printed.stderr, /\.no-mistakes\.json does not load/);
-  assert.doesNotMatch(printed.stderr, /no \.no-mistakes\.json found/);
-  assert.equal(posted.status, 1);
-  assert.match(posted.stdout, /pr_post=failed/);
-  // A direct post that finds the same config stops there too.
-  const direct = node(POSTERS.results, ['--pr', '25', '--run', RUN, '--repo', REPO], { home, cwd: project, env: { PATH: '/nonexistent' } });
-  assert.match(direct.stdout, /pr_post=failed/);
-  assert.match(direct.stderr, /\.no-mistakes\.json does not load/);
+  const central = config(join(home, '.no-mistakes'), VALID_CONFIG, 'acme.json');
+  let r = node(POSTERS.results, ['--print-command', '--pr', '25', '--run', RUN, '--repo', REPO, '--project', 'acme'], { home, cwd: work });
+  assert.equal(r.status, 0, r.stderr);
+  assert.deepEqual(shellWords(r.stdout.trim()).slice(-2), ['--config', central]);
+  const local = config(join(home, 'project'));
+  r = node(POSTERS.results, ['--print-command', '--pr', '25', '--run', RUN, '--repo', REPO, '--cwd', join(home, 'project')], { home, cwd: work });
+  assert.equal(r.status, 0, r.stderr);
+  assert.deepEqual(shellWords(r.stdout.trim()).slice(-2), ['--config', local]);
+});
+
+test('every skill line that loads the config stops its block when the config does not load', () => {
+  const { home } = sandbox();
+  const lines = [];
+  for (const skill of ['no-mistakes', 'no-mistakes-frontend', 'no-mistakes-backend', 'no-mistakes-a11y']) {
+    for (const doc of ['SKILL.md', 'harness/snippets.md']) {
+      const file = join(repoRoot, skill, doc);
+      if (!existsSync(file)) continue;
+      for (const line of readFileSync(file, 'utf8').split('\n'))
+        if (/^(NM_ENV=|eval ).*load-config\.mjs" --export/.test(line)) lines.push({ where: `${skill}/${doc}`, line, dir: join(repoRoot, skill) });
+    }
+  }
+  assert.ok(lines.length >= 7, `found ${lines.length} loader lines`);
+  for (const [cfg, ok] of [['{oops', false], [VALID_CONFIG, true]]) {
+    const project = join(home, ok ? 'good' : 'bad');
+    config(project, cfg);
+    for (const { where, line, dir } of lines) {
+      const r = spawnSync('bash', ['-c', `${line}\necho reached`], {
+        cwd: project, encoding: 'utf8', env: { PATH: process.env.PATH, HOME: home, H: dir, A: dir } });
+      assert.equal(r.stdout.includes('reached'), ok, `${where}: ${line}\n${r.stderr}`);
+    }
+  }
+});
+
+test('the four copies of load-config.mjs are identical', () => {
+  const copies = ['no-mistakes', 'no-mistakes-frontend', 'no-mistakes-backend', 'no-mistakes-a11y']
+    .map((skill) => readFileSync(join(repoRoot, skill, 'harness', 'load-config.mjs'), 'utf8'));
+  for (const c of copies.slice(1)) assert.equal(c, copies[0]);
 });
 
 test('an exported header and the config\'s header are both redacted', () => {

@@ -19,7 +19,7 @@ scripts already read:
 
 ```bash
 H="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/<skill>}"
-eval "$(node "$H/harness/load-config.mjs" --export)"   # NM_*, PORTER_*, NMF_*, …
+NM_ENV="$(node "$H/harness/load-config.mjs" --export)" && eval "$NM_ENV"   # NM_*, PORTER_*, NMF_*, …
 ```
 
 Loader modes: `--export` (shell `export` lines, default), `--json` (normalized config), `--get

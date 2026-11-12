@@ -31,7 +31,7 @@ fails.
 
 ```bash
 H="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/no-mistakes}"
-eval "$(node "$H/harness/load-config.mjs" --export)"   # targets come from .no-mistakes.json
+NM_ENV="$(node "$H/harness/load-config.mjs" --export)" && eval "$NM_ENV" || exit 2   # targets come from .no-mistakes.json
 FE="$HOME/.claude/skills/no-mistakes-frontend"   # frontend specialist
 BE="$HOME/.claude/skills/no-mistakes-backend"    # backend specialist
 ```

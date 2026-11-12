@@ -14,18 +14,19 @@
 // are expected to be ALREADY REDACTED by the harness (no Authorization, no secrets).
 //
 // Usage:
-//   node post-results.mjs --pr <N> --run <id> --repo owner/name [--config <.no-mistakes.json>]
-//   node post-results.mjs --pr <N> --run-dir <dir> --results <results.json> [--repo owner/name] [--config <.no-mistakes.json>]
+//   node post-results.mjs --pr <N> --run <id> --repo owner/name [--config <file> | --project <name> | --cwd <dir>]
+//   node post-results.mjs --pr <N> --run-dir <dir> --results <results.json> [--repo owner/name] [--config <file>]
+//   The config is --config, else $NM_CONFIG_PATH, else the loader's discovery (--cwd, --project).
 //   --print-command (with --run, plus --pr and --repo when the PR is open) validates the run as a post
-//   would, then prints the plain command that posts it (stdout), naming the config the run selected
-//   ($NM_CONFIG_PATH, else discovery from here or --project), and the allow rule that approves it (stderr).
+//   would, then prints the plain command that posts it, pinned to that config by --config (stdout), and
+//   the allow rule that approves it (stderr). If the post is already blocked, it reports that instead.
 //
 // results.json: {
 //   revision, dbTarget, intentSource, status?,
 //   cases: [{ name, pass, request, response, dbCheck }]
 // }
 //
-// On no-PR / a config that does not load / gh failure: writes <run-dir>/summary.md, prints
+// On no-PR / no loaded config / gh failure: writes <run-dir>/summary.md, prints
 // pr_post=no-pr | pr_post=failed, exits non-zero — the verdict is never lost.
 
 import { execFileSync } from 'node:child_process';
@@ -77,20 +78,14 @@ let results;
 try { results = JSON.parse(readFileSync(resultsPath, 'utf8')); }
 catch (e) { die(`could not parse results json: ${e.message}`); }
 
-// A plain-command post runs without load-config's exports, so read the config itself: the file the
-// run selected (--config, or the exported path), else whatever discovery finds here.
+// A plain-command post runs without load-config's exports, so it loads the config itself.
 const selectedConfig = arg('config') || process.env.NM_CONFIG_PATH;
-let loaded;
-try { loaded = selectedConfig ? loadConfig({ configPath: selectedConfig }) : loadConfig({ project: arg('project') }); }
-catch (e) { loaded = { path: selectedConfig ?? null, cfg: null, errors: [e.message] }; }
+const loaded = selectedConfig ? loadConfig({ configPath: selectedConfig }) : loadConfig({ cwd: arg('cwd'), project: arg('project') });
 const cfg = loaded.cfg;
-// A config that is found but does not load blocks posting (its redaction header is unknown); the
-// printed line still runs, so the summary is kept.
-const configError = loaded.path && !cfg ? `config ${loaded.path} does not load: ${loaded.errors.join('; ')}` : null;
+// The config names the API-key header to redact, so without one loaded nothing is posted.
+const configError = cfg ? null : loaded.path ? `config ${loaded.path} does not load: ${loaded.errors.join('; ')}` : loaded.errors.join('; ');
 if (configError) console.error(`[post-results] ${configError}; nothing is posted to the PR, the summary stays in the run dir`);
-if (!loaded.path) console.error('[post-results] no .no-mistakes.json found; posting without its API-key header or checkout base');
-if (printing) printCommand([...(pr ? ['--pr', pr] : []), '--run', run, ...(repo ? ['--repo', repo] : []),
-  ...(loaded.path ? ['--config', resolve(loaded.path)] : [])]);
+const configWords = loaded.path ? ['--config', resolve(loaded.path)] : [];
 
 // --- Build the two surfaces. ------------------------------------------------
 function overallStatus() {
@@ -192,8 +187,12 @@ function persistAndExit(status, evidenceUrl = null) {
   process.exit(status === 'ok' ? 0 : 1);
 }
 
-if (!pr) persistAndExit('no-pr');
+if (!pr) {
+  if (printing) printCommand(['--run', run, ...(repo ? ['--repo', repo] : []), ...configWords]);
+  persistAndExit('no-pr');
+}
 if (configError) persistAndExit('failed');
+if (printing) printCommand(['--pr', pr, '--run', run, '--repo', repo, ...configWords]);
 
 const checkoutBase = process.env.NM_CHECKOUT_BASE || expandHome(cfg?.checkoutBase);
 const repoBase = repo ? repo.split('/')[1] : null;

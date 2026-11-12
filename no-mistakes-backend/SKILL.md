@@ -29,7 +29,7 @@ This file is the runtime playbook. Follow the steps in order. Stop and emit the 
 
 ```bash
 H="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/no-mistakes-backend}"
-eval "$(node "$H/harness/load-config.mjs" --export)"
+NM_ENV="$(node "$H/harness/load-config.mjs" --export)" && eval "$NM_ENV" || exit 2
 ```
 
 All harness scripts are at `$H/harness/...`. The request / DB-verify / async-poll templates live in
@@ -280,20 +280,20 @@ Collect the run's evidence into `~/.no-mistakes-backend/$RUN/` and build `result
 
 `request`/`response`/`dbCheck` are **already-redacted** strings (no `Authorization`, no secrets).
 
-Post in two steps. First print the post command from the project checkout, with §0's loader (and its
-flags, if §0 passed any) so it names the config this run selected:
+Post in two steps. First print the post command from the project checkout (if §0's loader took
+`--config`, `--project` or `--cwd`, pass the same flag here, so it picks the same config):
 
 ```bash
 H="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/no-mistakes-backend}"
-eval "$(node "$H/harness/load-config.mjs" --export)"
 node "$H/harness/post-results.mjs" --print-command --pr <N> --run <RUN> --repo <owner/name>
 ```
 
 Then run the line it prints, exactly as printed and on its own. That line has every path written
 out, so an allow rule on the poster (stderr shows the rule's exact spelling) approves it without a
 prompt; posting any other way falls to a prompt, or to auto mode, which can block the GitHub write.
-With no open PR, leave out `--pr <N>`. The poster loads the config the line names for its redaction;
-if that config does not load, it posts nothing and keeps `summary.md` (`pr_post=failed`).
+With no open PR, leave out `--pr <N>`. The poster redacts with the config it loads, so when no config
+loads it posts nothing and keeps `summary.md` (`pr_post=failed`); the print step then reports that
+instead of printing a line.
 
 It posts on **two idempotent surfaces** (uniform with `no-mistakes-frontend`, so a future fullstack router gets
 one shape from both skills):

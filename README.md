@@ -155,7 +155,9 @@ All user-authored, and the same files serve Claude Code and Codex. Reviews come 
   matches rules against the command as text and never approves one holding a shell variable. A rule
   approves the poster with any arguments, so an agent can then post content it chose to any PR your
   `gh` login reaches, without asking. A plugin install's path changes with each version, so its rule
-  needs redoing after an update. After changing a poster, run
+  needs redoing after an update. The backend poster posts only once it has loaded the project's
+  config, which names the API-key header to redact; otherwise it keeps `summary.md` locally. After
+  changing a poster, the loader or a skill's loader line, run
   `node --test no-mistakes/harness/test-posters.mjs`.
 
 - **`wide-event-logging/`** — implement wide event logging (canonical log lines) in Python/FastAPI:

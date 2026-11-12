@@ -38,7 +38,7 @@ widget, reflow check) and `docs/adr/` for why this is a separate skill. Emit exa
 ```bash
 A="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/no-mistakes-a11y}"
 FE="$HOME/.claude/skills/no-mistakes-frontend"   # reuse its auth + recon snippets, evidence poster
-eval "$(node "$A/harness/load-config.mjs" --export)" || exit 2
+NM_ENV="$(node "$A/harness/load-config.mjs" --export)" && eval "$NM_ENV" || exit 2
 ```
 
 The loader discovers the per-project config by walking up from CWD for `.no-mistakes.json`, else

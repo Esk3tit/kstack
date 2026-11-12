@@ -24,7 +24,7 @@ This file is the runtime playbook. Follow the steps in order. Stop and emit the 
 
 ```bash
 H="${CLAUDE_PLUGIN_ROOT:-$HOME/.claude/skills/no-mistakes-frontend}"
-eval "$(node "$H/harness/load-config.mjs" --export)"   # NM_*, NMF_*, PORTER_*, NM_API_KEY_HEADER, …
+NM_ENV="$(node "$H/harness/load-config.mjs" --export)" && eval "$NM_ENV" || exit 2   # NM_*, NMF_*, PORTER_*, NM_API_KEY_HEADER, …
 ```
 
 The loader **discovers** `.no-mistakes.json` by walking up from CWD, else
