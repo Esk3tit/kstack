@@ -7,7 +7,8 @@
 // Usage:
 //   node post-fullstack.mjs --run <id>   (reads ~/.no-mistakes/<id>/fullstack/results.json in the frontend layer's run)
 //   node post-fullstack.mjs --results <results.json>
-//   --print-command (with --run) checks the run and prints the plain command to post it.
+//   --print-command (with --run) validates the run's results, then prints the plain command that posts
+//   it (stdout) and the allow rule that approves that command (stderr).
 //
 // results.json:
 // {
@@ -49,14 +50,14 @@ function printCommand(words) {
 }
 
 const run = arg('run');
+const printing = process.argv.includes('--print-command');
+if (printing && arg('results')) die('--print-command takes --run, not --results');
 const resultsPath = arg('results') ?? (run && join(runDirFor(run, '.no-mistakes'), 'fullstack', 'results.json'));
 if (!resultsPath || !existsSync(resultsPath)) die(`required: --run <id> with ~/.no-mistakes/<id>/fullstack/results.json, or --results <results.json>${resultsPath ? ` (not found: ${resultsPath})` : ''}`);
-if (process.argv.includes('--print-command')) {
-  if (!run) die('--print-command needs --run <id>');
-  printCommand(['--run', run]);
-}
+if (printing && !run) die('--print-command needs --run <id>');
 let r;
 try { r = JSON.parse(readFileSync(resultsPath, 'utf8')); } catch (e) { die(`bad results json: ${e.message}`); }
+if (printing) printCommand(['--run', run]);
 
 const badge = (s) => (s === 'PASS' ? '✅ PASS' : s === 'FAIL' ? '❌ FAIL' : s === 'BLOCKED' ? '⚠️ BLOCKED' : (s || '—'));
 const mark = (s) => (s === 'PASS' ? '✅' : s === 'FAIL' ? '❌' : s === 'BLOCKED' ? '⚠️' : '—');

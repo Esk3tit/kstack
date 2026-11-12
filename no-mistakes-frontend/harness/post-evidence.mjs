@@ -10,7 +10,8 @@
 // Usage:
 //   node post-evidence.mjs --pr <N> --run <id> --repo owner/name [--marker <name>]
 //   node post-evidence.mjs --pr <N> --run-dir <dir> --results <results.json> [--repo owner/name] [--marker <name>]
-//   --print-command (with --pr, --run, --repo) checks the run and prints the plain command to post it.
+//   --print-command (with --pr, --run, --repo) validates the run as a post would, then prints the plain
+//   command that posts it (stdout) and the allow rule that approves that command (stderr).
 //
 // results.json:
 //   { revision, intentSource, status?:"BLOCKED", previewUrl?, gaps?:[string], setup?:markdown,
@@ -54,7 +55,9 @@ const pr = arg('pr');
 const run = arg('run');
 const marker = arg('marker', 'no-mistakes-frontend');
 const RUN_ROOTS = { 'no-mistakes-frontend': '.no-mistakes', 'no-mistakes-a11y': '.no-mistakes-a11y' };
-if (run && !RUN_ROOTS[marker]) die(`--run knows no run root for marker ${marker}; pass --run-dir and --results`);
+const printing = process.argv.includes('--print-command');
+if (printing && (arg('run-dir') || arg('results'))) die('--print-command takes --run, not --run-dir or --results');
+if (run && !arg('run-dir') && !RUN_ROOTS[marker]) die(`--run knows no run root for marker ${marker}; pass --run-dir and --results`);
 const runDir = arg('run-dir') ?? (run && runDirFor(run, RUN_ROOTS[marker]));
 const resultsPath = arg('results') ?? (runDir && join(runDir, 'results.json'));
 let repo = arg('repo');
@@ -62,10 +65,7 @@ let repo = arg('repo');
 if (!runDir || !resultsPath) die('required: --run <id>, or --run-dir <dir> --results <results.json>');
 if (!existsSync(runDir)) die(`run-dir not found: ${runDir}`);
 if (!existsSync(resultsPath)) die(`results not found: ${resultsPath}`);
-if (process.argv.includes('--print-command')) {
-  if (!/^\d+$/.test(pr ?? '') || !run || !/^[\w.-]+\/[\w.-]+$/.test(repo ?? '')) die('--print-command needs --pr <N> --run <id> --repo owner/name');
-  printCommand(['--pr', pr, '--run', run, '--repo', repo, ...(marker === 'no-mistakes-frontend' ? [] : ['--marker', marker])]);
-}
+if (printing && (!/^\d+$/.test(pr ?? '') || !run || !/^[\w.-]+\/[\w.-]+$/.test(repo ?? ''))) die('--print-command needs --pr <N> --run <id> --repo owner/name');
 
 let results;
 try { results = JSON.parse(readFileSync(resultsPath, 'utf8')); }
@@ -99,6 +99,7 @@ const present = new Set(readdirSync(runDir));
 // gh --attach reads '#' as the alt-text separator and markdown links break on spaces, so names stay plain.
 const unusable = media.filter((f) => !present.has(f) || !(IMAGE.test(f) || VIDEO.test(f)) || !/^[\w.-]+$/.test(f));
 if (unusable.length) die(`evidence must be a plain-named image/video in --run-dir: ${unusable.join(', ')}`);
+if (printing) printCommand(['--pr', pr, '--run', run, '--repo', repo, ...(marker === 'no-mistakes-frontend' ? [] : ['--marker', marker])]);
 const cell = (s) => String(s ?? '').replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\n/g, ' ');
 
 function findingsLines() {

@@ -152,8 +152,11 @@ All user-authored, and the same files serve Claude Code and Codex. Reviews come 
   `--print-command`, prints the plain command that posts that run plus the allow rule that approves
   it, e.g. `Bash(node /Users/<you>/.claude/skills/no-mistakes-frontend/harness/post-evidence.mjs:*)`.
   Add those rules to `~/.claude/settings.json` so a hands-off run posts without a prompt; Claude Code
-  matches rules against the command as text and never approves one holding a shell variable. After
-  changing a poster, run `node --test no-mistakes/harness/test-posters.mjs`.
+  matches rules against the command as text and never approves one holding a shell variable. A rule
+  approves the poster with any arguments, so an agent can then post content it chose to any PR your
+  `gh` login reaches, without asking. A plugin install's path changes with each version, so its rule
+  needs redoing after an update. After changing a poster, run
+  `node --test no-mistakes/harness/test-posters.mjs`.
 
 - **`wide-event-logging/`** — implement wide event logging (canonical log lines) in Python/FastAPI:
   `SKILL.md` + reference modules (`config.py`, `context.py`, `middleware.py`, `security.py`, `usage.py`)

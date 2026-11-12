@@ -16,8 +16,9 @@
 // Usage:
 //   node post-results.mjs --pr <N> --run <id> --repo owner/name [--config <.no-mistakes.json>]
 //   node post-results.mjs --pr <N> --run-dir <dir> --results <results.json> [--repo owner/name] [--config <.no-mistakes.json>]
-//   --print-command (with --pr, --run, --repo) checks the run and prints the plain command to post it,
-//   naming the config the run selected ($NM_CONFIG_PATH, else discovery from here or --project).
+//   --print-command (with --pr, --run, --repo) validates the run as a post would, then prints the plain
+//   command that posts it (stdout), naming the config the run selected ($NM_CONFIG_PATH, else discovery
+//   from here or --project), and the allow rule that approves that command (stderr).
 //
 // results.json: {
 //   revision, dbTarget, intentSource, status?,
@@ -29,7 +30,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { homedir } from 'node:os';
 import { loadConfig, expandHome } from './load-config.mjs';
 
@@ -60,6 +61,8 @@ function arg(name, fallback) {
 
 const pr = arg('pr');
 const run = arg('run');
+const printing = process.argv.includes('--print-command');
+if (printing && (arg('run-dir') || arg('results'))) die('--print-command takes --run, not --run-dir or --results');
 const runDir = arg('run-dir') ?? (run && runDirFor(run, '.no-mistakes-backend'));
 const resultsPath = arg('results') ?? (runDir && join(runDir, 'results.json'));
 let repo = arg('repo');
@@ -67,30 +70,25 @@ let repo = arg('repo');
 if (!runDir || !resultsPath) die('required: --run <id>, or --run-dir <dir> --results <results.json>');
 if (!existsSync(runDir)) die(`run-dir not found: ${runDir}`);
 if (!existsSync(resultsPath)) die(`results not found: ${resultsPath}`);
-if (process.argv.includes('--print-command')) {
-  if (!/^\d+$/.test(pr ?? '') || !run || !/^[\w.-]+\/[\w.-]+$/.test(repo ?? '')) die('--print-command needs --pr <N> --run <id> --repo owner/name');
-  const selected = arg('config') || process.env.NM_CONFIG_PATH || loadConfig({ project: arg('project') }).path;
-  if (selected && !loadConfig({ configPath: selected }).cfg) die(`config ${selected} does not load`);
-  if (!selected) console.error('[post-results] no .no-mistakes.json found; the post will run without its API-key header');
-  printCommand(['--pr', pr, '--run', run, '--repo', repo, ...(selected ? ['--config', selected] : [])]);
-}
+if (printing && (!/^\d+$/.test(pr ?? '') || !run || !/^[\w.-]+\/[\w.-]+$/.test(repo ?? ''))) die('--print-command needs --pr <N> --run <id> --repo owner/name');
 
 let results;
 try { results = JSON.parse(readFileSync(resultsPath, 'utf8')); }
 catch (e) { die(`could not parse results json: ${e.message}`); }
 
 // A plain-command post runs without load-config's exports, so read the config itself: the file the
-// run selected (--config, or the exported path), which must load, else whatever discovery finds here.
-const configPath = arg('config') || process.env.NM_CONFIG_PATH;
-let cfg = null;
-if (configPath) {
-  const loaded = loadConfig({ configPath });
-  if (!loaded.cfg) die(`config ${configPath}: ${loaded.errors.join('; ')}`);
-  cfg = loaded.cfg;
-} else {
-  try { ({ cfg } = loadConfig()); } catch {}
-  if (!cfg) console.error('[post-results] no .no-mistakes.json found; posting without its API-key header or checkout base');
-}
+// run selected (--config, or the exported path), else whatever discovery finds here.
+const selectedConfig = arg('config') || process.env.NM_CONFIG_PATH;
+let loaded;
+try { loaded = selectedConfig ? loadConfig({ configPath: selectedConfig }) : loadConfig({ project: arg('project') }); }
+catch (e) { loaded = { path: selectedConfig ?? null, cfg: null, errors: [e.message] }; }
+const cfg = loaded.cfg;
+// A selected config that does not load blocks posting (its redaction header is unknown); the summary is still kept.
+const configError = loaded.path && !cfg ? `config ${loaded.path} does not load: ${loaded.errors.join('; ')}` : null;
+if (printing && configError) die(configError);
+if (configError && !selectedConfig) console.error(`[post-results] ${configError}; posting without its API-key header or checkout base`);
+if (!loaded.path) console.error('[post-results] no .no-mistakes.json found; posting without its API-key header or checkout base');
+if (printing) printCommand(['--pr', pr, '--run', run, '--repo', repo, ...(loaded.path ? ['--config', resolve(loaded.path)] : [])]);
 const checkoutBase = process.env.NM_CHECKOUT_BASE || expandHome(cfg?.checkoutBase);
 
 const repoBase = repo ? repo.split('/')[1] : null;
@@ -126,10 +124,11 @@ const esc = (s) => String(s ?? '').replace(/\\/g, '\\\\').replace(/\|/g, '\\|');
 // One sensitive-name set drives BOTH header-line and JSON-key redaction so they can't
 // drift; the project's custom API-key header ($NM_API_KEY_HEADER) is folded in dynamically.
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const apiKeyHeader = (process.env.NM_API_KEY_HEADER || cfg?.auth?.apiKeyHeader || '').toLowerCase().trim();
+const apiKeyHeaders = [...new Set([process.env.NM_API_KEY_HEADER, cfg?.auth?.apiKeyHeader]
+  .map((h) => (h || '').toLowerCase().trim()).filter(Boolean))];
 const NAMES = [
   'authorization', 'cookie', 'set-cookie', 'x-api-key',
-  ...(apiKeyHeader ? [escapeRe(apiKeyHeader)] : []),
+  ...apiKeyHeaders.map(escapeRe),
   'access[_-]?token', 'refresh[_-]?token', 'id[_-]?token', 'token',
   'api[_-]?key', 'client[_-]?secret', 'secret', 'password', 'private[_-]?key',
 ].join('|');
@@ -208,6 +207,7 @@ function persistAndExit(status, evidenceUrl = null) {
   process.exit(status === 'ok' ? 0 : 1);
 }
 
+if (configError && selectedConfig) { console.error(`[post-results] ${configError}`); persistAndExit('failed'); }
 if (!pr) persistAndExit('no-pr');
 
 // --- Idempotent post: evidence comment first (for its URL), then body block. -
