@@ -33,13 +33,13 @@ A review bot's green check counts only once that bot has reviewed the current he
 
 ## The final pass
 
-A repo can name **final-pass reviewers** in `docs/agents/review-bots.md`, each with the tag that requests it: bots billed per review, so they review only a head the other reviewers have converged on, after those have taken the easy findings. A final-pass reviewer's tag comments on the PR are the record of its requests: read the PR's comments for them before each decision below, which applies to each final-pass reviewer on its own.
+A repo can name **final-pass reviewers** in `docs/agents/review-bots.md`, each with the tag that requests it: bots billed per review, so each one reviews a PR once, after the other reviewers have converged and taken the easy findings. A final-pass reviewer's tag comments on the PR are the record of its requests: read the PR's comments for them before each decision below, which applies to each final-pass reviewer on its own.
 
-- **A request is due** once the PR converges, when the reviewer has no tag comment yet, or when fixes for its latest review's findings were pushed after its last tag comment. Standalone, post every due tag then, each as its own comment; under `/pr-loop`, step 8 posts them. The re-trigger above passes final-pass reviewers over.
+- **A request is due** once the PR converges and the reviewer has no tag comment yet. One more is due, at most once per PR, when a pushed fix for a bug it found changed more than the code it flagged: new logic, or another file. Fixes for its other findings, merges of the base branch and later work make no request due; the other reviewers check them, and the user can ask for another. Standalone, post every due tag then, each as its own comment; under `/pr-loop`, step 8 posts them. The re-trigger above passes final-pass reviewers over.
 - **Before a request,** each pass leaves it out of the check on who has reviewed the head.
 - **After a request,** it gates convergence until it reports a review that started after that tag comment: a review, or a comment or check-run summary saying the review finished; a check's state alone doesn't show that. A skip (for cost, size or usage), or 30 minutes from the tag with no review, ends the wait as `NOT_REVIEWED=<bot>:<reason>` rather than a loop failure, and ends its requests on this PR. Once it has reviewed or been reported `NOT_REVIEWED`, its check on any later commit, even one still pending, drops out of step 1's green gate and step 6's wait. The repo doc says how to read its review and its skips, and makes it comment when it finishes, since a T3 watch wakes on comments and reviews, not on a passing check.
 - **Its findings** are worked like any other, once every requested final-pass reviewer has reviewed or been reported `NOT_REVIEWED`: a push before then cancels a review still running.
-- **It passes** when its latest review finds nothing, or when every finding from that review is answered without a code change. Report it as `passed on <sha>`, naming the head that review covered. A pushed fix to its findings makes its next request due, so it is tagged again, once the PR converges, until it passes.
+- **It passes** once every finding from its reviews is fixed or answered and no request is due. Report it as `passed on <sha>`, naming the head its last review covered.
 
 ## Each pass
 
