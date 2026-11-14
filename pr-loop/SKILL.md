@@ -58,9 +58,9 @@ Record each final head, affected commands and collected/executed test results, r
 
 ## 8. Final pass
 
-When the repo names final-pass reviewers (`/address-pr-comments`, **The final pass**), post each one's request on each PR together, once steps 4–7 are done on that PR's final head, so they review last; a PR that already carries a reviewer's request keeps that one. Then run step 4, which waits for their reviews and works their findings; steps 6 and 7 follow for the fixes they touch.
+When the repo names final-pass reviewers (`/address-pr-comments`, **The final pass**), post every due request on each PR together, once steps 4–7 are done on that PR's final head, so they review last. Then run step 4, which waits for their reviews and works their findings; steps 6 and 7 follow for the fixes they touch. Repeat while a request is due.
 
-Done when step 4 has converged with each final pass reviewed or reported `NOT_REVIEWED`, and steps 6 and 7 are done for its fixes. A repo that names none skips this step.
+Done when each final-pass reviewer has passed or been reported `NOT_REVIEWED`, and steps 6 and 7 are done for its fixes. A repo that names none skips this step.
 
 ## 9. Recap and hand-back
 
