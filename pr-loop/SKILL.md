@@ -58,7 +58,7 @@ Record each final head, affected commands and collected/executed test results, r
 
 ## 8. Final pass
 
-When the repo names a final-pass reviewer (`/address-pr-comments`, **The final pass**), post its request on each PR once steps 4–7 are done on that PR's final head, so it reviews last; a PR that already carries the request keeps that one. Then run step 4, which waits for its review and works its findings; steps 6 and 7 follow for the fixes they touch.
+When the repo names final-pass reviewers (`/address-pr-comments`, **The final pass**), post each one's request on each PR together, once steps 4–7 are done on that PR's final head, so they review last; a PR that already carries a reviewer's request keeps that one. Then run step 4, which waits for their reviews and works their findings; steps 6 and 7 follow for the fixes they touch.
 
 Done when step 4 has converged with each final pass reviewed or reported `NOT_REVIEWED`, and steps 6 and 7 are done for its fixes. A repo that names none skips this step.
 
@@ -68,7 +68,7 @@ Follow `~/.claude/skills/recap-pr/SKILL.md`. Then hand back this block for each 
 
 ```text
 PR <url>: <what it changes, in a user's words> · head <sha> · merge order <n>
-Reviewers on this head: <name: passed | failed: why | NOT_REVIEWED: reason | passed on <sha> (the final-pass reviewer)>, one per reviewer
+Reviewers on this head: <name: passed | failed: why | NOT_REVIEWED: reason | passed on <sha> (a final-pass reviewer)>, one per reviewer
 Open findings: <none | each one>
 CI on this head: <each check and its conclusion, with test counts where the check reports them>
 App evidence: <taken on <sha> | skipped: reason>
