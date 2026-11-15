@@ -4,7 +4,8 @@
 Usage: render.py <recap.json> [<out.html>]
 
 Reads the recap data, checks it has a title, a reviewer, PRs that each say whether they're
-ready, and all six sections, then writes it into recap.html, the template beside this script.
+ready and give any merge order as a whole number from 1, and all six sections, then writes it
+into recap.html, the template beside this script.
 The page goes to <out.html>, or recap.html beside the JSON, and its path is printed. On bad
 input it names every problem, writes nothing and exits non-zero.
 """
