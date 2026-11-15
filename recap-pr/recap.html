@@ -395,8 +395,12 @@ dd{margin:0; min-width:0}
     else if (notReady.length) verdict = 'Nothing needs you, but the agent says this isn’t ready to merge.';
     else if (noteCount) verdict = 'Nothing to decide. Read ' + (noteCount === 1 ? 'one note' : word(noteCount).toLowerCase() + ' notes') + ' before merging.';
     else {
-      var waits = prs.map(function (p) { return str(p.merge_ready).replace(/^yes,?\s*/i, ''); }).filter(Boolean);
-      verdict = 'Nothing needs you. Safe to merge' + (waits.length ? ' ' + waits.join(', ') : '') + '.';
+      var after = [];
+      prs.forEach(function (p) {
+        var m = /^yes,\s*after\s+(.+?)\s+merges$/i.exec(str(p.merge_ready));
+        if (m && after.indexOf(m[1]) < 0) after.push(m[1]);
+      });
+      verdict = 'Nothing needs you. Safe to merge' + (after.length ? ' after ' + joinWords(after) + (after.length === 1 ? ' merges' : ' merge') : '') + '.';
       clear = true;
     }
     var head = el('header', { class: 'verdict' });
