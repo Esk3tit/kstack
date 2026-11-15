@@ -261,24 +261,27 @@ dd{margin:0; min-width:0}
     return capFirst(joinWords(names));
   }
 
-  function linkKind(href) {
-    href = str(href);
-    if (!href) return 'none';
-    if (/^https?:\/\//i.test(href)) return 'web';
-    if (/^[a-z][a-z0-9+.-]*:/i.test(href) || /^[\/~\\]/.test(href)) return 'text';
-    return 'local';
+  var LINKABLE = { 'http:': true, 'https:': true, 'file:': true };
+  /* A URL or file path as a safe href, or '' when it can't be one. Browsers drop control
+     characters inside URLs, so "java\nscript:" would otherwise slip past a scheme check. */
+  function safeHref(value) {
+    var s = str(value);
+    if (!s || /[\u0000-\u001f\u007f\\]/.test(s) || s.charAt(0) === '~') return '';
+    if (!/^[a-z][a-z0-9+.-]*:/i.test(s)) s = s.split('/').map(encodeURIComponent).join('/');
+    var url;
+    try { url = new URL(s, document.baseURI); } catch (e) { return ''; }
+    return LINKABLE[url.protocol] ? url.href : '';
   }
   function link(label, href) {
-    var kind = linkKind(href);
+    var url = safeHref(href);
     label = str(label) || str(href);
-    if (kind === 'web') return el('a', { href: href, rel: 'noopener noreferrer', text: label });
-    if (kind === 'local') return el('a', { href: href, text: label });
-    if (kind === 'text' && str(href) !== label) return el('span', { title: str(href), text: label });
+    if (url) return el('a', { href: url, rel: 'noopener noreferrer', text: label });
+    if (str(href) && str(href) !== label) return el('span', { title: str(href), text: label });
     return el('span', { text: label });
   }
 
   var isOpen = function (it) { var r = str(it.result).toLowerCase(); return !r || r === 'open'; };
-  var RESULT_WORDS = { accepted: 'kept', rejected: 'turned down', superseded: 'superseded', reverted: 'undone', open: 'still open' };
+  var RESULT_WORDS = { accepted: 'kept', rejected: 'turned down', superseded: 'superseded', retracted: 'retracted', reverted: 'undone', open: 'still open' };
 
   function extras(it, hideWhy) {
     var rows = list(it.rows), ev = list(it.evidence), out = [];
@@ -324,7 +327,6 @@ dd{margin:0; min-width:0}
     var d = el('details', { class: 'fold' },
       el('summary', null, el('span', null, title, note ? el('span', { class: 'note', text: note }) : null)),
       el('div', { class: 'fold-body' }, body));
-    /* screenshots are fetched only once their section is opened */
     d.addEventListener('toggle', function () {
       if (d.open) Array.prototype.forEach.call(d.querySelectorAll('img[data-src]'), function (img) {
         img.src = img.getAttribute('data-src'); img.removeAttribute('data-src');
@@ -336,41 +338,62 @@ dd{margin:0; min-width:0}
     return el('ul', null, items.map(function (it) { return item(it, opts); }));
   }
 
+  function formatDate(iso, options) {
+    var d = new Date(iso);
+    return isNaN(d) ? str(iso) : d.toLocaleString(undefined, options);
+  }
+  function hasTicket(data) { return !!(data.ticket && (data.ticket.label || data.ticket.url)); }
+  function baseName(prs) {
+    var bases = prs.map(function (p) { return str(p.base); }).filter(function (b, i, all) { return b && all.indexOf(b) === i; });
+    return bases.length === 1 ? bases[0] : 'the base branch';
+  }
+
   function prLabel(pr) { return (pr.number != null ? '#' + pr.number : str(pr.title) || str(pr.repo) || 'a PR'); }
   function prLink(pr) { return link('PR ' + prLabel(pr), pr.url); }
 
   function render(data) {
-    var S = data.sections && typeof data.sections === 'object' ? data.sections : {};
+    var S = data.sections;
     var prs = list(data.prs);
-    var divergences = list(S.divergences), attention = list(S.attention);
-    var undecided = divergences.filter(isOpen);
-    var decided = divergences.filter(function (d) { return !isOpen(d); });
-    var calls = attention.filter(function (a) { return a.owner_call && isOpen(a); });
-    var fyi = attention.filter(function (a) { return !(a.owner_call && isOpen(a)); });
-    var behavior = list(S.behavior_changes);
-    var notReady = prs.filter(function (p) { return p.merge_ready != null && str(p.merge_ready).toLowerCase() !== 'yes'; });
+    var base = baseName(prs);
+    var undecided = list(S.divergences);
+    var attention = list(S.attention);
+    var calls = attention.filter(function (a) { return a.owner_call; });
+    var notes = attention.filter(function (a) { return !a.owner_call; });
+    var notReady = prs.filter(function (p) { return str(p.merge_ready).toLowerCase() !== 'yes'; });
     var needCount = undecided.length + calls.length;
 
     document.title = (needCount ? '(' + needCount + ') ' : '') + 'Recap' + (data.title ? ': ' + data.title : '');
+    main.appendChild(topLine(data));
+    main.appendChild(verdictHeader(data, prs, needCount, notReady, notes.length));
+    if (needCount) main.appendChild(needs(data, undecided, calls, base));
+    var behavior = list(S.behavior_changes);
+    if (behavior.length) main.appendChild(behaviorSection(behavior));
+    main.appendChild(folds(data, S, notes, prs));
 
-    /* top line */
-    var when = '';
-    if (data.generated) {
-      var d = new Date(data.generated);
-      when = isNaN(d) ? str(data.generated) : d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
-    }
+    window.addEventListener('beforeprint', function () {
+      Array.prototype.forEach.call(document.querySelectorAll('details:not([open])'), function (d) { d.open = true; d.setAttribute('data-print', ''); });
+      Array.prototype.forEach.call(document.querySelectorAll('li[hidden]'), function (l) { l.hidden = false; });
+    });
+    window.addEventListener('afterprint', function () {
+      Array.prototype.forEach.call(document.querySelectorAll('details[data-print]'), function (d) { d.open = false; d.removeAttribute('data-print'); });
+    });
+  }
+
+  function topLine(data) {
+    var when = data.generated ? formatDate(data.generated, { day: 'numeric', month: 'short', year: 'numeric' }) : '';
     var themeBtn = el('button', { class: 'theme quiet', type: 'button' });
-    main.appendChild(el('div', { class: 'top' },
-      el('span', { class: 'quiet', text: ['Recap', when].filter(Boolean).join(' · ') }), themeBtn));
     wireTheme(themeBtn);
+    return el('div', { class: 'top' }, el('span', { class: 'quiet', text: ['Recap', when].filter(Boolean).join(' · ') }), themeBtn);
+  }
 
-    /* verdict */
-    var verdict;
+  function verdictHeader(data, prs, needCount, notReady, noteCount) {
+    var verdict, clear = false;
     if (needCount) verdict = word(needCount) + (needCount === 1 ? ' thing needs you' : ' things need you') + ' before this merges.';
     else if (notReady.length) verdict = 'Nothing needs you, but the agent says this isn’t ready to merge.';
-    else verdict = 'Nothing needs you. Safe to merge.';
+    else if (noteCount) verdict = 'Nothing to decide. Read ' + (noteCount === 1 ? 'one note' : word(noteCount).toLowerCase() + ' notes') + ' before merging.';
+    else { verdict = 'Nothing needs you. Safe to merge.'; clear = true; }
     var head = el('header', { class: 'verdict' });
-    if (!needCount && !notReady.length) head.appendChild(okMark());
+    if (clear) head.appendChild(okMark());
     head.appendChild(el('h1', null, verdict.split(/(?<=\.) /).map(function (part, i) {
       return [i ? ' ' : null, el('span', { text: part })];
     })));
@@ -378,7 +401,7 @@ dd{margin:0; min-width:0}
     var about = el('p', { class: 'about-line' });
     if (data.title) about.appendChild(document.createTextNode(str(data.title)));
     var refs = [];
-    if (data.ticket && (data.ticket.label || data.ticket.url)) refs.push(link(data.ticket.label || 'ticket', data.ticket.url));
+    if (hasTicket(data)) refs.push(link(data.ticket.label || 'ticket', data.ticket.url));
     prs.forEach(function (p) { refs.push(prLink(p)); });
     refs.forEach(function (r, i) { about.appendChild(document.createTextNode(i || data.title ? ' · ' : '')); about.appendChild(r); });
     if (about.childNodes.length) head.appendChild(about);
@@ -390,77 +413,54 @@ dd{margin:0; min-width:0}
     if (needCount && notReady.length) {
       head.appendChild(el('p', { class: 'about-line', text: 'The agent also says ' + joinWords(notReady.map(prLabel)) + (notReady.length === 1 ? ' isn’t' : ' aren’t') + ' ready to merge.' }));
     }
-    main.appendChild(head);
+    return head;
+  }
 
-    /* what needs the owner */
-    if (needCount) main.appendChild(needs(data, undecided, calls));
-
-    /* what users will see */
-    if (behavior.length) {
-      var sec = el('section', null, el('h2', { text: 'What users will see' }));
-      var LIMIT = 6, ul = el('ul');
-      behavior.forEach(function (b, i) {
-        var li = item(b);
-        if (i >= LIMIT) li.hidden = true;
-        ul.appendChild(li);
+  function behaviorSection(behavior) {
+    var sec = el('section', null, el('h2', { text: 'What users will see' }));
+    var LIMIT = 6, ul = el('ul');
+    behavior.forEach(function (b, i) {
+      var li = item(b);
+      if (i >= LIMIT) li.hidden = true;
+      ul.appendChild(li);
+    });
+    sec.appendChild(ul);
+    if (behavior.length > LIMIT) {
+      var moreBtn = el('button', { class: 'linkish quiet', type: 'button', text: 'Show ' + (behavior.length - LIMIT) + ' more' });
+      moreBtn.addEventListener('click', function () {
+        Array.prototype.forEach.call(ul.children, function (c) { c.hidden = false; });
+        moreBtn.remove();
       });
-      sec.appendChild(ul);
-      if (behavior.length > LIMIT) {
-        var moreBtn = el('button', { class: 'linkish quiet', type: 'button', text: 'Show ' + (behavior.length - LIMIT) + ' more' });
-        moreBtn.addEventListener('click', function () {
-          Array.prototype.forEach.call(ul.children, function (c) { c.hidden = false; });
-          moreBtn.remove();
-        });
-        sec.appendChild(moreBtn);
-      }
-      main.appendChild(sec);
+      sec.appendChild(moreBtn);
     }
+    return sec;
+  }
 
-    /* everything else, folded */
-    var folds = el('div', { class: 'folds' });
-    if (fyi.length) folds.appendChild(fold(plural(fyi.length, 'thing', 'things') + ' worth knowing', 'nothing to do', itemList(fyi, { showWhy: true })));
-    if (decided.length) folds.appendChild(fold(plural(decided.length, 'difference', 'differences') + ' from main', 'already decided', itemList(decided, { showWhy: true })));
-
+  function folds(data, S, notes, prs) {
+    var out = el('div', { class: 'folds' });
+    if (notes.length) out.appendChild(fold(plural(notes.length, 'note', 'notes'), 'read before merging', itemList(notes, { showWhy: true })));
     var extra = list(S.not_asked_for);
     if (extra.length) {
       var mech = extra.filter(function (x) { return x.mechanism; }).length;
-      folds.appendChild(fold(plural(extra.length, 'addition', 'additions') + ' nobody asked for',
-        mech ? (mech === 1 ? '1 a mechanism' : mech + ' mechanisms') : '', grouped(extra)));
+      out.appendChild(fold(plural(extra.length, 'addition', 'additions') + ' nobody asked for',
+        mech ? plural(mech, 'mechanism', 'mechanisms') : '', grouped(extra)));
     }
     var turned = list(S.rejected_or_reverted);
     if (turned.length) {
       var other = {};
       turned.forEach(function (t) { var r = str(t.result).toLowerCase(); if (r && r !== 'rejected') other[r] = (other[r] || 0) + 1; });
       var otherNote = Object.keys(other).map(function (k) { return other[k] + ' ' + (RESULT_WORDS[k] || k); }).join(', ');
-      folds.appendChild(fold(plural(turned.length, 'suggestion', 'suggestions') + ' turned down', otherNote, itemList(turned, { showWhy: true })));
+      out.appendChild(fold(plural(turned.length, 'suggestion', 'suggestions') + ' turned down', otherNote, itemList(turned, { showWhy: true })));
     }
-    var checks = list(S.decided_no_change);
-    if (checks.length) {
-      var stillOpen = checks.filter(isOpen).length;
-      folds.appendChild(fold('Reviews and tests', stillOpen ? stillOpen + ' of ' + checks.length + ' still open' : 'all clean', itemList(checks, { showWhy: true })));
-    }
-    var KNOWN = { divergences: 1, attention: 1, behavior_changes: 1, not_asked_for: 1, rejected_or_reverted: 1, decided_no_change: 1 };
-    Object.keys(S).forEach(function (k) {
-      if (KNOWN[k] || !list(S[k]).length) return;
-      folds.appendChild(fold(capFirst(k.replace(/_/g, ' ')), String(list(S[k]).length), itemList(list(S[k]), { showWhy: true })));
-    });
-
+    var settled = list(S.decided_no_change);
+    if (settled.length) out.appendChild(fold(plural(settled.length, 'decision', 'decisions') + ' that change nothing for users', '', itemList(settled, { showWhy: true })));
     var parity = data.parity && typeof data.parity === 'object' ? data.parity : null;
-    if (parity && (list(parity.pairs).length || parity.summary)) folds.appendChild(parityFold(parity));
-
+    if (parity && (list(parity.pairs).length || parity.summary)) out.appendChild(parityFold(parity, baseName(prs)));
     var everyone = [];
     Object.keys(S).forEach(function (k) { everyone = everyone.concat(list(S[k])); });
-    if (everyone.length) folds.appendChild(whoFold(everyone));
-    folds.appendChild(aboutFold(data, prs));
-    main.appendChild(folds);
-
-    window.addEventListener('beforeprint', function () {
-      Array.prototype.forEach.call(document.querySelectorAll('details:not([open])'), function (d) { d.open = true; d.setAttribute('data-print', ''); });
-      Array.prototype.forEach.call(document.querySelectorAll('li[hidden]'), function (l) { l.hidden = false; });
-    });
-    window.addEventListener('afterprint', function () {
-      Array.prototype.forEach.call(document.querySelectorAll('details[data-print]'), function (d) { d.open = false; d.removeAttribute('data-print'); });
-    });
+    if (everyone.length) out.appendChild(whoFold(everyone));
+    out.appendChild(aboutFold(data, prs));
+    return out;
   }
 
   function okMark() {
@@ -495,8 +495,7 @@ dd{margin:0; min-width:0}
     return out;
   }
 
-  /* the owner's part: undecided divergences, then calls, then one reply */
-  function needs(data, undecided, calls) {
+  function needs(data, undecided, calls, base) {
     var key = 'recap-answers:' + str(data.title) + '|' + str(data.generated) + '|' + list(data.prs).map(prLabel).join(',');
     var saved = {};
     try { saved = JSON.parse(localStorage.getItem(key) || '{}') || {}; } catch (e) { saved = {}; }
@@ -544,7 +543,7 @@ dd{margin:0; min-width:0}
       items.forEach(function (it) { n += 1; ol.appendChild(item(it, { num: n, control: control(it, fallbackOptions) })); });
       sec.appendChild(el('div', { class: 'group ' + tone }, el('h2', { class: tone, text: heading }), ol));
     }
-    group('alarm', undecided.length === 1 ? 'A difference from main nobody decided' : 'Differences from main nobody decided',
+    group('alarm', (undecided.length === 1 ? 'A difference from ' : 'Differences from ') + base + ' nobody decided',
       undecided, ['Fine, keep it', 'Fix it before merging']);
     group('call', calls.length === 1 ? 'Your call' : 'Your calls', calls);
 
@@ -583,13 +582,13 @@ dd{margin:0; min-width:0}
     return lines.join('\n');
   }
 
-  function parityFold(parity) {
+  function parityFold(parity, base) {
     var pairs = list(parity.pairs), counts = {}, order = [];
     var wordFor = function (v, n) {
       v = str(v).toLowerCase();
       if (v === 'same') return 'same';
-      if (v === 'differs' || v === 'differ' || v === 'different') return n === 1 ? 'differs' : 'differ';
-      if (v === 'read only' || v === 'read-only' || v === 'read') return 'checked by reading';
+      if (v === 'differs') return n === 1 ? 'differs' : 'differ';
+      if (v === 'read only') return 'checked by reading';
       return v || 'not judged';
     };
     pairs.forEach(function (p) {
@@ -609,7 +608,7 @@ dd{margin:0; min-width:0}
       li.appendChild(line);
       if (p.note) li.appendChild(el('p', { class: 'why' }, rich(p.note)));
       if (str(p.master) || str(p.branch)) {
-        li.appendChild(el('div', { class: 'pair-shots' }, shot(p.master, 'main', p.label), shot(p.branch, 'this branch', p.label)));
+        li.appendChild(el('div', { class: 'pair-shots' }, shot(p.master, base, p.label), shot(p.branch, 'this branch', p.label)));
       }
       return li;
     })));
@@ -619,12 +618,12 @@ dd{margin:0; min-width:0}
     src = str(src);
     var fig = el('figure');
     var missing = function (why) { return el('div', { class: 'noimg quiet', text: why }); };
-    var kind = linkKind(src);
-    if (kind === 'none') fig.appendChild(missing('No screenshot'));
-    else if (kind === 'text') fig.appendChild(missing('Screenshot not reachable from here'));
+    var url = safeHref(src);
+    if (!src) fig.appendChild(missing('No screenshot'));
+    else if (!url) fig.appendChild(missing('Screenshot not reachable from here'));
     else {
-      var a = el('a', { href: src });
-      var img = el('img', { 'data-src': src, alt: plain(label) + ', ' + caption });
+      var a = el('a', { href: url });
+      var img = el('img', { 'data-src': url, alt: plain(label) + ', ' + caption });
       img.addEventListener('error', function () { fig.replaceChild(missing('Screenshot didn’t load'), a); });
       a.appendChild(img);
       fig.appendChild(a);
@@ -664,7 +663,7 @@ dd{margin:0; min-width:0}
   function aboutFold(data, prs) {
     var dl = el('dl');
     var row = function (label, value) { if (value) { dl.appendChild(el('dt', { text: label })); dl.appendChild(el('dd', null, value)); } };
-    if (data.ticket && (data.ticket.label || data.ticket.url)) row('Ticket', link(data.ticket.label || data.ticket.url, data.ticket.url));
+    if (hasTicket(data)) row('Ticket', link(data.ticket.label || data.ticket.url, data.ticket.url));
     prs.forEach(function (p, i) {
       var dd = [link([str(p.repo), p.number != null ? '#' + p.number : ''].filter(Boolean).join(' ') || 'PR', p.url)];
       if (p.title && str(p.title) !== str(data.title)) dd.push(' ' + str(p.title));
@@ -682,10 +681,7 @@ dd{margin:0; min-width:0}
     if (log && (log.path || log.rows != null)) {
       row('Decision log', [log.rows != null ? plural(log.rows, 'row', 'rows') : '', log.path ? el('div', null, el('code', { text: str(log.path) })) : null]);
     }
-    if (data.generated) {
-      var d = new Date(data.generated);
-      row('Written', isNaN(d) ? str(data.generated) : d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }));
-    }
+    if (data.generated) row('Written', formatDate(data.generated, { dateStyle: 'medium', timeStyle: 'short' }));
     if (!dl.childNodes.length) dl.appendChild(el('dd', { text: 'This recap carries no details about itself.' }));
     var note = log && log.rows != null ? 'from ' + plural(log.rows, 'log row', 'log rows') : '';
     return fold('About this recap', note, dl);
@@ -711,10 +707,10 @@ dd{margin:0; min-width:0}
   var data = null;
   try { data = JSON.parse(document.getElementById('recap-data').textContent); } catch (e) { data = null; }
   main.textContent = '';
-  if (!data || typeof data !== 'object' || Array.isArray(data)) {
+  if (!data || typeof data !== 'object' || Array.isArray(data) || !list(data.prs).length || !data.sections || typeof data.sections !== 'object') {
     main.appendChild(el('header', { class: 'verdict' },
       el('h1', { text: 'This recap couldn’t be read.' }),
-      el('p', { class: 'about-line', text: 'Its data block isn’t valid JSON, so there is nothing to show. Don’t merge on the strength of this page.' })));
+      el('p', { class: 'about-line', text: 'Its data is missing or incomplete, so there is nothing to show. Don’t merge on the strength of this page.' })));
     return;
   }
   render(data);

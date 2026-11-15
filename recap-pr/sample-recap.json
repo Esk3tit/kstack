@@ -1,7 +1,9 @@
 {
-  "schema": 1,
   "title": "Tree names refit when the browser's text size changes",
-  "ticket": { "label": "#610", "url": "https://github.com/Esk3tit/wt-records/issues/610" },
+  "ticket": {
+    "label": "#610",
+    "url": "https://github.com/Esk3tit/wt-records/issues/610"
+  },
   "generated": "2026-11-14T02:41:09Z",
   "head_note": "Head dbec4312 is 760a0089 rebased onto main cd9afc35. The conflicts were the union of both sides in playwright.config.ts and docs/e2e.md; range-diff shows every commit otherwise identical.",
   "prs": [
@@ -17,16 +19,54 @@
       "merge_ready": "yes"
     }
   ],
-  "log": { "path": "~/.local/share/recap/wt-records-610/decisions.tsv", "rows": 67 },
+  "log": {
+    "path": "~/.local/share/recap/wt-records-610/decisions.tsv",
+    "rows": 67
+  },
   "reviewed_by": "gpt-6.1-sol (Codex)",
   "parity": {
     "summary": "Every tree name at the default text size, on main's build and this branch, on the USA tree with the long-name fixture at 390, 1280 and 1600px: 18 of 18 identical in fit, break, height and lines. Page weight differs; see Divergences.",
     "pairs": [
-      { "surface": "Nation tree", "label": "USA tree, 390px, night", "master": "shots/master-390.png", "branch": "shots/branch-390.png", "verdict": "same", "note": "fit, break, height and lines identical" },
-      { "surface": "Nation tree", "label": "USA tree, 1280px, day", "master": "shots/master-1280.png", "branch": "shots/branch-1280.png", "verdict": "same", "note": "" },
-      { "surface": "Nation tree", "label": "Chrome font setting 20px, 1500px", "master": "shots/master-chrome-font.png", "branch": "shots/branch-chrome-font.png", "verdict": "differs", "note": "the decided change: names refit at the new size (row 2)" },
-      { "surface": "Page weight", "label": "Phone search page, CI perf run", "master": "", "branch": "", "verdict": "differs", "note": "largest paint 3.48 → 3.63 s; see Divergences" },
-      { "surface": "Safari text size", "label": "Make Text Bigger (⌥⌘+)", "master": "", "branch": "", "verdict": "read only", "note": "automation can't drive it; one check by hand settles it" }
+      {
+        "surface": "Nation tree",
+        "label": "USA tree, 390px, night",
+        "master": "shots/master-390.png",
+        "branch": "shots/branch-390.png",
+        "verdict": "same",
+        "note": "fit, break, height and lines identical"
+      },
+      {
+        "surface": "Nation tree",
+        "label": "USA tree, 1280px, day",
+        "master": "shots/master-1280.png",
+        "branch": "shots/branch-1280.png",
+        "verdict": "same",
+        "note": ""
+      },
+      {
+        "surface": "Nation tree",
+        "label": "Chrome font setting 20px, 1500px",
+        "master": "shots/master-chrome-font.png",
+        "branch": "shots/branch-chrome-font.png",
+        "verdict": "differs",
+        "note": "the decided change: names refit at the new size (row 2)"
+      },
+      {
+        "surface": "Page weight",
+        "label": "Phone search page, CI perf run",
+        "master": "",
+        "branch": "",
+        "verdict": "differs",
+        "note": "largest paint 3.48 → 3.63 s; see Divergences"
+      },
+      {
+        "surface": "Safari text size",
+        "label": "Make Text Bigger (⌥⌘+)",
+        "master": "",
+        "branch": "",
+        "verdict": "read only",
+        "note": "automation can't drive it; one check by hand settles it"
+      }
     ]
   },
   "sections": {
@@ -35,21 +75,41 @@
         "surface": "Page weight",
         "text": "**Most pages carry about 0.2 KB more JavaScript.** The browser bundle already includes the database schema on main, so the new column's definition ships to every page. The player page and some moderator pages go the other way: about 0.4 KB less and one request fewer.",
         "why": null,
-        "who": ["me"],
+        "who": [
+          "me"
+        ],
         "asked": "no",
         "result": "open",
-        "rows": [61],
-        "evidence": [ { "label": "perf comment", "href": "https://github.com/Esk3tit/wt-records/pull/617#issuecomment-1", "kind": "comment" } ]
+        "rows": [
+          61
+        ],
+        "evidence": [
+          {
+            "label": "perf comment",
+            "href": "https://github.com/Esk3tit/wt-records/pull/617#issuecomment-1",
+            "kind": "comment"
+          }
+        ]
       },
       {
         "surface": "Page weight",
         "text": "**The phone search page reads slower on CI's final run.** Largest paint went 3.48 → 3.63 s, with ranges that don't overlap (noise floor 0.12 s). On the previous run the same page read 3.62 → 3.68 s, no difference. The search page's code and queries are untouched.",
         "why": null,
-        "who": ["me"],
+        "who": [
+          "me"
+        ],
         "asked": "no",
         "result": "open",
-        "rows": [62],
-        "evidence": [ { "label": "perf run 2", "href": "https://github.com/Esk3tit/wt-records/actions/runs/1", "kind": "test" } ]
+        "rows": [
+          62
+        ],
+        "evidence": [
+          {
+            "label": "perf run 2",
+            "href": "https://github.com/Esk3tit/wt-records/actions/runs/1",
+            "kind": "test"
+          }
+        ]
       }
     ],
     "behavior_changes": [
@@ -57,14 +117,30 @@
         "surface": "Nation tree",
         "text": "When a reader changes the browser's text size, every tree name refits at once, as a fresh load at that size draws it. Main kept the old fit until the next window-width change, so a name could run past its card, start below its BR with room beside it, or break mid-word with room to spare.",
         "why": "Every card is sized in rem, so a text-size change resizes them with no resize event.",
-        "who": ["me"],
+        "who": [
+          "me"
+        ],
         "asked": "yes",
         "result": "accepted",
-        "rows": [2],
+        "rows": [
+          2
+        ],
         "evidence": [
-          { "label": "src/components/tree-names.ts", "href": "https://github.com/Esk3tit/wt-records/blob/dbec4312/src/components/tree-names.ts", "kind": "file" },
-          { "label": "red on main, green in 3 engines", "href": "https://github.com/Esk3tit/wt-records/actions/runs/2", "kind": "test" },
-          { "label": "before/after clip", "href": "shots/text-size-before-after.mp4", "kind": "screenshot" }
+          {
+            "label": "src/components/tree-names.ts",
+            "href": "https://github.com/Esk3tit/wt-records/blob/dbec4312/src/components/tree-names.ts",
+            "kind": "file"
+          },
+          {
+            "label": "red on main, green in 3 engines",
+            "href": "https://github.com/Esk3tit/wt-records/actions/runs/2",
+            "kind": "test"
+          },
+          {
+            "label": "before/after clip",
+            "href": "shots/text-size-before-after.mp4",
+            "kind": "screenshot"
+          }
         ]
       }
     ],
@@ -75,21 +151,35 @@
         "mechanism": true,
         "text": "WebKit's root-size cases get three times the 30 s test timeout (`test.slow`).",
         "why": "Measured 26–43 s in Playwright's Linux WebKit container on CI's 4 CPUs and 2 workers.",
-        "who": ["codex"],
+        "who": [
+          "codex"
+        ],
         "asked": "no",
         "result": "accepted",
-        "rows": [40],
-        "evidence": [ { "label": "e2e/tree-text-size.spec.ts:18", "href": "", "kind": "file" } ]
+        "rows": [
+          40
+        ],
+        "evidence": [
+          {
+            "label": "e2e/tree-text-size.spec.ts:18",
+            "href": "",
+            "kind": "file"
+          }
+        ]
       },
       {
         "surface": "Nation tree",
         "group": "App code",
         "text": "The window-width resize listener is kept beside the new observer.",
         "why": "A width change still fits before the tree's room under an open panel is measured.",
-        "who": ["me"],
+        "who": [
+          "me"
+        ],
         "asked": "no",
         "result": "accepted",
-        "rows": [5],
+        "rows": [
+          5
+        ],
         "evidence": []
       },
       {
@@ -97,10 +187,14 @@
         "group": "Tests and docs",
         "text": "New e2e/tree-text-size.spec.ts runs in all three engines. The long-name fixture moved unchanged into e2e/support/tree-names.ts.",
         "why": null,
-        "who": ["me"],
+        "who": [
+          "me"
+        ],
         "asked": "no",
         "result": "accepted",
-        "rows": [8],
+        "rows": [
+          8
+        ],
         "evidence": []
       },
       {
@@ -108,10 +202,14 @@
         "group": "Tests and docs",
         "text": "A Chromium-only case changes Chrome's default font size over CDP at 1500px.",
         "why": "It caught a first version that compared card width only.",
-        "who": ["me"],
+        "who": [
+          "me"
+        ],
         "asked": "no",
         "result": "accepted",
-        "rows": [11],
+        "rows": [
+          11
+        ],
         "evidence": []
       },
       {
@@ -119,10 +217,14 @@
         "group": "Tests and docs",
         "text": "The sweep runs under the wider face too, per docs/e2e.md's fit rule.",
         "why": null,
-        "who": ["review"],
+        "who": [
+          "review"
+        ],
         "asked": "no",
         "result": "accepted",
-        "rows": [19],
+        "rows": [
+          19
+        ],
         "evidence": []
       },
       {
@@ -130,10 +232,14 @@
         "group": "Tests and docs",
         "text": "A Folder stays open through the sweep; its names and heading are checked.",
         "why": null,
-        "who": ["fable"],
+        "who": [
+          "fable"
+        ],
         "asked": "no",
         "result": "accepted",
-        "rows": [24],
+        "rows": [
+          24
+        ],
         "evidence": []
       },
       {
@@ -141,22 +247,44 @@
         "group": "Tests and docs",
         "text": "The sweep takes the glass blur off before first paint, as an adopted stylesheet.",
         "why": "CI's runner was shut down twice: headless Linux WebKit took 6.4 GiB on this tree against 1.4 GiB with the blur off. Names measured identical with and without blur in all three engines.",
-        "who": ["codex", "review"],
+        "who": [
+          "codex",
+          "review"
+        ],
         "asked": "no",
         "result": "accepted",
-        "rows": [33, 34],
-        "evidence": [ { "label": "runner OOM log", "href": "https://github.com/Esk3tit/wt-records/actions/runs/3", "kind": "test" } ]
+        "rows": [
+          33,
+          34
+        ],
+        "evidence": [
+          {
+            "label": "runner OOM log",
+            "href": "https://github.com/Esk3tit/wt-records/actions/runs/3",
+            "kind": "test"
+          }
+        ]
       },
       {
         "surface": "Follow-ups",
         "group": "Tests and docs",
         "text": "A follow-up was filed as #620: measure the tree's glass cost on a real iPhone and a low-end Android.",
         "why": null,
-        "who": ["fable"],
+        "who": [
+          "fable"
+        ],
         "asked": "no",
         "result": "accepted",
-        "rows": [45],
-        "evidence": [ { "label": "#620", "href": "https://github.com/Esk3tit/wt-records/issues/620", "kind": "issue" } ]
+        "rows": [
+          45
+        ],
+        "evidence": [
+          {
+            "label": "#620",
+            "href": "https://github.com/Esk3tit/wt-records/issues/620",
+            "kind": "issue"
+          }
+        ]
       }
     ],
     "rejected_or_reverted": [
@@ -164,40 +292,56 @@
         "surface": "Nation tree",
         "text": "Observing `.tree-slot` instead of `.tree-card`.",
         "why": "A Folder's face precedes its panel, so the first `.tree-card` is never a panel card.",
-        "who": ["fable"],
+        "who": [
+          "fable"
+        ],
         "asked": "no",
         "result": "rejected",
-        "rows": [27],
+        "rows": [
+          27
+        ],
         "evidence": []
       },
       {
         "surface": "Nation tree",
         "text": "A ResizeObserver loop error with an open Folder when the first card is a Folder face.",
         "why": "Not reproduced in 3 engines across 18 root sizes with a Folder first and open.",
-        "who": ["fable"],
+        "who": [
+          "fable"
+        ],
         "asked": "no",
         "result": "rejected",
-        "rows": [28],
+        "rows": [
+          28
+        ],
         "evidence": []
       },
       {
         "surface": "Tests",
         "text": "Deriving nation-tree.spec.ts's literal 13/14/11px and 126px from `sizesAt`.",
         "why": "The literals are DESIGN.md's numbers, an independent check.",
-        "who": ["review"],
+        "who": [
+          "review"
+        ],
         "asked": "no",
         "result": "rejected",
-        "rows": [30],
+        "rows": [
+          30
+        ],
         "evidence": []
       },
       {
         "surface": "Diagnosis",
         "text": "The first CI-shard diagnosis, \"infrastructure\".",
         "why": "The container reproduction disproved it.",
-        "who": ["me"],
+        "who": [
+          "me"
+        ],
         "asked": "no",
         "result": "superseded",
-        "rows": [21],
+        "rows": [
+          21
+        ],
         "evidence": []
       }
     ],
@@ -206,40 +350,61 @@
         "surface": "Reviews",
         "text": "Codex rounds 1–13 (`gpt-6.1-sol`): 1 finding in all (round 10, accepted). Converged at 760a0089.",
         "why": null,
-        "who": ["codex"],
+        "who": [
+          "codex"
+        ],
         "asked": "yes",
         "result": "accepted",
-        "rows": [50],
+        "rows": [
+          50
+        ],
         "evidence": []
       },
       {
         "surface": "Reviews",
         "text": "Standards, Spec and Fable 5.2 passes: clean on 0dc49466, then clean on 760a0089.",
         "why": null,
-        "who": ["review", "fable"],
+        "who": [
+          "review",
+          "fable"
+        ],
         "asked": "yes",
         "result": "accepted",
-        "rows": [52, 53],
+        "rows": [
+          52,
+          53
+        ],
         "evidence": []
       },
       {
         "surface": "Tests",
         "text": "Affected tests: tree-text-size 11 passed + 2 skipped across 3 engines; nation-tree 57; the 13 other affected specs 307 (Chromium) and 35 + 8 skipped (WebKit, Firefox); unit tests 20.",
         "why": null,
-        "who": ["me"],
+        "who": [
+          "me"
+        ],
         "asked": "yes",
         "result": "accepted",
-        "rows": [55],
+        "rows": [
+          55
+        ],
         "evidence": []
       },
       {
         "surface": "Bots",
         "text": "Bots on 760a0089: CI 14/14; CodeRabbit, Bugbot and the Codex GitHub reviewer passed; Greptile silent, out of November credits (NOT_REVIEWED). Macroscope's final pass approved.",
         "why": null,
-        "who": ["bot:coderabbit", "bot:bugbot", "bot:codex", "bot:macroscope"],
+        "who": [
+          "bot:coderabbit",
+          "bot:bugbot",
+          "bot:codex",
+          "bot:macroscope"
+        ],
         "asked": "yes",
         "result": "accepted",
-        "rows": [58],
+        "rows": [
+          58
+        ],
         "evidence": []
       }
     ],
@@ -249,11 +414,18 @@
         "owner_call": true,
         "text": "**Open, for you:** Safari's Make Text Bigger (⌥⌘+) and Firefox's Zoom Text Only can't be driven from automation. The fix assumes they resize `rem` boxes along with the text. One check by hand settles it; steps are in the PR's \"How to test\".",
         "why": null,
-        "who": ["codex"],
+        "who": [
+          "codex"
+        ],
         "asked": "no",
         "result": "open",
-        "rows": [63],
-        "options": ["Check it by hand before merging", "Merge and check after"],
+        "rows": [
+          63
+        ],
+        "options": [
+          "Check it by hand before merging",
+          "Merge and check after"
+        ],
         "evidence": []
       },
       {
@@ -261,28 +433,47 @@
         "owner_call": true,
         "text": "**Your yes needed, the production backfill.** Merging means the next 06:00 UTC catalog sync makes about 2,700 small portraits in production. Trigger it by hand after the merge, or hold it.",
         "why": null,
-        "who": ["me"],
+        "who": [
+          "me"
+        ],
         "asked": "no",
         "result": "open",
-        "rows": [64],
-        "options": ["Trigger it by hand after merge", "Hold it"],
+        "rows": [
+          64
+        ],
+        "options": [
+          "Trigger it by hand after merge",
+          "Hold it"
+        ],
         "evidence": []
       },
       {
         "surface": "CI",
         "text": "A scroll-by-purpose case flaked once in CI's Chromium and passed on retry. It's unrelated to this change; filed as #621.",
         "why": null,
-        "who": ["me"],
+        "who": [
+          "me"
+        ],
         "asked": "no",
         "result": "open",
-        "rows": [66],
-        "evidence": [ { "label": "#621", "href": "https://github.com/Esk3tit/wt-records/issues/621", "kind": "issue" } ]
+        "rows": [
+          66
+        ],
+        "evidence": [
+          {
+            "label": "#621",
+            "href": "https://github.com/Esk3tit/wt-records/issues/621",
+            "kind": "issue"
+          }
+        ]
       },
       {
         "surface": "Coverage",
         "text": "CodeRabbit never reviewed this PR (spending cap).",
         "why": null,
-        "who": ["bot:coderabbit"],
+        "who": [
+          "bot:coderabbit"
+        ],
         "asked": "no",
         "result": "open",
         "rows": [],

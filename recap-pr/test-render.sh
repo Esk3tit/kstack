@@ -25,9 +25,17 @@ python3 "$D/render.py" "$tmp/hostile.json" "$tmp/hostile.html" >/dev/null
 check "a value can't close the data block" "$(grep -c '</script><script>alert' "$tmp/hostile.html" || true)" "0"
 check "the escaped value reads back unchanged" "$(block "$tmp/hostile.html")" "$(same "$tmp/hostile.json")"
 
-python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); del d["sections"]["attention"]; json.dump(d, open(sys.argv[2], "w"))' "$tmp/recap.json" "$tmp/partial.json"
-check "a missing section is refused" "$(python3 "$D/render.py" "$tmp/partial.json" "$tmp/partial.html" 2>&1 >/dev/null | grep -c 'sections.attention')" "1"
-check "a refused recap writes no page" "$([ -e "$tmp/partial.html" ] && echo written || echo none)" "none"
+refused() {  # refused <name> <python edit of d> <expected phrase>
+  python3 -c "import json,sys; d=json.load(open(sys.argv[1])); $2; json.dump(d, open(sys.argv[2], 'w'))" "$tmp/recap.json" "$tmp/$1.json"
+  check "refused: $1" "$(python3 "$D/render.py" "$tmp/$1.json" "$tmp/$1.html" 2>&1 >/dev/null | grep -c "$3")" "1"
+  check "refused $1 writes no page" "$([ -e "$tmp/$1.html" ] && echo written || echo none)" "none"
+}
+refused missing-section 'del d["sections"]["attention"]' 'sections.attention'
+refused sections-a-list 'd["sections"] = []' 'sections is missing'
+refused no-prs 'd["prs"] = []' 'prs is missing'
+refused unready-unknown 'del d["prs"][0]["merge_ready"]' 'prs\[0\] has no merge_ready'
+refused no-reviewer 'd["reviewed_by"] = ""' 'reviewed_by'
+refused not-an-object 'd = [d]' 'not a JSON object'
 echo '{"title": "x", "prs": [], "sections": [' > "$tmp/broken.json"
 check "unreadable JSON is refused" "$(python3 "$D/render.py" "$tmp/broken.json" >/dev/null 2>&1 && echo 0 || echo 1)" "1"
 
