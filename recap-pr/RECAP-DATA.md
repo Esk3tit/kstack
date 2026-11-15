@@ -19,7 +19,7 @@ So a divergence or owner call goes in those places only while it's open, and eve
 | `ticket` | `{label, url}`, or `null` |
 | `generated` | when the recap was written, UTC `YYYY-MM-DDTHH:MM:SSZ` |
 | `head_note` | the heads the recap covers, and any rebase or merge that moved them |
-| `prs` | one per PR, at least one: `repo`, `number`, `url`, `title`, `head`, `base`, `base_sha`, `merge_order`, and `merge_ready` (`yes`, `yes, after <PR> merges`, or `no: <what blocks it>`, as `/pr-loop` hands back; write `<PR>` as `#<n>` for one in the same repo, else `<owner>/<repo>#<n>`) |
+| `prs` | one per PR, at least one: `repo`, `number`, `url`, `title`, `head`, `base`, `base_sha`, `merge_order` (a whole number from 1, when several PRs must merge in order), and `merge_ready` (`yes`, `yes, after <PR> merges`, or `no: <what blocks it>`, as `/pr-loop` hands back; write `<PR>` as `#<n>` for one in the same repo, else `<owner>/<repo>#<n>`) |
 | `log` | `{path, rows}`: the decision log and its row count |
 | `reviewed_by` | step 4's reviewer |
 | `parity` | `{summary, pairs}`. Each pair is step 3's master/branch comparison: `surface`, `label`, `master` and `branch` (a screenshot, as below, or `""`), `verdict` (`same`, `differs` or `read only`), `note` |

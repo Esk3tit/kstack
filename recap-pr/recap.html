@@ -352,7 +352,11 @@ dd{margin:0; min-width:0}
   }
 
   /* A PR without a numeric merge_order sorts last, and never counts as merging before another. */
-  function order(pr) { var n = Number(pr.merge_order); return pr.merge_order != null && isFinite(n) ? n : Infinity; }
+  function order(pr) {
+    var v = pr.merge_order;
+    if (typeof v === 'string' && /^\d+$/.test(v.trim())) v = Number(v);
+    return typeof v === 'number' && isFinite(v) ? v : Infinity;
+  }
   var multiRepo = false;
   function prLabel(pr) { return (pr.number != null ? (multiRepo ? str(pr.repo) : '') + '#' + pr.number : str(pr.title) || str(pr.repo) || 'a PR'); }
   function prLink(pr) { return link('PR ' + prLabel(pr), pr.url); }
@@ -404,9 +408,8 @@ dd{margin:0; min-width:0}
     });
   }
   /* A bare #N means the waiting PR's own repo, so name the repo when the recap spans several. */
-  function qualified(condition, pr, prs) {
-    var repos = prs.map(function (p) { return str(p.repo); }).filter(function (r, i, all) { return all.indexOf(r) === i; });
-    if (repos.length < 2) return condition;
+  function qualified(condition, pr) {
+    if (!multiRepo) return condition;
     return condition.replace(/(^|[^\w\/.-])#(\d+)/g, function (all, before, n) { return before + str(pr.repo) + '#' + n; });
   }
 
@@ -419,7 +422,7 @@ dd{margin:0; min-width:0}
       var conditions = [];
       prs.forEach(function (p) {
         var rest = str(p.merge_ready).replace(/^yes,?\s*/i, '').replace(/\.$/, '');
-        var shown = rest && !waitsOnlyWithin(rest, p, prs) ? qualified(rest, p, prs) : '';
+        var shown = rest && !waitsOnlyWithin(rest, p, prs) ? qualified(rest, p) : '';
         if (shown && conditions.indexOf(shown) < 0) conditions.push(shown);
       });
       verdict = 'Nothing needs you. Safe to merge' + (conditions.length ? ' ' + conditions.join('; ') : '') + '.';
@@ -704,7 +707,7 @@ dd{margin:0; min-width:0}
       var bits = [];
       if (p.head) bits.push('head ' + p.head);
       if (p.base) bits.push('onto ' + p.base + (p.base_sha ? ' at ' + p.base_sha : ''));
-      if (prs.length > 1 && p.merge_order != null) bits.push('merges ' + ordinal(p.merge_order));
+      if (prs.length > 1 && order(p) < Infinity) bits.push('merges ' + ordinal(order(p)));
       if (p.merge_ready != null) bits.push(isReady(p) ? 'the agent says ready' + str(p.merge_ready).slice(3) : 'the agent says not ready: ' + str(p.merge_ready).replace(/^no:\s*/i, ''));
       if (bits.length) dd.push(el('div', { class: 'quiet', text: bits.join(' · ') }));
       row(prs.length > 1 ? 'PR ' + (i + 1) : 'PR', dd);

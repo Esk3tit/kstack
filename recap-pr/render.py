@@ -40,6 +40,12 @@ def problems(data) -> list[str]:
             for i, pr in enumerate(prs)
             if not isinstance(pr, dict) or not MERGE_READY.fullmatch(str(pr.get("merge_ready", "")))
         ]
+        found += [
+            f"prs[{i}].merge_order must be a whole number from 1"
+            for i, pr in enumerate(prs)
+            if isinstance(pr, dict) and pr.get("merge_order") is not None
+            and (isinstance(pr["merge_order"], bool) or not isinstance(pr["merge_order"], int) or pr["merge_order"] < 1)
+        ]
     sections = data.get("sections")
     if not isinstance(sections, dict):
         found.append("sections is missing or not an object")

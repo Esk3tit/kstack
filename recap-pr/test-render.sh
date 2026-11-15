@@ -42,6 +42,7 @@ python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); d["prs"][0]["merge_
 check "a stacked PR's readiness is accepted" "$(python3 "$D/render.py" "$tmp/stacked.json" "$tmp/stacked.html" >/dev/null 2>&1 && echo 0 || echo 1)" "0"
 refused no-reviewer 'd["reviewed_by"] = ""' 'reviewed_by'
 refused not-an-object 'd = [d]' 'not a JSON object'
+refused blank-order 'd["prs"][0]["merge_order"] = ""' 'merge_order must be a whole number'
 echo '{"title": "x", "prs": [], "sections": [' > "$tmp/broken.json"
 check "unreadable JSON is refused" "$(python3 "$D/render.py" "$tmp/broken.json" >/dev/null 2>&1 && echo 0 || echo 1)" "1"
 
