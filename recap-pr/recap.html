@@ -351,12 +351,16 @@ dd{margin:0; min-width:0}
     return bases.length === 1 ? bases[0] : 'the base branch';
   }
 
-  function prLabel(pr) { return (pr.number != null ? '#' + pr.number : str(pr.title) || str(pr.repo) || 'a PR'); }
+  /* A PR without a numeric merge_order sorts last, and never counts as merging before another. */
+  function order(pr) { var n = Number(pr.merge_order); return pr.merge_order != null && isFinite(n) ? n : Infinity; }
+  var multiRepo = false;
+  function prLabel(pr) { return (pr.number != null ? (multiRepo ? str(pr.repo) : '') + '#' + pr.number : str(pr.title) || str(pr.repo) || 'a PR'); }
   function prLink(pr) { return link('PR ' + prLabel(pr), pr.url); }
 
   function render(data) {
     var S = data.sections;
     var prs = list(data.prs);
+    multiRepo = prs.map(function (p) { return str(p.repo); }).filter(function (r, i, all) { return all.indexOf(r) === i; }).length > 1;
     var base = baseName(prs);
     var undecided = list(S.divergences);
     var attention = list(S.attention);
@@ -396,7 +400,7 @@ dd{margin:0; min-width:0}
     if (!m) return false;
     var repo = m[1] || str(pr.repo);
     return prs.some(function (q) {
-      return q !== pr && str(q.repo) === repo && String(q.number) === m[2] && q.merge_order < pr.merge_order;
+      return q !== pr && str(q.repo) === repo && String(q.number) === m[2] && order(q) < order(pr);
     });
   }
   /* A bare #N means the waiting PR's own repo, so name the repo when the recap spans several. */
@@ -436,7 +440,7 @@ dd{margin:0; min-width:0}
     if (about.childNodes.length) head.appendChild(about);
 
     if (prs.length > 1) {
-      var ordered = prs.slice().sort(function (a, b) { return (a.merge_order == null ? 1e9 : a.merge_order) - (b.merge_order == null ? 1e9 : b.merge_order); });
+      var ordered = prs.slice().sort(function (a, b) { return order(a) === order(b) ? 0 : order(a) < order(b) ? -1 : 1; });
       head.appendChild(el('p', { class: 'about-line', text: 'Merge in this order: ' + ordered.map(prLabel).join(', then ') + '.' }));
     }
     if (needCount && notReady.length) {
