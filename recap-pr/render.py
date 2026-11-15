@@ -8,6 +8,7 @@ ready, and all six sections, then writes it into recap.html, the template beside
 The page goes to <out.html>, or recap.html beside the JSON, and its path is printed. On bad
 input it names every problem, writes nothing and exits non-zero.
 """
+import html
 import json
 import pathlib
 import re
@@ -35,7 +36,7 @@ def problems(data) -> list[str]:
         found.append("prs is missing or empty")
     else:
         found += [
-            f"prs[{i}].merge_ready must be yes, yes, after <PR> merges, or no: <what blocks it>"
+            f"prs[{i}].merge_ready must be 'yes', 'yes, after <PR> merges' or 'no: <what blocks it>'"
             for i, pr in enumerate(prs)
             if not isinstance(pr, dict) or not MERGE_READY.fullmatch(str(pr.get("merge_ready", "")))
         ]
@@ -48,7 +49,7 @@ def problems(data) -> list[str]:
     return found
 
 
-def render(data) -> str:
+def render(data, base_dir: pathlib.Path) -> str:
     found = problems(data)
     if found:
         raise ValueError("; ".join(found))
@@ -57,7 +58,9 @@ def render(data) -> str:
     page, count = DATA_BLOCK.subn(lambda m: m.group(1) + payload + m.group(3), TEMPLATE.read_text(), count=1)
     if count != 1:
         raise ValueError(f"no recap-data block in {TEMPLATE}")
-    return page
+    # Relative screenshot and evidence paths name files beside recap.json, wherever the page is written.
+    base = f'<head>\n<base href="{html.escape(base_dir.resolve().as_uri() + "/")}">'
+    return page.replace("<head>", base, 1)
 
 
 def main(argv: list[str]) -> int:
@@ -66,7 +69,7 @@ def main(argv: list[str]) -> int:
         return 2
     source = pathlib.Path(argv[1])
     try:
-        page = render(json.loads(source.read_text()))
+        page = render(json.loads(source.read_text()), source.parent)
     except (OSError, ValueError) as error:
         print(f"render.py: {source}: {error}", file=sys.stderr)
         return 1

@@ -14,6 +14,8 @@ cp "$D/sample-recap.json" "$tmp/recap.json"
 check "prints the page beside the data" "$(python3 "$D/render.py" "$tmp/recap.json")" "$tmp/recap.html"
 check "the sample reaches the page intact" "$(block "$tmp/recap.html")" "$(same "$tmp/recap.json")"
 check "one data block" "$(grep -c 'id="recap-data"' "$tmp/recap.html")" "1"
+mkdir -p "$tmp/elsewhere" && python3 "$D/render.py" "$tmp/recap.json" "$tmp/elsewhere/page.html" >/dev/null
+check "relative paths stay anchored to recap.json" "$(grep -o '<base href="[^"]*">' "$tmp/elsewhere/page.html")" "<base href=\"$(python3 -c 'import pathlib,sys; print(pathlib.Path(sys.argv[1]).resolve().as_uri())' "$tmp")/\">"
 
 python3 - "$tmp/recap.json" "$tmp/hostile.json" <<'PY'
 import json, sys

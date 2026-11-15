@@ -7,7 +7,7 @@ The page works out its headline from the data:
 - each item in `divergences` and each `owner_call` in `attention` is a thing that needs the user, with buttons to answer it;
 - a PR whose `merge_ready` starts `no` makes it "not ready to merge";
 - any other `attention` item makes it "Nothing to decide. Read the notes before merging";
-- only with none of these does it say "Safe to merge".
+- only with none of these does it say "Safe to merge", adding any `after <PR> merges` condition.
 
 So a divergence or owner call goes in those places only while it's open, and every open one goes there.
 
@@ -36,7 +36,7 @@ So a divergence or owner call goes in those places only while it's open, and eve
 | `asked` | `yes` or `no` |
 | `result` | `accepted`, `rejected`, `reverted`, `superseded`, `retracted` or `open` |
 | `rows` | the log's row numbers behind it, counting data rows from 1 |
-| `evidence` | a list of `{label, href, kind}`. `kind` is `commit`, `file`, `comment`, `screenshot`, `test` or `issue`; `href` is an `http(s)` URL, a file path (absolute, or relative to the page, which sits beside `recap.json`; `~` isn't expanded), or `""`. Anything else shows as plain text |
+| `evidence` | a list of `{label, href, kind}`. `kind` is `commit`, `file`, `comment`, `screenshot`, `test` or `issue`; `href` is an `http(s)` URL, a file path (absolute, or relative to `recap.json`; `~` isn't expanded), or `""`. Anything else shows as plain text |
 | `group` | in `not_asked_for`: a short heading for related items; groups holding a mechanism come first |
 | `mechanism` | `true` for an added mechanism |
 | `owner_call` | in `attention`: `true` when only the user can decide it |
