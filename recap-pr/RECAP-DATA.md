@@ -11,6 +11,8 @@ The page works out its headline from the data:
 
 So a divergence or owner call goes in those places only while it's open, and every open one goes there.
 
+Screenshots on disk show when the page is opened from disk in a browser. T3's in-thread view can't reach local files, so there they show as a placeholder; the rest of the page is the same.
+
 ## Top level
 
 | field | holds |
