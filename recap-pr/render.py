@@ -16,7 +16,7 @@ import sys
 
 TEMPLATE = pathlib.Path(__file__).with_name("recap.html")
 DATA_BLOCK = re.compile(r'(<script type="application/json" id="recap-data">)(.*?)(</script>)', re.S)
-MERGE_READY = re.compile(r"yes|yes, after .+ merges|no: .+")
+MERGE_READY = re.compile(r"yes|yes, after .+ merges?|no: .+")
 SECTIONS = (
     "divergences",
     "behavior_changes",
