@@ -58,7 +58,7 @@ Record each final head, affected commands and collected/executed test results, r
 
 ## 8. Final pass
 
-When the repo names final-pass reviewers (`/address-pr-comments`, **The final pass**), make the call for each one on each PR once steps 4–7 are done on that PR's final head, and post the requests you make together, so they review last. Then run step 4, which waits for their reviews and works their findings; steps 6 and 7 follow for the fixes they touch. Each time steps 4, 6 and 7 settle on a new head, make the call on the unreviewed delta.
+When the repo names final-pass reviewers (`/address-pr-comments`, **The final pass**), make the call for each one on each PR once steps 4–7 are done on that PR's final head, and post the requests you make together, so they review last. Then run step 4, which waits for their reviews and works their findings; steps 6 and 7 follow for the fixes they touch. Each time steps 4, 6 and 7 settle on a new head, make the call again.
 
 Done when each final-pass reviewer is done (**The final pass**, "It's done") and steps 6 and 7 are done for its fixes. A repo that names none skips this step.
 
