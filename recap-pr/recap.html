@@ -383,10 +383,11 @@ dd{margin:0; min-width:0}
 
     window.addEventListener('beforeprint', function () {
       Array.prototype.forEach.call(document.querySelectorAll('details:not([open])'), function (d) { d.open = true; d.setAttribute('data-print', ''); });
-      Array.prototype.forEach.call(document.querySelectorAll('li[hidden]'), function (l) { l.hidden = false; });
+      Array.prototype.forEach.call(document.querySelectorAll('li[hidden]'), function (l) { l.hidden = false; l.setAttribute('data-print', ''); });
     });
     window.addEventListener('afterprint', function () {
       Array.prototype.forEach.call(document.querySelectorAll('details[data-print]'), function (d) { d.open = false; d.removeAttribute('data-print'); });
+      Array.prototype.forEach.call(document.querySelectorAll('li[data-print]'), function (l) { l.hidden = true; l.removeAttribute('data-print'); });
     });
   }
 
