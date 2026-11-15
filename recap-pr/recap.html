@@ -542,25 +542,28 @@ dd{margin:0; min-width:0}
     } catch (e) { /* unreadable storage starts fresh */ }
     var entries = [], n = 0;
     var status = el('span', { class: 'quiet', role: 'status' });
+    var idCounts = emptyMap();
+    undecided.concat(calls).forEach(function (it) { var id = questionId(it); idCounts[id] = (idCounts[id] || 0) + 1; });
 
     function refresh() {
       var done = entries.filter(function (e) { return e.get(); }).length;
       status.textContent = done + ' of ' + entries.length + ' answered';
       var out = {};
-      entries.forEach(function (e) { if (e.get()) out[e.id] = e.get(); });
+      entries.forEach(function (e) { if (e.unique && e.get()) out[e.id] = e.get(); });
       try { localStorage.setItem(key, JSON.stringify(out)); } catch (e) { /* private mode */ }
     }
 
     function control(it, fallbackOptions) {
       var index = entries.length;
-      /* Answers are kept by question, not position, so a rewritten recap can't hand one question another's answer. */
-      var id = shortLabel(it) + ' [' + list(it.rows).join(',') + ']';
-      while (entries.some(function (e) { return e.id === id; })) id += '+';
+      /* Answers are kept by the whole question, not its position, so a rewritten recap can't hand one
+         question another's answer. Two identical questions can't be told apart, so neither is kept. */
+      var id = questionId(it), unique = idCounts[id] === 1;
       var options = list(it.options).map(str).filter(Boolean);
       if (!options.length) options = fallbackOptions || [];
-      var value = str(saved[id]);
+      var stored = unique ? saved[id] : undefined;
+      var value = typeof stored === 'string' ? stored : '';
       if (options.length && options.indexOf(value) < 0) value = '';
-      var entry = { id: id, item: it, get: function () { return value; } };
+      var entry = { id: id, unique: unique, item: it, get: function () { return value; } };
       entries.push(entry);
       if (!options.length) {
         var input = el('input', { class: 'answer', type: 'text', placeholder: 'Your answer', 'aria-label': 'Your answer to item ' + (index + 1) });
@@ -611,6 +614,7 @@ dd{margin:0; min-width:0}
     return sec;
   }
 
+  function questionId(it) { return [str(it.surface), plain(it.text), list(it.rows).join(',')].join('\n'); }
   function shortLabel(it) {
     var text = str(it.text), lead = /^\*\*([\s\S]+?)\*\*/.exec(text);
     var label = plain(lead ? lead[1] : text).replace(/[\s.:,;]+$/, '');
