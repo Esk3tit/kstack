@@ -57,22 +57,19 @@ Done when the reviewer's flags are in hand, or it reports none.
 
 ## 5. Recap
 
-Write `recap.md` beside the log and print it. Group by surface within each section; one line per decision: what changed, why, who proposed it, evidence.
+Write the recap as `recap.json` beside the log, in the shape of [sample-recap.json](sample-recap.json); [RECAP-DATA.md](RECAP-DATA.md) gives each field. One item per decision, grouped by surface within each section, saying what changed, why, who proposed it, and its evidence. The sections, in order:
 
-```markdown
-## Divergences nobody decided
-## Behavior changes vs master
-## Not asked for
-## Rejected or reverted
-## Decided, no behavior change
-## Attention
-reviewed by <model>
-```
+| key | holds |
+|---|---|
+| `divergences` | divergences nobody decided |
+| `behavior_changes` | behavior changes vs master |
+| `not_asked_for` | accepted `asked no` rows, mechanisms first |
+| `rejected_or_reverted` | rejected, reverted, superseded and retracted rows |
+| `decided_no_change` | accepted `asked yes` rows with `prod_delta none` |
+| `attention` | step 4's flags and any other `open` row; a call only the user can make is an `owner_call`, with its `options` |
 
-`Not asked for` holds accepted `asked no` rows, mechanisms first. `Attention` holds step 4's flags and any other `open` row, or "No flags".
+Render it: `python3 ~/.claude/skills/recap-pr/render.py <log dir>/recap.json` writes `recap.html` beside it and prints its path. Show the page to the user: `open` it on a Mac, and in T3 also show it in the thread with T3's HTML render tool. Then print its path, and under it each divergence and owner call in one line, or "Nothing needs you".
 
-Then refresh each PR body's `## Behavior changes vs master` section (the `/pr` template) from the changes still in that PR's final diff: accepted rows nothing has superseded or retracted, with a `prod_delta` other than `none`, plus open parity divergences. Rejected, reverted, superseded and retracted rows stay in the recap's "Rejected or reverted" section only.
+Then refresh each PR body's `## Behavior changes vs master` section (the `/pr` template) from the changes still in that PR's final diff: accepted rows nothing has superseded or retracted, with a `prod_delta` other than `none`, plus open parity divergences. Rejected, reverted, superseded and retracted rows stay in the recap's `rejected_or_reverted` section only.
 
-`Decided, no behavior change` holds accepted `asked yes` rows with `prod_delta none`.
-
-Done when every log row and every parity row appears in exactly one section: a superseded or retracted row in `Rejected or reverted`, an accepted `asked no` row in `Not asked for`, any other row in the first section above that fits.
+Done when every log row and every parity row appears in exactly one section of `recap.json` (a superseded or retracted row in `rejected_or_reverted`, an accepted `asked no` row in `not_asked_for`, any other row in the first section above that fits), and `render.py` has written `recap.html` from it.

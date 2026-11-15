@@ -77,7 +77,7 @@ Merge-ready: <yes | yes, after <sibling PR> merges | no: what blocks it>
 
 A deploy job's result is reported but never sets `Merge-ready: no`; a failed reviewer, an open finding or a failing required check does.
 
-Done when `recap.md` exists beside the log, every PR body's "Behavior changes vs master" section matches it, and each PR's block is handed back.
+Done when `recap.html` exists beside the log, every PR body's "Behavior changes vs master" section matches it, and each PR's block is handed back.
 
 ## When the user says merged
 
