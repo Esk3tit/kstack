@@ -58,9 +58,9 @@ Record each final head, affected commands and collected/executed test results, r
 
 ## 8. Final pass
 
-When the repo names final-pass reviewers (`/address-pr-comments`, **The final pass**), post every due request on each PR together, once steps 4–7 are done on that PR's final head, so they review last. Then run step 4, which waits for their reviews and works their findings; steps 6 and 7 follow for the fixes they touch. Repeat while a request is due.
+When the repo names final-pass reviewers (`/address-pr-comments`, **The final pass**), make the call for each one on each PR once steps 4–7 are done on that PR's final head, and post the requests you decide on together, so they review last. Then run step 4, which waits for their reviews and works their findings; steps 6 and 7 follow for the fixes they touch. Each time steps 4, 6 and 7 settle on a new head, make the call on the unreviewed delta.
 
-Done when each final-pass reviewer has passed or been reported `NOT_REVIEWED`, and steps 6 and 7 are done for its fixes. A repo that names none skips this step.
+Done when each final-pass reviewer has passed, been skipped with its call logged, or been reported `NOT_REVIEWED`, and steps 6 and 7 are done for its fixes. A repo that names none skips this step.
 
 ## 9. Recap and hand-back
 
@@ -68,7 +68,7 @@ Follow `~/.claude/skills/recap-pr/SKILL.md`. Then hand back this block for each 
 
 ```text
 PR <url>: <what it changes, in a user's words> · head <sha> · merge order <n>
-Reviewers on this head: <name: passed | failed: why | NOT_REVIEWED: reason | passed on <sha> (a final-pass reviewer)>, one per reviewer
+Reviewers on this head: <name: passed | failed: why | NOT_REVIEWED: reason | passed on <sha> | skipped: why (a final-pass reviewer)>, one per reviewer
 Open findings: <none | each one>
 CI on this head: <each check and its conclusion, with test counts where the check reports them>
 App evidence: <taken on <sha> | skipped: reason>
