@@ -33,7 +33,11 @@ refused() {  # refused <name> <python edit of d> <expected phrase>
 refused missing-section 'del d["sections"]["attention"]' 'sections.attention'
 refused sections-a-list 'd["sections"] = []' 'sections is missing'
 refused no-prs 'd["prs"] = []' 'prs is missing'
-refused unready-unknown 'del d["prs"][0]["merge_ready"]' 'prs\[0\] has no merge_ready'
+refused unready-unknown 'del d["prs"][0]["merge_ready"]' 'prs\[0\].merge_ready must be'
+refused ready-not-a-phrase 'd["prs"][0]["merge_ready"] = True' 'prs\[0\].merge_ready must be'
+refused unknown-section 'd["sections"]["open_questions"] = []' 'sections.open_questions is not one'
+python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); d["prs"][0]["merge_ready"]="yes, after #616 merges"; json.dump(d, open(sys.argv[2], "w"))' "$tmp/recap.json" "$tmp/stacked.json"
+check "a stacked PR's readiness is accepted" "$(python3 "$D/render.py" "$tmp/stacked.json" "$tmp/stacked.html" >/dev/null 2>&1 && echo 0 || echo 1)" "0"
 refused no-reviewer 'd["reviewed_by"] = ""' 'reviewed_by'
 refused not-an-object 'd = [d]' 'not a JSON object'
 echo '{"title": "x", "prs": [], "sections": [' > "$tmp/broken.json"

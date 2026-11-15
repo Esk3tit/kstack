@@ -15,6 +15,7 @@ import sys
 
 TEMPLATE = pathlib.Path(__file__).with_name("recap.html")
 DATA_BLOCK = re.compile(r'(<script type="application/json" id="recap-data">)(.*?)(</script>)', re.S)
+MERGE_READY = re.compile(r"yes|yes, after .+ merges|no: .+")
 SECTIONS = (
     "divergences",
     "behavior_changes",
@@ -33,12 +34,17 @@ def problems(data) -> list[str]:
     if not isinstance(prs, list) or not prs:
         found.append("prs is missing or empty")
     else:
-        found += [f"prs[{i}] has no merge_ready" for i, pr in enumerate(prs) if not isinstance(pr, dict) or not pr.get("merge_ready")]
+        found += [
+            f"prs[{i}].merge_ready must be yes, yes, after <PR> merges, or no: <what blocks it>"
+            for i, pr in enumerate(prs)
+            if not isinstance(pr, dict) or not MERGE_READY.fullmatch(str(pr.get("merge_ready", "")))
+        ]
     sections = data.get("sections")
     if not isinstance(sections, dict):
         found.append("sections is missing or not an object")
     else:
         found += [f"sections.{name} is missing or not a list" for name in SECTIONS if not isinstance(sections.get(name), list)]
+        found += [f"sections.{name} is not one of the six sections" for name in sections if name not in SECTIONS]
     return found
 
 

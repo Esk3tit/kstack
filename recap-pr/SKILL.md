@@ -68,7 +68,7 @@ Write the recap as `recap.json` beside the log, in the shape of [sample-recap.js
 | `decided_no_change` | accepted `asked yes` rows with `prod_delta none` |
 | `attention` | step 4's flags and any other `open` row; a call only the user can make is an `owner_call`, with its `options` |
 
-Render it: `python3 ~/.claude/skills/recap-pr/render.py <log dir>/recap.json` writes `recap.html` beside it and prints its path. Show the page to the user: `open` it on a Mac, and in T3 also show it in the thread with T3's HTML render tool. Then print its path, and under it each divergence and owner call in one line, or "Nothing needs you".
+Render it: `python3 ~/.claude/skills/recap-pr/render.py <log dir>/recap.json` writes `recap.html` beside it and prints its path. Show the page to the user: `open` it on a Mac, and in T3 also show it in the thread with T3's HTML render tool. Then print its path, and under it each divergence and owner call in one line, or the page's headline when there are none.
 
 Then refresh each PR body's `## Behavior changes vs master` section (the `/pr` template) from the changes still in that PR's final diff: accepted rows nothing has superseded or retracted, with a `prod_delta` other than `none`, plus open parity divergences. Rejected, reverted, superseded and retracted rows stay in the recap's `rejected_or_reverted` section only.
 

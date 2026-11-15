@@ -243,16 +243,19 @@ dd{margin:0; min-width:0}
     if (parts.length < 2) return parts.join('');
     return parts.slice(0, -1).join(', ') + ' and ' + parts[parts.length - 1];
   }
+  function emptyMap() { return Object.create(null); }
+  function own(map, key) { return Object.prototype.hasOwnProperty.call(map, key) ? map[key] : undefined; }
+  function isReady(pr) { return /^yes\b/i.test(str(pr.merge_ready)); }
   function capFirst(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
 
   var BOTS = { coderabbit: 'CodeRabbit', bugbot: 'Bugbot', macroscope: 'Macroscope', greptile: 'Greptile', codex: 'Codex on GitHub' };
   function whoName(w) {
     w = str(w);
     var known = { you: 'you', me: 'the agent', codex: 'Codex', fable: 'Fable', review: 'the reviewers', claude: 'Claude' };
-    if (known[w]) return known[w];
+    if (own(known, w)) return known[w];
     if (w.indexOf('bot:') === 0) {
       var n = w.slice(4);
-      return BOTS[n.toLowerCase()] || (capFirst(n) + (/bot$/i.test(n) ? '' : ' bot'));
+      return own(BOTS, n.toLowerCase()) || (capFirst(n) + (/bot$/i.test(n) ? '' : ' bot'));
     }
     return w;
   }
@@ -291,7 +294,7 @@ dd{margin:0; min-width:0}
     if (asked === 'yes') facts.push('You asked for this');
     else if (asked === 'no') facts.push('Nobody asked for this');
     var res = str(it.result).toLowerCase();
-    if (res) facts.push(RESULT_WORDS[res] || res);
+    if (res) facts.push(own(RESULT_WORDS, res) || res);
     if (rows.length) facts.push('log ' + (rows.length === 1 ? 'row ' : 'rows ') + rows.join(', '));
     if (facts.length) out.push(el('p', { text: capFirst(facts.join(' · ')) }));
     if (ev.length) {
@@ -359,7 +362,7 @@ dd{margin:0; min-width:0}
     var attention = list(S.attention);
     var calls = attention.filter(function (a) { return a.owner_call; });
     var notes = attention.filter(function (a) { return !a.owner_call; });
-    var notReady = prs.filter(function (p) { return str(p.merge_ready).toLowerCase() !== 'yes'; });
+    var notReady = prs.filter(function (p) { return !isReady(p); });
     var needCount = undecided.length + calls.length;
 
     document.title = (needCount ? '(' + needCount + ') ' : '') + 'Recap' + (data.title ? ': ' + data.title : '');
@@ -368,7 +371,7 @@ dd{margin:0; min-width:0}
     if (needCount) main.appendChild(needs(data, undecided, calls, base));
     var behavior = list(S.behavior_changes);
     if (behavior.length) main.appendChild(behaviorSection(behavior));
-    main.appendChild(folds(data, S, notes, prs));
+    main.appendChild(folds(data, notes, base));
 
     window.addEventListener('beforeprint', function () {
       Array.prototype.forEach.call(document.querySelectorAll('details:not([open])'), function (d) { d.open = true; d.setAttribute('data-print', ''); });
@@ -436,7 +439,8 @@ dd{margin:0; min-width:0}
     return sec;
   }
 
-  function folds(data, S, notes, prs) {
+  function folds(data, notes, base) {
+    var S = data.sections, prs = list(data.prs);
     var out = el('div', { class: 'folds' });
     if (notes.length) out.appendChild(fold(plural(notes.length, 'note', 'notes'), 'read before merging', itemList(notes, { showWhy: true })));
     var extra = list(S.not_asked_for);
@@ -447,15 +451,15 @@ dd{margin:0; min-width:0}
     }
     var turned = list(S.rejected_or_reverted);
     if (turned.length) {
-      var other = {};
+      var other = emptyMap();
       turned.forEach(function (t) { var r = str(t.result).toLowerCase(); if (r && r !== 'rejected') other[r] = (other[r] || 0) + 1; });
-      var otherNote = Object.keys(other).map(function (k) { return other[k] + ' ' + (RESULT_WORDS[k] || k); }).join(', ');
+      var otherNote = Object.keys(other).map(function (k) { return other[k] + ' ' + (own(RESULT_WORDS, k) || k); }).join(', ');
       out.appendChild(fold(plural(turned.length, 'suggestion', 'suggestions') + ' turned down', otherNote, itemList(turned, { showWhy: true })));
     }
     var settled = list(S.decided_no_change);
     if (settled.length) out.appendChild(fold(plural(settled.length, 'decision', 'decisions') + ' that change nothing for users', '', itemList(settled, { showWhy: true })));
     var parity = data.parity && typeof data.parity === 'object' ? data.parity : null;
-    if (parity && (list(parity.pairs).length || parity.summary)) out.appendChild(parityFold(parity, baseName(prs)));
+    if (parity && (list(parity.pairs).length || parity.summary)) out.appendChild(parityFold(parity, base));
     var everyone = [];
     Object.keys(S).forEach(function (k) { everyone = everyone.concat(list(S[k])); });
     if (everyone.length) out.appendChild(whoFold(everyone));
@@ -479,7 +483,7 @@ dd{margin:0; min-width:0}
   }
 
   function grouped(items) {
-    var order = [], by = {};
+    var order = [], by = emptyMap();
     items.forEach(function (it) {
       var g = str(it.group) || (it.mechanism ? 'Mechanisms' : 'Other');
       if (!by[g]) { by[g] = []; order.push(g); }
@@ -583,7 +587,7 @@ dd{margin:0; min-width:0}
   }
 
   function parityFold(parity, base) {
-    var pairs = list(parity.pairs), counts = {}, order = [];
+    var pairs = list(parity.pairs), counts = emptyMap(), order = [];
     var wordFor = function (v, n) {
       v = str(v).toLowerCase();
       if (v === 'same') return 'same';
@@ -633,7 +637,7 @@ dd{margin:0; min-width:0}
   }
 
   function whoFold(items) {
-    var order = [], by = {}, asked = 0;
+    var order = [], by = emptyMap(), asked = 0;
     items.forEach(function (it) {
       if (str(it.asked).toLowerCase() === 'yes') asked += 1;
       var r = str(it.result).toLowerCase();
@@ -671,7 +675,7 @@ dd{margin:0; min-width:0}
       if (p.head) bits.push('head ' + p.head);
       if (p.base) bits.push('onto ' + p.base + (p.base_sha ? ' at ' + p.base_sha : ''));
       if (prs.length > 1 && p.merge_order != null) bits.push('merges ' + ordinal(p.merge_order));
-      if (p.merge_ready != null) bits.push(str(p.merge_ready).toLowerCase() === 'yes' ? 'the agent says ready' : 'the agent says not ready (' + str(p.merge_ready) + ')');
+      if (p.merge_ready != null) bits.push(isReady(p) ? 'the agent says ' + str(p.merge_ready) : 'the agent says not ready (' + str(p.merge_ready) + ')');
       if (bits.length) dd.push(el('div', { class: 'quiet', text: bits.join(' · ') }));
       row(prs.length > 1 ? 'PR ' + (i + 1) : 'PR', dd);
     });
@@ -686,7 +690,7 @@ dd{margin:0; min-width:0}
     var note = log && log.rows != null ? 'from ' + plural(log.rows, 'log row', 'log rows') : '';
     return fold('About this recap', note, dl);
   }
-  function ordinal(n) { return ({ 1: 'first', 2: 'second', 3: 'third' })[n] || 'number ' + n; }
+  function ordinal(n) { return own({ 1: 'first', 2: 'second', 3: 'third' }, n) || 'number ' + n; }
 
   function wireTheme(btn) {
     var modes = ['auto', 'light', 'dark'], mode = 'auto';
@@ -713,7 +717,14 @@ dd{margin:0; min-width:0}
       el('p', { class: 'about-line', text: 'Its data is missing or incomplete, so there is nothing to show. Don’t merge on the strength of this page.' })));
     return;
   }
-  render(data);
+  try {
+    render(data);
+  } catch (error) {
+    main.textContent = '';
+    main.appendChild(el('header', { class: 'verdict' },
+      el('h1', { text: 'This recap couldn’t be shown.' }),
+      el('p', { class: 'about-line', text: 'The page failed while drawing it (' + error.message + '). Don’t merge on the strength of this page.' })));
+  }
 })();
 </script>
 </body>
