@@ -535,8 +535,11 @@ dd{margin:0; min-width:0}
 
   function needs(data, undecided, calls, base) {
     var key = 'recap-answers:' + str(data.title) + '|' + str(data.generated) + '|' + list(data.prs).map(prLabel).join(',');
-    var saved = {};
-    try { saved = JSON.parse(localStorage.getItem(key) || '{}') || {}; } catch (e) { saved = {}; }
+    var saved = emptyMap();
+    try {
+      var stored = JSON.parse(localStorage.getItem(key) || '{}');
+      if (stored && typeof stored === 'object') Object.keys(stored).forEach(function (k) { saved[k] = stored[k]; });
+    } catch (e) { /* unreadable storage starts fresh */ }
     var entries = [], n = 0;
     var status = el('span', { class: 'quiet', role: 'status' });
 
@@ -544,15 +547,20 @@ dd{margin:0; min-width:0}
       var done = entries.filter(function (e) { return e.get(); }).length;
       status.textContent = done + ' of ' + entries.length + ' answered';
       var out = {};
-      entries.forEach(function (e, i) { if (e.get()) out[i] = e.get(); });
+      entries.forEach(function (e) { if (e.get()) out[e.id] = e.get(); });
       try { localStorage.setItem(key, JSON.stringify(out)); } catch (e) { /* private mode */ }
     }
 
     function control(it, fallbackOptions) {
-      var index = entries.length, value = str(saved[index]);
+      var index = entries.length;
+      /* Answers are kept by question, not position, so a rewritten recap can't hand one question another's answer. */
+      var id = shortLabel(it) + ' [' + list(it.rows).join(',') + ']';
+      while (entries.some(function (e) { return e.id === id; })) id += '+';
       var options = list(it.options).map(str).filter(Boolean);
       if (!options.length) options = fallbackOptions || [];
-      var entry = { item: it, get: function () { return value; } };
+      var value = str(saved[id]);
+      if (options.length && options.indexOf(value) < 0) value = '';
+      var entry = { id: id, item: it, get: function () { return value; } };
       entries.push(entry);
       if (!options.length) {
         var input = el('input', { class: 'answer', type: 'text', placeholder: 'Your answer', 'aria-label': 'Your answer to item ' + (index + 1) });
