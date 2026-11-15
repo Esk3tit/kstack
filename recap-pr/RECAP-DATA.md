@@ -7,7 +7,7 @@ The page works out its headline from the data:
 - each item in `divergences` and each `owner_call` in `attention` is a thing that needs the user, with buttons to answer it;
 - a PR whose `merge_ready` starts `no` makes it "not ready to merge";
 - any other `attention` item makes it "Nothing to decide. Read the notes before merging";
-- only with none of these does it say "Safe to merge", followed by each PR's `yes, …` condition as written, except one that waits only on another PR in this recap, which the page's merge order covers.
+- only with none of these does it say "Safe to merge", followed by each PR's `yes, …` condition as written, except one that waits only on another PR in this recap that merges earlier, which the page's merge order covers.
 
 So a divergence or owner call goes in those places only while it's open, and every open one goes there.
 
@@ -19,7 +19,7 @@ So a divergence or owner call goes in those places only while it's open, and eve
 | `ticket` | `{label, url}`, or `null` |
 | `generated` | when the recap was written, UTC `YYYY-MM-DDTHH:MM:SSZ` |
 | `head_note` | the heads the recap covers, and any rebase or merge that moved them |
-| `prs` | one per PR, at least one: `repo`, `number`, `url`, `title`, `head`, `base`, `base_sha`, `merge_order`, and `merge_ready` (`yes`, `yes, after <PR> merges`, or `no: <what blocks it>`, as `/pr-loop` hands back) |
+| `prs` | one per PR, at least one: `repo`, `number`, `url`, `title`, `head`, `base`, `base_sha`, `merge_order`, and `merge_ready` (`yes`, `yes, after <PR> merges`, or `no: <what blocks it>`, as `/pr-loop` hands back; write `<PR>` as `#<n>` for one in the same repo, else `<owner>/<repo>#<n>`) |
 | `log` | `{path, rows}`: the decision log and its row count |
 | `reviewed_by` | step 4's reviewer |
 | `parity` | `{summary, pairs}`. Each pair is step 3's master/branch comparison: `surface`, `label`, `master` and `branch` (a screenshot, as below, or `""`), `verdict` (`same`, `differs` or `read only`), `note` |

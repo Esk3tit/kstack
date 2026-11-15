@@ -389,13 +389,21 @@ dd{margin:0; min-width:0}
     return el('div', { class: 'top' }, el('span', { class: 'quiet', text: ['Recap', when].filter(Boolean).join(' · ') }), themeBtn);
   }
 
-  /* True when a condition names exactly one PR, by number or owner/repo#number, that this recap holds:
-     the merge-order line covers it. Anything else stays in the headline as written. */
+  /* True when a condition names exactly one other PR in this recap that merges earlier: the
+     merge-order line covers it. Anything else stays in the headline. */
   function waitsOnlyWithin(condition, pr, prs) {
     var m = /^after\s+(?:([\w.-]+\/[\w.-]+))?#(\d+)\s+merges?$/i.exec(condition);
     if (!m) return false;
     var repo = m[1] || str(pr.repo);
-    return prs.some(function (q) { return str(q.repo) === repo && String(q.number) === m[2]; });
+    return prs.some(function (q) {
+      return q !== pr && str(q.repo) === repo && String(q.number) === m[2] && q.merge_order < pr.merge_order;
+    });
+  }
+  /* A bare #N means the waiting PR's own repo, so name the repo when the recap spans several. */
+  function qualified(condition, pr, prs) {
+    var repos = prs.map(function (p) { return str(p.repo); }).filter(function (r, i, all) { return all.indexOf(r) === i; });
+    if (repos.length < 2) return condition;
+    return condition.replace(/(^|[^\w\/.-])#(\d+)/g, function (all, before, n) { return before + str(pr.repo) + '#' + n; });
   }
 
   function verdictHeader(data, prs, needCount, notReady, noteCount) {
@@ -407,7 +415,8 @@ dd{margin:0; min-width:0}
       var conditions = [];
       prs.forEach(function (p) {
         var rest = str(p.merge_ready).replace(/^yes,?\s*/i, '').replace(/\.$/, '');
-        if (rest && !waitsOnlyWithin(rest, p, prs) && conditions.indexOf(rest) < 0) conditions.push(rest);
+        var shown = rest && !waitsOnlyWithin(rest, p, prs) ? qualified(rest, p, prs) : '';
+        if (shown && conditions.indexOf(shown) < 0) conditions.push(shown);
       });
       verdict = 'Nothing needs you. Safe to merge' + (conditions.length ? ' ' + conditions.join('; ') : '') + '.';
       clear = true;
