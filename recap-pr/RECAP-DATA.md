@@ -7,7 +7,7 @@ The page works out its headline from the data:
 - each item in `divergences` and each `owner_call` in `attention` is a thing that needs the user, with buttons to answer it;
 - a PR whose `merge_ready` starts `no` makes it "not ready to merge";
 - any other `attention` item makes it "Nothing to decide. Read the notes before merging";
-- only with none of these does it say "Safe to merge", followed by each PR's `yes, …` condition as written, except one that waits only on another PR in this recap that merges earlier, which the page's merge order covers.
+- only with none of these does it say "Safe to merge", followed by each PR's `yes, …` condition as written, except one that waits only on another PR in this recap that merges earlier, when every PR has a `merge_order`, so the page shows the order.
 
 So a divergence or owner call goes in those places only while it's open, and every open one goes there.
 
