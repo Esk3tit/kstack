@@ -143,8 +143,8 @@ git symbolic-ref --delete refs/remotes/origin/HEAD && git update-ref -d refs/rem
 "$L" --pass spec "$H3" clean "$body"
 "$L" --pass fable "$H3" not-reviewed
 check "a pass recorded not-reviewed on the head exits 3" "$("$L" --check "$H3" "$body" >/dev/null 2>&1; echo $?)" "3"
-check "and says it is not rerun there" "$(verdict "$H3" "$body"; line fable)" "fail: Not reviewed on ${H3:0:8}, and not rerun there: fable
-NOT REVIEWED on this head: not rerun here"
+check "and names the pass" "$(verdict "$H3" "$body"; line fable)" "fail: Not reviewed on ${H3:0:8}: fable
+NOT REVIEWED on this head"
 "$L" --pass standards "$H3" fixed
 check "another pass still open makes it exit 1" "$("$L" --check "$H3" "$body" >/dev/null 2>&1; echo $?)" "1"
 "$L" --pass standards "$H3" clean

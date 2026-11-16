@@ -230,7 +230,7 @@ case "${1:-}" in
           split(lines[i], f, " "); p = f[1]; reads = f[2]
           if (!(p in verdict))
             state = (p in lasthead) ? "MISSING: last ran on " substr(lasthead[p], 1, 8) " (" lastverdict[p] ")" : "MISSING: never recorded"
-          else if (verdict[p] == "not-reviewed") state = "NOT REVIEWED on this head: not rerun here"
+          else if (verdict[p] == "not-reviewed") state = "NOT REVIEWED on this head"
           else if (verdict[p] != "clean") state = "NOT CLEAN: " verdict[p] " on this head"
           else if (reads && cur == "") state = "clean (PR body not checked)"
           else if (reads && body[p] == "-") state = "STALE BODY: it read no PR body"
@@ -241,7 +241,7 @@ case "${1:-}" in
           else if (state !~ /^clean/) bad = bad " " p
         }
         if (bad != "") { printf "Not clean on %s:%s%s\n", short, bad, unreviewed; exit 1 }
-        if (unreviewed != "") { printf "Not reviewed on %s, and not rerun there:%s\n", short, unreviewed; exit 3 }
+        if (unreviewed != "") { printf "Not reviewed on %s:%s\n", short, unreviewed; exit 3 }
         printf "Every required pass is clean on %s%s.\n", short, (cur == "" ? "" : " and its PR body")
       }'
     exit $? ;;
