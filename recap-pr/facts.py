@@ -222,12 +222,15 @@ def own_text(body):
         os.unlink(f.name)
 
 
-def write(slug, pr, make_block, first=None):
+def write(slug, pr, head, make_block, first=None):
     """Write the block into the live body and read it back; returns (attempts, author-text baseline, body written)."""
     changed = ("the description's own text changed while facts.py was writing (a bot may have restored an "
                "older copy, or someone edited it): compare it with the last edit, restore it if needed, and rerun")
     block = None
     for attempt in range(1, WRITE_ATTEMPTS + 1):
+        moved = pr_view(pr, "headRefOid")["headRefOid"]
+        if moved != head:
+            fail(f"the PR's head moved to {moved[:8]} while facts.py ran for {head[:8]}: rerun it for the new head")
         live = pr_view(pr, "body").get("body") or ""
         text = own_text(live)
         first = first or text
@@ -266,18 +269,18 @@ def main(argv):
         git("fetch", "--quiet", "origin", head)
     if "--record-only" in argv:
         new_record = record(pr, head)
-        attempts, _, _ = write(slug, pr, lambda live: with_record(own_block(live), new_record))
+        attempts, _, _ = write(slug, pr, head, lambda live: with_record(own_block(live), new_record))
         print(f"review record refreshed on PR #{pr} for {head[:8]}" + (f" after {attempts} writes" if attempts > 1 else ""))
         return
     block = build_block(pr, slug, head, base, top)
     if "--dry-run" in argv:
         print(block)
         return
-    attempts, first, written = write(slug, pr, lambda live: block)
+    attempts, first, written = write(slug, pr, head, lambda live: block)
     # The record read the description before these facts landed: rebuild it from the body just written, and
     # write the same facts again with the same author-text baseline, so a bot's older copy can't slip in.
     new_record = record(pr, head, written)
-    write(slug, pr, lambda live: with_record(block, new_record), first)
+    write(slug, pr, head, lambda live: with_record(block, new_record), first)
     print(f"facts block written to PR #{pr} for {head[:8]}" + (f" after {attempts} writes" if attempts > 1 else ""))
 
 
