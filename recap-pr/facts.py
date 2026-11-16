@@ -78,7 +78,7 @@ def checks_section(slug, head):
     for line in filter(None, runs.splitlines()):
         name, status, conclusion = (line.split("\t") + ["", ""])[:3]
         rows.append((name, conclusion if status == "completed" else status))
-    statuses = run(["gh", "api", f"repos/{slug}/commits/{head}/status",
+    statuses = run(["gh", "api", f"repos/{slug}/commits/{head}/status?per_page=100", "--paginate",
                     "-q", ".statuses[] | [.context, .state] | @tsv"]).stdout
     for line in filter(None, statuses.splitlines()):
         name, state = (line.split("\t") + [""])[:2]

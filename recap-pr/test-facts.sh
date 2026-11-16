@@ -34,8 +34,8 @@ elif a[0] == "api" and "PATCH" in a:
     print("{}")
 elif a[0] == "api" and a[1].endswith("/check-runs"):
     print("build\tcompleted\tsuccess\ne2e | webkit\tin_progress\t\nlint\tcompleted\tsuccess")
-elif a[0] == "api" and a[1].endswith("/status"):
-    print("CodeRabbit\tsuccess")
+elif a[0] == "api" and "/status" in a[1]:
+    print("CodeRabbit\tsuccess" + ("\nrailway deploy\tfailure" if "--paginate" in a else ""))
 else:
     sys.exit(f"stand-in gh got: {a}")
 PY
@@ -68,7 +68,7 @@ printf '## Summary\n\nDoes the thing.\n' > "$FAKE/body"
 block=$(python3 "$D/facts.py" 7 --dry-run)
 has() { printf '%s\n' "$block" | grep -cF -- "$1" || true; }
 check "names the head" "$(has "**Facts on \`${head:0:8}\`**")" "1"
-check "counts every check and status by result" "$(has "**Checks:** 4 on this head: 3 success, 1 in_progress.")" "1"
+check "counts every check and every page of statuses by result" "$(has "**Checks:** 5 on this head: 3 success, 1 failure, 1 in_progress.")" "1"
 check "a pipe in a check name stays in its cell" "$(has '| e2e \| webkit | in_progress |')" "1"
 check "carries the review check" "$(has "Every required pass is clean on ${head:0:8} and its PR body.")" "1"
 check "lists the PRs a base merge brought in" "$(printf '%s\n' "$block" | grep -E '^- #' | tr '\n' '|')" "- #2 tighten the budget|- #3 Name the cards by their owner|"
