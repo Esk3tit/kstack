@@ -285,6 +285,11 @@ It posts on **two idempotent surfaces**:
 Cap: **50 files per run** — capture what answers a review question, not every viewport of every
 screen. Name captures plainly (`[A-Za-z0-9_.-]`).
 
+Posting is all-or-nothing: the poster reads back the gallery to prove every capture uploaded, and on
+any failure removes the new gallery and leaves the PR as it was. `pr_post=spliced` = posted;
+`pr_post=failed` / `pr_post=no-pr` → `summary.md` (local media paths) in the run dir, stderr says why;
+re-run the post. The verdict is never lost.
+
 **A standalone gallery** (a before/after or a design choice for the owner, outside a verification
 run) goes through the same poster under its own `--marker`, one per question, so it never replaces a
 run's gallery or block. Its captures prove their subject as §5 says. Put them in a scratch folder with
@@ -306,11 +311,6 @@ node /Users/<you>/.claude/skills/no-mistakes-frontend/harness/post-evidence.mjs 
 ```
 
 Cite only the captures it posted.
-
-Posting is all-or-nothing: the poster reads back the gallery to prove every capture uploaded, and on
-any failure removes the new gallery and leaves the PR as it was. `pr_post=spliced` = posted;
-`pr_post=failed` / `pr_post=no-pr` → `summary.md` (local media paths) in the run dir, stderr says why;
-re-run the post. The verdict is never lost.
 
 **Never commit media to the PR branch.**
 

@@ -1,6 +1,15 @@
 --- a/SKILL.md
 +++ b/SKILL.md
-@@ -25,6 +25,11 @@
+@@ -20,11 +20,20 @@
+ 
+ - <what users, customers or ops see differently, and why> | None
+ 
++**For developers and agents:**
++
++- <what only people working on the code see differently, and why> | None
++
+ ## Evidence
+ 
  - **Before:** <screenshot/output/failing test run>
    **After:** <screenshot/output/passing test run>
  
@@ -12,7 +21,7 @@
  ## Merge Danger
  
  **Door:** <one-way or two-way>
-@@ -161,7 +166,7 @@
+@@ -161,7 +170,7 @@
  
  ### Behavior changes vs master
  
@@ -21,7 +30,7 @@
  
  ### Evidence
  
-@@ -171,8 +176,16 @@
+@@ -171,8 +180,16 @@
  
  Execution-based evidence is A-tier. Test results, console output. Show the exact test that now fails and passes, using pseudocode.
  

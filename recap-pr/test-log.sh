@@ -128,7 +128,22 @@ check "a later fixed verdict on the same head reopens the pass" "$(verdict "$H3"
 check "a body-reading pass that read no body" "$(verdict "$H3" "$body" >/dev/null; line spec)" "STALE BODY: it read no PR body"
 check "no declaration lists what ran" "$(verdict "$undeclared" "$body")" "pass"
 check "no declaration says so" "$(head -1 "$HOME/check.out")" "No required passes declared (docs/agents/pr-loop.md at ${undeclared:0:8})."
+"$L" --pass spec "$H3" clean "$body"
+"$L" --pass fable "$H3" not-reviewed
+check "a pass recorded not-reviewed on the head exits 3" "$("$L" --check "$H3" "$body" >/dev/null 2>&1; echo $?)" "3"
+check "and says it is not rerun there" "$(verdict "$H3" "$body"; line fable)" "fail: Not reviewed on ${H3:0:8}, and not rerun there: fable
+NOT REVIEWED on this head: not rerun here"
+"$L" --pass standards "$H3" fixed
+check "another pass still open makes it exit 1" "$("$L" --check "$H3" "$body" >/dev/null 2>&1; echo $?)" "1"
+"$L" --pass standards "$H3" clean
+"$L" --pass fable "$H3" clean
 check "a bad verdict is refused" "$("$L" --pass fable "$H3" approved 2>/dev/null; echo $?)" "2"
+git switch -q -c feat/malformed
+printf '%s\n' '- pass: standards' '- pass: fable-5.2' > docs/agents/pr-loop.md
+git commit -q -am "a pass line the check cannot read"
+check "an unreadable pass line is refused, not dropped" "$("$L" --check "$(git rev-parse HEAD)" 2>&1 >/dev/null; echo $?)" "log.sh: unreadable pass line in docs/agents/pr-loop.md: - pass: fable-5.2
+2"
+git switch -q feat/passes
 check "an unknown head is refused" "$("$L" --check deadbeef 2>/dev/null; echo $?)" "2"
 
 mkdir -p "$HOME/bin"

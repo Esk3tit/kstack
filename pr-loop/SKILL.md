@@ -21,12 +21,15 @@ A repo declares the review passes a PR needs before merge in `docs/agents/pr-loo
 - pass: codexloop
 ```
 
-`standards` and `spec` are step 1's two axes, `codexloop` is step 2's converged loop, and `fable` is step 5. A `fable` line the user wrote or approved is their standing request for Fable passes in that repo. The same file can declare sections for the PR's facts block (the line format is documented at the top of `~/.claude/skills/recap-pr/facts.py`). A repo with no declaration keeps the per-step rules below, and its check only lists what ran.
+`standards` and `spec` are step 1's two axes, `codexloop` is step 2's converged loop, and `fable` is step 5; a PR whose declaration names any other pass is handed back naming it, since no step here runs it. A `fable` line the user wrote or approved is their standing request for Fable passes in that repo. The same file can declare sections for the PR's facts block (the line format is documented at the top of `~/.claude/skills/recap-pr/facts.py`). A repo with no declaration keeps the per-step rules below, and its check only lists what ran.
 
 - **Record** every pass as it lands, declared or not (LEDGER.md, **Review passes**).
-- **The pass sequence** runs the passes `log.sh --check <head>` names, in step order: step 1's axes (`/code-review` runs only the axis the check names), then step 5's Fable, then `/codexloop --until-converged --base <base>`. Repeat it until the check exits 0. Any new commit, a base merge, rebase or restack included, sends the passes round again on the new head; a pass already clean there is not rerun. On a declaring repo a head reaches the remote only once the check passes, so `/codexloop` pushes only then, apart from step 2's draft-PR pushes for CI. The sequence ends with that push: once the check exits 0 on a head the remote lacks, run `/codexloop` once more, which reviews nothing at its converged head and pushes.
+- **The pass sequence** runs the passes `log.sh --check <head>` names, in step order: step 1's axes (`/code-review` runs only the axis the check names), then step 5's Fable, then `/codexloop --until-converged --base <base>`.
+  - It repeats until the check exits 0, or 3 when the only passes left are recorded `not-reviewed`. Any new commit, a base merge, rebase or restack included, sends the passes round again on the new head; a pass already clean there is not rerun.
+  - On a declaring repo a head reaches the remote only once the check exits 0 or 3, so `/codexloop` pushes only then, apart from step 2's draft-PR pushes for CI.
+  - It ends with that push: once the check allows it on a head the remote lacks, run `/codexloop` once more, which reviews nothing at its converged head and pushes.
 - **Merge-ready** needs `log.sh --check <head> <pr>` to exit 0, which also holds a pass that reads the PR body to the current body (step 9).
-- **A pass whose reviewer cannot finish** (it fails or times out, or `/codexloop` exits `FAIL` on a reviewer error) is recorded `not-reviewed` once and not run again on that head; the run hands back `Merge-ready: no: <pass> not reviewed`. A lint, test or merge failure is the run's to fix, not a reviewer's.
+- **A pass whose reviewer cannot finish** (it fails or times out, or `/codexloop` exits `FAIL` on a reviewer error) is recorded `not-reviewed` once and not run again on that head. The run still pushes and goes on through step 9, and hands back `Merge-ready: no: <pass> not reviewed`. A lint, test or merge failure is the run's to fix, not a reviewer's.
 
 ## 1. Two-axis review
 
@@ -44,7 +47,7 @@ Done when every branch has converged and its head is on the remote, or has stopp
 
 ## 3. Open the PRs
 
-Open one PR per repo against `<base>` with the `/pr` template, marked as closing the spec and tickets it finishes, its "Behavior changes vs master" section filled from the log's accepted rows with a `prod_delta` other than `none`, and the log's `open` rows listed as open questions. A branch that already has a PR keeps it, with its body updated the same way, and a draft opened under step 2 is marked ready. For a cross-repo change, name the merge order in every body and cross-link the PRs. Then write each PR's facts block: `python3 ~/.claude/skills/recap-pr/facts.py <pr>`.
+Open one PR per repo against `<base>` with the `/pr` template, marked as closing the spec and tickets it finishes, its "Behavior changes vs master" section filled from the log's accepted rows with a `prod_delta` other than `none`, and the log's `open` rows listed as open questions. A branch that already has a PR keeps it, with its body updated the same way, and a draft opened under step 2 is marked ready. For a cross-repo change, name the merge order in every body and cross-link the PRs. Then, in each repo, write its PR's facts block: `python3 ~/.claude/skills/recap-pr/facts.py <pr>`.
 
 Done when every repo with commits on the branch has an open PR carrying its facts block.
 
@@ -60,7 +63,7 @@ Done when every PR has converged, has no open bot finding (threads and review-bo
 
 A repo that declares `fable` among its required passes runs it on every head the check finds it missing on. Elsewhere, an explicit human `/pr-loop` invocation approves at most one Fable pass for that run, as does an explicit Fable request or approval; automatic skill routing grants no Fable approval. When approved, run it when the diff carries a judgement the mechanical reviews keep circling, changes what customers or analysts see, or couples parts of the system in a way a reviewer has to hold in their head. Mechanical changes that have already converged skip it.
 
-Run it read-only, briefed with the diffs, the settled decisions, and what to look for: judgement calls, taste, simpler shapes of the problem and the code, edge cases, an adversarial read. A taste finding that departs from the spec's agreed prototype goes to the user as a question showing both pictures, the prototype as built and the proposal; the prototype stays built until they choose. In Claude Code that is a subagent with `model: fable`; in Codex, `/Users/<you>/.codex/bin/claude-read claude-fable-5-1 "<brief>" [<extra dirs to read>]` (a copy of kstack `codex/bin/`), pointing the brief at files to Read; Codex allows only that read-only wrapper outside the sandbox, as a plain command. Record it: `log.sh --pass fable <head> clean|fixed`. Accepted Fable changes go back through step 4.
+Run it read-only, briefed with the diffs, the settled decisions, and what to look for: judgement calls, taste, simpler shapes of the problem and the code, edge cases, an adversarial read. A taste finding that departs from the spec's agreed prototype goes to the user as a question showing both pictures, the prototype as built and the proposal, posted as a standalone gallery (`no-mistakes-frontend`, step 8); the prototype stays built until they choose. In Claude Code that is a subagent with `model: fable`; in Codex, `/Users/<you>/.codex/bin/claude-read claude-fable-5-1 "<brief>" [<extra dirs to read>]` (a copy of kstack `codex/bin/`), pointing the brief at files to Read; Codex allows only that read-only wrapper outside the sandbox, as a plain command. Record it: `log.sh --pass fable <head> clean|fixed`. Accepted Fable changes go back through step 4.
 
 Done when the run-or-skip decision and its reason are logged, every Fable finding is fixed, logged as rejected or put to the user as a question, and a pass that ran is recorded.
 
@@ -85,9 +88,9 @@ Done when each final-pass reviewer is done (**The final pass**, "It's done") and
 ## 9. Recap and hand-back
 
 1. Follow `~/.claude/skills/recap-pr/SKILL.md`.
-2. Once CI has finished on each final head, refresh its PR's facts block: `facts.py <pr>`.
-3. Run `log.sh --check <head> <pr>` in its repo. While it names a pass not recorded `not-reviewed` on that head, run that pass and check again: a changed fact or the recap's edit sends Spec round, so Spec reads the finished description last. A pass that changes the head sends it back through steps 4 to 8, then this step starts again on it; so does a PR whose head has moved past the one checked. A `gh` failure (exit 2) is retried once, then handed back as `Merge-ready: no: check could not run`.
-4. Refresh only the block's review record (`facts.py <pr> --record-only`), keeping the facts Spec read, and run the check a last time: its output is the one handed back. A failure that names only `not-reviewed` passes hands back `Merge-ready: no`; any other goes back to 3.
+2. Once CI has finished on each final head, refresh its PR's facts block from its repo: `facts.py <pr>`.
+3. Run `log.sh --check <head> <pr>` in its repo. While it exits 1, run the passes it names, skipping any recorded `not-reviewed` on that head, and check again: a changed fact or the recap's edit sends Spec round, so Spec reads the finished description last. A pass that changes the head sends it back through steps 4 to 8, then this step starts again on it; so does a PR whose head has moved past the one checked. A `gh` failure (exit 2) is retried once, then handed back as `Merge-ready: no: check could not run`.
+4. Refresh only the block's review record (`facts.py <pr> --record-only`), keeping the facts Spec read, and run the check a last time: its output is the one handed back. Exit 3 (only `not-reviewed` passes left) hands back `Merge-ready: no`; any other failure goes back to 3.
 5. Hand back this block for each PR, every line filled from the final head:
 
 ```text

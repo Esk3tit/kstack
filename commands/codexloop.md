@@ -63,7 +63,7 @@ fi
 ## Contract
 **Inputs:**
 - `--max-iterations N` — safety cap on loop count (default: 5)
-- `--until-converged` — no iteration cap; each round reviews the whole PR or only the fixes since the last round, and the loop ends as **Round scope** (below) says. Commits stay local until the loop converges, then step 4 pushes that head once, because bots and CI run on every push and bots bill per run. `/pr-loop` runs this mode.
+- `--until-converged` — no iteration cap; each round reviews the whole PR or only the fixes since the last round, and the loop ends as **Round scope** (below) says. Commits stay local until the loop converges, then step 4 pushes that head once (under `/pr-loop` on a declaring repo, once its required passes allow), because bots and CI run on every push and bots bill per run. `/pr-loop` runs this mode.
 - `--model MODEL` — reviewer model (default: the one its Reviewer section names)
 - `--base BRANCH` — base branch to diff against (default: auto-detect `master` or `main`)
 - `--scope auto|working-tree|branch` — review target (default: `auto`: branch when it has commits beyond base, else working-tree)
@@ -185,7 +185,7 @@ Done when the round has started or the run has exited `PAUSED`.
    - Confirm commits exist beyond the base: `git log origin/<base>..HEAD --oneline` is non-empty.
    - Push the current branch with upstream tracking: `git push -u origin HEAD`.
    - Never force-push. If the remote has diverged, STOP and surface the conflict to the user instead.
-   - Under `/pr-loop` on a repo that declares required passes, push only once `~/.claude/skills/recap-pr/log.sh --check HEAD` exits 0; until then exit `STATUS=CLEAN` unpushed and leave the push to its pass sequence.
+   - Under `/pr-loop` on a repo that declares required passes, push only once `~/.claude/skills/recap-pr/log.sh --check HEAD` exits 0 or 3; until then exit `STATUS=CLEAN` unpushed and leave the push to its pass sequence.
    - If an open PR exists for this branch, print its URL (`gh pr view --json url -q .url`).
 
 5. **Final summary:**

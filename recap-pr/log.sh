@@ -7,7 +7,8 @@
 #   log.sh --rounds  print this branch's last two /codexloop round rows; exit 1 while a dispatched round has none
 #   log.sh --rejected  print this branch's /codexloop findings whose latest row rejects them, one "- " line each
 #   log.sh --pass <pass> <head> <clean|fixed|not-reviewed> [<PR body file it read>]  record a review pass
-#   log.sh --check <head> [<PR number | body file>]  exit 1, naming each, unless every required pass is clean there
+#   log.sh --check <head> [<PR number | body file>]  exit 1, naming each, unless every required pass is clean
+#                    there; exit 3 when the only passes left are recorded not-reviewed on it
 #   log.sh --body-hash <file>  print the hash --pass and --check keep for a PR body
 set -euo pipefail
 
@@ -178,8 +179,11 @@ case "${1:-}" in
       fi
       current=$(body_hash "$body_file")
     fi
-    declared=$(git show "$head:$DECLARATION" 2>/dev/null \
-      | awk '/^- pass: [a-z0-9-]+(, reads the PR body)?[ \t]*$/ { sub(/,$/, "", $3); printf "%s%s %d", (n++ ? ";" : ""), $3, ($4 == "reads") }') || true
+    declaration=$(git show "$head:$DECLARATION" 2>/dev/null) || true
+    unreadable=$(printf '%s\n' "$declaration" | grep -E '^- pass:' | grep -vE '^- pass: [a-z0-9-]+(, reads the PR body)?[ \t]*$' || true)
+    [ -z "$unreadable" ] || die "unreadable pass line in $DECLARATION: $(printf '%s' "$unreadable" | head -1)"
+    declared=$(printf '%s\n' "$declaration" \
+      | awk '/^- pass: [a-z0-9-]+(, reads the PR body)?[ \t]*$/ { sub(/,$/, "", $3); printf "%s%s %d", (n++ ? ";" : ""), $3, ($4 == "reads") }')
     records=$(branch_keys | while read -r k; do
       f="$HOME/.local/share/recap/$k/reviews.tsv"
       if [ -f "$f" ]; then tail -n +2 "$f"; fi
@@ -204,15 +208,18 @@ case "${1:-}" in
           split(lines[i], f, " "); p = f[1]; reads = f[2]
           if (!(p in verdict))
             state = (p in lasthead) ? "MISSING: last ran on " substr(lasthead[p], 1, 8) " (" lastverdict[p] ")" : "MISSING: never recorded"
+          else if (verdict[p] == "not-reviewed") state = "NOT REVIEWED on this head: not rerun here"
           else if (verdict[p] != "clean") state = "NOT CLEAN: " verdict[p] " on this head"
           else if (reads && cur == "") state = "clean (PR body not checked)"
           else if (reads && body[p] == "-") state = "STALE BODY: it read no PR body"
           else if (reads && body[p] != cur) state = "STALE BODY: the PR body changed after it read it"
           else state = "clean"
           printf "  %-10s %s\n", p, state
-          if (state !~ /^clean/) bad = bad " " p
+          if (state ~ /^NOT REVIEWED/) unreviewed = unreviewed " " p
+          else if (state !~ /^clean/) bad = bad " " p
         }
-        if (bad != "") { printf "Not clean on %s:%s\n", short, bad; exit 1 }
+        if (bad != "") { printf "Not clean on %s:%s%s\n", short, bad, unreviewed; exit 1 }
+        if (unreviewed != "") { printf "Not reviewed on %s, and not rerun there:%s\n", short, unreviewed; exit 3 }
         printf "Every required pass is clean on %s%s.\n", short, (cur == "" ? "" : " and its PR body")
       }'
     exit $? ;;
