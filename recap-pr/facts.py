@@ -208,14 +208,15 @@ def own_text(body):
 def write(slug, pr, make_block):
     changed = ("the description's own text changed while facts.py was writing (a bot may have restored an "
                "older copy, or someone edited it): compare it with the last edit, restore it if needed, and rerun")
-    first = None
+    first = block = None
     for attempt in range(1, WRITE_ATTEMPTS + 1):
         live = pr_view(pr, "body").get("body") or ""
         text = own_text(live)
         first = first or text
         if text != first:
             fail(changed)
-        block = make_block(live)
+        # Built once, from the first read, so a retry after a bot's stale rewrite writes the same block.
+        block = block or make_block(live)
         updated = splice(live, block)
         with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as payload:
             json.dump({"body": updated}, payload)
