@@ -80,4 +80,82 @@ check "split chain with a stray retraction, one log order" "$(RECAP_KEY=SR1 RECA
 check "split chain with a stray retraction, other log order" "$(RECAP_KEY=SR2 RECAP_PIN_KEYS='SR2 SR1' pins)" "- C (why)"
 check "non-UTC RECAP_TS refused" "$(RECAP_TS=2026-01-01T00:00:00-07:00 "$L" user you yes x w none e accepted 2>/dev/null; echo $?)" "2"
 
+git switch -q -c feat/passes
+undeclared=$(git rev-parse HEAD)
+mkdir -p docs/agents
+printf '%s\n' '# PR loop' '' '## Required passes' '' '- pass: standards' '- pass: spec, reads the PR body' \
+  '- pass: fable' '- pass: codexloop' > docs/agents/pr-loop.md
+git add docs && git commit -q -m "declare the passes"
+H1=$(git rev-parse HEAD)
+body="$HOME/body.md"
+printf '## Summary\n\nDoes the thing.\n' > "$body"
+clean_on() { for p in standards fable codexloop; do "$L" --pass "$p" "$1" clean; done; "$L" --pass spec "$1" clean "$body"; }
+verdict() { "$L" --check "$@" > "$HOME/check.out" 2>&1 && echo pass || echo "fail: $(tail -1 "$HOME/check.out")"; }
+line() { grep "^  $1 " "$HOME/check.out" | sed -E 's/^  [a-z-]+ +//'; }
+clean_on "$H1"
+check "all four clean on the head and body" "$(verdict "$H1" "$body")" "pass"
+printf '## Summary\n\nDoes the thing.  \r\n\n\n<!-- pr-facts:start -->\nchecks 9/9\n<!-- pr-facts:end -->\n<!-- CURSOR_SUMMARY -->\nbugbot\n<!-- /CURSOR_SUMMARY -->\n' > "$HOME/bots.md"
+check "bot and facts blocks, blank lines and spacing leave the body unchanged" "$(verdict "$H1" "$HOME/bots.md")" "pass"
+printf '## Summary\n\nDoes the thing.\n<!-- pr-facts:start -->\nnever closed\n' > "$HOME/open.md"
+check "an unclosed block counts as text" "$(verdict "$H1" "$HOME/open.md")" "fail: Not clean on ${H1:0:8}: spec"
+printf '## Summary\n\nDoes the thing, twice as fast.\n' > "$HOME/edited.md"
+check "a body edit after Spec" "$(verdict "$H1" "$HOME/edited.md")" "fail: Not clean on ${H1:0:8}: spec"
+check "a body edit names why" "$(line spec)" "STALE BODY: the PR body changed after it read it"
+check "without a body the head alone is checked" "$(verdict "$H1")" "pass"
+
+git switch -q -c base "$undeclared" && git commit -q --allow-empty -m "main moved" && git switch -q feat/passes
+git merge -q --no-edit base
+H2=$(git rev-parse HEAD)
+check "a base merge after review" "$(verdict "$H2" "$body")" "fail: Not clean on ${H2:0:8}: standards spec fable codexloop"
+check "a pass from an older head says where it ran" "$(line fable)" "MISSING: last ran on ${H1:0:8} (clean)"
+
+git commit -q --allow-empty -m "fix from Fable"
+H3=$(git rev-parse HEAD)
+"$L" --pass fable "$H2" fixed
+for p in standards codexloop; do "$L" --pass "$p" "$H3" clean; done
+"$L" --pass spec "$H3" clean "$body"
+check "a fix after Fable" "$(verdict "$H3" "$body")" "fail: Not clean on ${H3:0:8}: fable"
+check "the fixing pass is named with its verdict" "$(line fable)" "MISSING: last ran on ${H2:0:8} (fixed)"
+"$L" --pass fable "$H3" clean
+check "all four clean after the fix" "$(verdict "$H3" "$body")" "pass"
+"$L" --pass standards "$H3" fixed
+check "a later fixed verdict on the same head reopens the pass" "$(verdict "$H3" "$body")" "fail: Not clean on ${H3:0:8}: standards"
+"$L" --pass spec "$H2" clean
+"$L" --pass spec "$H3" clean
+"$L" --pass standards "$H3" clean
+check "a body-reading pass that read no body" "$(verdict "$H3" "$body" >/dev/null; line spec)" "STALE BODY: it read no PR body"
+check "no declaration lists what ran" "$(verdict "$undeclared" "$body")" "pass"
+check "no declaration says so" "$(head -1 "$HOME/check.out")" "No required passes declared (docs/agents/pr-loop.md at ${undeclared:0:8})."
+check "a bad verdict is refused" "$("$L" --pass fable "$H3" approved 2>/dev/null; echo $?)" "2"
+check "an unknown head is refused" "$("$L" --check deadbeef 2>/dev/null; echo $?)" "2"
+
+mkdir -p "$HOME/bin"
+printf '#!/usr/bin/env bash\ncase "$*" in *headRefOid*) echo %s ;; *body*) cat %s ;; esac\n' "$H3" "$body" > "$HOME/bin/gh"
+chmod +x "$HOME/bin/gh"
+"$L" --pass spec "$H3" clean "$body"
+check "a PR number reads its live head and body" "$(PATH="$HOME/bin:$PATH" verdict "$H3" 7)" "pass"
+check "a PR number with another head" "$(PATH="$HOME/bin:$PATH" verdict "$H2" 7)" "fail: PR #7's head is ${H3:0:8}, not ${H2:0:8}: check the head it will merge."
+
+round() { "$L" codexloop me yes "$1" scope none "head $2" accepted; }
+check "no rounds yet" "$("$L" --rounds; echo $?)" "0"
+round "round 1 dispatched on feat/passes" "$H1, whole-PR"
+check "a dispatched round blocks the next" "$("$L" --rounds 2>/dev/null; echo $?)" "1"
+check "the block names the round" "$("$L" --rounds 2>&1 | cut -c1-34)" "round 1 on feat/passes (dispatched"
+round "round 1 (whole-PR) on feat/passes: 2 findings, 1 accepted, fixed" "$H1"
+check "a round row unblocks" "$("$L" --rounds | cut -f6)" "round 1 (whole-PR) on feat/passes: 2 findings, 1 accepted, fixed"
+round "round 2 dispatched on feat/passes" "$H3, fixes"
+round "round 2 dropped on feat/passes" "$H3"
+round "round 9 dispatched on feat/other" "$H3, whole-PR"
+check "a dropped round and another branch's round block nothing" "$("$L" --rounds | cut -f6)" "round 1 (whole-PR) on feat/passes: 2 findings, 1 accepted, fixed"
+round "round 3 dispatched on feat/passes" "$H3, fixes"
+round "round 3 (fixes) on feat/passes: 0 findings, 0 accepted, clean" "$H3"
+check "the last two round rows, oldest first" "$("$L" --rounds | cut -f6 | tr '\n' '|')" "round 1 (whole-PR) on feat/passes: 2 findings, 1 accepted, fixed|round 3 (fixes) on feat/passes: 0 findings, 0 accepted, clean|"
+
+finding() { "$L" codexloop codex no "$1" "$2" none ev "$3"; }
+finding "F1.1 retry token kept stale" "the old token is still valid" rejected
+finding "F1.2 missing await" "real" "accepted, tests green"
+finding "F2.1 title says undimmed" "wording only" rejected
+finding "F1.1 retry token kept stale" "new trace shows a 401" "accepted, tests green"
+check "rejected findings keep their IDs, and a reopened one leaves" "$("$L" --rejected)" "- F2.1 title says undimmed (wording only)"
+
 exit $fail
