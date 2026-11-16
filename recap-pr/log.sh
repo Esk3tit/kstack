@@ -199,7 +199,7 @@ case "${1:-}" in
       if declaration=$(git show "$default:$DECLARATION" 2>/dev/null); then where="$DECLARATION on $default"; else declaration=""; fi
     fi
     declared=$(printf '%s\n' "$declaration" | awk '
-      /^- pass:/ && !/^- pass: [a-z0-9-]+(, reads the PR body)?[ \t]*$/ { bad = $0; exit }
+      /^[ \t]*- pass:/ && !/^- pass: [a-z0-9-]+(, reads the PR body)?[ \t]*$/ { bad = $0; exit }
       /^- pass:/ { sub(/,$/, "", $3); out = out (out == "" ? "" : ";") $3 " " ($4 == "reads") }
       END { if (bad != "") { print bad; exit 3 } printf "%s", out }') \
       || die "unreadable pass line in $DECLARATION: $declared"

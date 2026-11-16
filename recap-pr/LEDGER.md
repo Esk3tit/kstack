@@ -21,7 +21,7 @@ After any change to `log.sh`, run `bash test-log.sh` beside it. The helper finds
 | `asked` | `yes` when the user or the ticket asked for it; `no` when an agent or reviewer chose it |
 | `decision` | what was chosen or done, one line |
 | `why` | the reason, in plain words |
-| `prod_delta` | what analysts, customers or ops will see differently from **master**; `dev: ` and the difference when only developers or agents see it; or `none` |
+| `prod_delta` | what analysts, customers or ops will see differently from **master**; `dev: …` when only developers or agents see it (below); or `none` |
 | `evidence` | commit SHA, `file:line`, PR comment URL, screenshot path |
 | `result` | `accepted`, `rejected`, `reverted` or `open`, plus the verification (`tests green`, `screenshot`) |
 

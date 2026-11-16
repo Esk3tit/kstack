@@ -12,7 +12,7 @@ Resolve the log key once in the main repo (`log.sh --path` reuses the key the br
 
 ## Required passes
 
-A repo declares the review passes a PR needs before merge in `docs/agents/pr-loop.md`, one line each:
+A repo declares the review passes a PR needs before merge in `docs/agents/pr-loop.md`, one unindented line each:
 
 ```markdown
 - pass: standards
@@ -41,7 +41,7 @@ When only CI can judge the change (a failure seen only on CI's runners, a suite 
 
 Wherever this run calls `/codexloop`, a `PAUSED` exit (its design pause) stops the run on that branch. With a Fable pass approved, brief it on the cluster as step 5 does and carry its proposal to the user unapplied. Hand back the branch, and its PR if one is open, with the design question as the open item and `Merge-ready: no: design pause`.
 
-Done when every branch has converged, or has a required pass recorded `not-reviewed`, and its head is on the remote; or has stopped on a design pause.
+Done when every branch has converged, or has a required pass recorded `not-reviewed`, and its head is on the remote; or has stopped on a design pause or a check that could not run.
 
 ## 3. Open the PRs
 
@@ -61,7 +61,7 @@ Done when every PR has converged, has no open bot finding (threads and review-bo
 
 A repo whose `fable` line stands (Required passes) runs it on every head the check finds it missing on. Otherwise, including a `fable` line that does not stand yet, an explicit human `/pr-loop` invocation approves at most one Fable pass for that run, as does an explicit request or approval of a single Fable pass; automatic skill routing grants no Fable approval. There, when approved, run it when the diff carries a judgement the mechanical reviews keep circling, changes what customers or analysts see, or couples parts of the system in a way a reviewer has to hold in their head; mechanical changes that have already converged skip it.
 
-Run it read-only, briefed with the diffs, the settled decisions, and what to look for: judgement calls, taste, simpler shapes of the problem and the code, edge cases, an adversarial read. A taste finding that departs from the spec's agreed prototype goes to the user as a question showing both pictures, the prototype as built and the proposal: one standalone gallery per question, under its own marker (`no-mistakes-frontend`, step 8), posted once the PR is open and never again. The prototype stays built until they choose. In Claude Code that is a subagent with `model: fable`; in Codex, `/Users/<you>/.codex/bin/claude-read claude-fable-5-1 "<brief>" [<extra dirs to read>]` (a copy of kstack `codex/bin/`), pointing the brief at files to Read; Codex allows only that read-only wrapper outside the sandbox, as a plain command. Record it: `log.sh --pass fable <head> clean|fixed`. Accepted Fable changes are committed and go round the pass sequence again, through step 4 once the PR is open.
+Run it read-only, briefed with the diffs, the settled decisions, and what to look for: judgement calls, taste, simpler shapes of the problem and the code, edge cases, an adversarial read. A taste finding that departs from the spec's agreed prototype goes to the user as a question showing both pictures, the prototype as built and the proposal: one standalone gallery per question, under its own `--marker` (`no-mistakes-frontend` step 8), posted once the PR is open and never again. The prototype stays built until they choose. In Claude Code that is a subagent with `model: fable`; in Codex, `/Users/<you>/.codex/bin/claude-read claude-fable-5-1 "<brief>" [<extra dirs to read>]` (a copy of kstack `codex/bin/`), pointing the brief at files to Read; Codex allows only that read-only wrapper outside the sandbox, as a plain command. Record it: `log.sh --pass fable <head> clean|fixed`. Accepted Fable changes are committed and go round the pass sequence again, through step 4 once the PR is open.
 
 Done when the run-or-skip decision and its reason are logged, every Fable finding is fixed, logged as rejected or put to the user as a question, and a pass that ran is recorded.
 

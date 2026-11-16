@@ -155,6 +155,9 @@ printf '%s\n' '- pass: standards' '- pass: fable-5.2' > docs/agents/pr-loop.md
 git commit -q -am "a pass line the check cannot read"
 check "an unreadable pass line is refused, not dropped" "$("$L" --check "$(git rev-parse HEAD)" 2>&1 >/dev/null; echo $?)" "log.sh: unreadable pass line in docs/agents/pr-loop.md: - pass: fable-5.2
 2"
+printf '%s\n' '- pass: standards' '  - pass: fable' > docs/agents/pr-loop.md
+git commit -q -am "an indented pass line"
+check "an indented pass line is refused, not dropped" "$("$L" --check "$(git rev-parse HEAD)" >/dev/null 2>&1; echo $?)" "2"
 printf '%s\n' '- pass: standards' '- pass: spec, reads the PR bodyt' > docs/agents/pr-loop.md
 git commit -q -am "a body suffix with a stray letter"
 check "a malformed body suffix is refused" "$("$L" --check "$(git rev-parse HEAD)" >/dev/null 2>&1; echo $?)" "2"

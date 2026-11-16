@@ -20,8 +20,8 @@ branch or its history.
 
 This file is the runtime playbook. Follow the steps in order. Stop and emit the matching
 `NOMISTAKES_FRONTEND_STATUS` the moment a gate fails — do not push past a blocked gate. To post a
-before/after or design-choice gallery from captures already taken, go straight to **A standalone
-gallery** in step 8.
+before/after or design-choice gallery, take its captures as step 5's **Each capture proves its
+subject** says, then go straight to **A standalone gallery** in step 8.
 
 ## 0. Resolve the harness + project config (gate)
 
@@ -169,7 +169,7 @@ For each case: drive the flow, assert behavior, capture evidence → PASS/FAIL +
   shell, on failure too (`trap 'agent-browser --session <name> close' EXIT`). On a memory-limited
   Linux cloud machine, a browser killed for memory (exit 137, or an OOM in the kernel log or the
   scope's memory events) is a result: stop after the first kill and cover that case through CI or a
-  smaller page instead of running the same command again. The case is unverified in this run
+  smaller page instead of running the same command again. The case is unverified on that page
   (coverage gap, `reason=memory-kill`); `gaps` names it and where it was covered instead.
 - **Inspect every capture before posting** — every screenshot, and frames across each whole clip.
   Leave one out of `results.json` if it shows setup noise, a secret, or not the claim.
@@ -297,8 +297,9 @@ re-run the post. The verdict is never lost.
 
 **A standalone gallery** (a before/after or a design choice for the owner, outside a verification
 run) goes through the same poster under its own `--marker`, one per question, so it never replaces a
-run's gallery or block. Its captures prove their subject as step 5 says and keep step 9's confidentiality. Put them in a scratch folder with
-a small `results.json`, each case passing when its picture shows what it names:
+run's gallery or block. Its captures prove their subject as step 5 says and keep step 9's
+confidentiality. Put them in a scratch folder with a small `results.json`, each case passing when
+its picture shows what it names:
 
 ```json
 {"revision": "c5ef2589", "intentSource": "owner question 3: where a lone picture sits",
