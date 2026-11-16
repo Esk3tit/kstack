@@ -97,6 +97,16 @@ branch_rows() {
   done | sort -s -t$'\t' -k1,1
 }
 
+# The remote's default branch: origin/HEAD when set, else origin/main, else origin/master.
+default_branch() {
+  git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null && return
+  local b
+  for b in origin/main origin/master; do
+    if git rev-parse --verify --quiet "$b^{commit}" >/dev/null; then echo "$b"; return; fi
+  done
+  return 1
+}
+
 commit_of() { git rev-parse --verify --quiet "$1^{commit}" || die "not a commit in this repo: $1"; }
 
 # Hashes the PR body's own text: the review bots' summaries and the review record inside facts.py's
@@ -184,9 +194,10 @@ case "${1:-}" in
     # A branch cut before its repo declared passes still answers to the default branch's declaration.
     where="$DECLARATION at $short"
     if ! declaration=$(git show "$head:$DECLARATION" 2>/dev/null); then
-      default=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || true)
-      declaration=""
-      if [ -n "$default" ] && declaration=$(git show "$default:$DECLARATION" 2>/dev/null); then where="$DECLARATION on $default"; fi
+      default=$(default_branch) \
+        || die "no $DECLARATION at $short and no default branch to read one from; run: git remote set-head origin -a"
+      where="$DECLARATION at $short or on $default"
+      if declaration=$(git show "$default:$DECLARATION" 2>/dev/null); then where="$DECLARATION on $default"; else declaration=""; fi
     fi
     declared=$(printf '%s\n' "$declaration" | awk '
       /^- pass:/ && !/^- pass: [a-z0-9-]+(, reads the PR body)?[ \t]*$/ { bad = $0; exit }

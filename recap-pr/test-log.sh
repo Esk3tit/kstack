@@ -126,12 +126,17 @@ check "a later fixed verdict on the same head reopens the pass" "$(verdict "$H3"
 "$L" --pass spec "$H3" clean
 "$L" --pass standards "$H3" clean
 check "a body-reading pass that read no body" "$(verdict "$H3" "$body" >/dev/null; line spec)" "STALE BODY: it read no PR body"
+check "with no default branch to read, an undeclared head is refused" "$("$L" --check "$undeclared" 2>&1 >/dev/null; echo $?)" "log.sh: no docs/agents/pr-loop.md at ${undeclared:0:8} and no default branch to read one from; run: git remote set-head origin -a
+2"
+git update-ref refs/remotes/origin/main "$undeclared"
 check "no declaration lists what ran" "$(verdict "$undeclared" "$body")" "pass"
-check "no declaration says so" "$(head -1 "$HOME/check.out")" "No required passes declared (docs/agents/pr-loop.md at ${undeclared:0:8})."
-git update-ref refs/remotes/origin/main "$H1" && git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main
-check "a branch cut before the declaration answers to the default branch's" "$(verdict "$undeclared" "$body"; head -1 "$HOME/check.out")" "fail: Not clean on ${undeclared:0:8}: standards spec fable codexloop
+check "no declaration says where it looked" "$(head -1 "$HOME/check.out")" "No required passes declared (docs/agents/pr-loop.md at ${undeclared:0:8} or on origin/main)."
+git update-ref refs/remotes/origin/main "$H1"
+check "a branch cut before the declaration answers to origin/main's, with no origin/HEAD" "$(verdict "$undeclared" "$body"; head -1 "$HOME/check.out")" "fail: Not clean on ${undeclared:0:8}: standards spec fable codexloop
 Required passes on ${undeclared:0:8} (docs/agents/pr-loop.md on origin/main, PR body $("$L" --body-hash "$body")):"
-git symbolic-ref --delete refs/remotes/origin/HEAD && git update-ref -d refs/remotes/origin/main
+git update-ref refs/remotes/origin/trunk "$H1" && git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/trunk && git update-ref -d refs/remotes/origin/main
+check "origin/HEAD names the default branch when set" "$("$L" --check "$undeclared" 2>&1 | head -1 | grep -c 'pr-loop.md on origin/trunk,')" "1"
+git symbolic-ref --delete refs/remotes/origin/HEAD && git update-ref -d refs/remotes/origin/trunk
 "$L" --pass spec "$H3" clean "$body"
 "$L" --pass fable "$H3" not-reviewed
 check "a pass recorded not-reviewed on the head exits 3" "$("$L" --check "$H3" "$body" >/dev/null 2>&1; echo $?)" "3"

@@ -19,7 +19,9 @@ produce evidence; the human reviews code and merges. **Ephemeral:** nothing land
 branch or its history.
 
 This file is the runtime playbook. Follow the steps in order. Stop and emit the matching
-`NOMISTAKES_FRONTEND_STATUS` the moment a gate fails — do not push past a blocked gate.
+`NOMISTAKES_FRONTEND_STATUS` the moment a gate fails — do not push past a blocked gate. To post a
+before/after or design-choice gallery from captures already taken, go straight to **A standalone
+gallery** in step 8; its captures still meet step 5's capture rules and step 9's confidentiality.
 
 ## 0. Resolve the harness + project config (gate)
 

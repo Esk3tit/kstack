@@ -133,9 +133,13 @@ def declaration(head):
     shown = run(["git", "show", f"{head}:{DECLARATION}"], check=False)
     if shown.returncode == 0:
         return shown.stdout
-    default = run(["git", "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"], check=False).stdout.strip()
-    shown = run(["git", "show", f"{default}:{DECLARATION}"], check=False) if default else shown
-    return shown.stdout if shown.returncode == 0 else ""
+    candidates = [run(["git", "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"], check=False).stdout.strip(),
+                  "origin/main", "origin/master"]
+    for default in filter(None, candidates):
+        if run(["git", "rev-parse", "--verify", "--quiet", f"{default}^{{commit}}"], check=False).returncode == 0:
+            shown = run(["git", "show", f"{default}:{DECLARATION}"], check=False)
+            return shown.stdout if shown.returncode == 0 else ""
+    return ""
 
 
 def declared_sections(pr, head, base, top):

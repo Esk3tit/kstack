@@ -11,6 +11,7 @@ context-mode cut and indexed. The definitions print with the counts.
 """
 
 import json
+import re
 import sys
 from collections import Counter
 from pathlib import Path
@@ -24,8 +25,9 @@ DEFINITIONS = {
     "hook denial": "a tool result whose entry records a hook's reject (permissionDecision source hook), "
                    "or whose text opens with a PreToolUse hook error.",
     "other denial": "a tool result rejected by another permission source: the user, a safety check.",
-    "indexed output": "a tool result context-mode cut to its best-matching parts; its text says it "
-                      "\"searches the whole output\", and the rest is reachable through ctx_search.",
+    "indexed output": "a tool result context-mode cut to its best-matching parts: its last line points to "
+                      "ctx_search with the source holding the rest, whether a hook cut a built-in tool's output "
+                      "or ctx_execute indexed its own. A ctx_search page's \"More:\" pointer is not one.",
     "compaction boundary": "a system entry of subtype compact_boundary.",
     "continuation summary": "the user-role entry holding the summary written at a compaction "
                             "(isCompactSummary); it restates earlier work and is not a new message.",
@@ -33,6 +35,9 @@ DEFINITIONS = {
                  "summaries, meta or sidechain entries. Delegated briefs, skill text and notifications arrive "
                  "this way too, so verify authorship before counting one as the human's.",
 }
+
+
+INDEXED = re.compile(r'^(?:mcp__[\w-]+__)?ctx_search\(\{queries:\[.*\], source:"[^"]+"\}\)')
 
 
 def text_of(content):
@@ -98,7 +103,8 @@ class Tally:
             return "hook denial"
         if block.get("is_error"):
             return "error"
-        if "searches the whole output" in text:
+        lines = text.strip().splitlines()
+        if lines and INDEXED.match(lines[-1].strip()):
             return "indexed output"
         return "ok"
 
