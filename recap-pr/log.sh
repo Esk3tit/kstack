@@ -8,6 +8,7 @@
 #   log.sh --rejected  print this branch's /codexloop findings whose latest row rejects them, one "- " line each
 #   log.sh --pass <pass> <head> <clean|fixed|not-reviewed> [<PR body file it read>]  record a review pass
 #   log.sh --check <head> [<PR number | body file>]  exit 1, naming each, unless every required pass is clean there
+#   log.sh --body-hash <file>  print the hash --pass and --check keep for a PR body
 set -euo pipefail
 
 HEADER=$'ts\trepo\tphase\tsource\tasked\tdecision\twhy\tprod_delta\tevidence\tresult'
@@ -116,6 +117,7 @@ body_hash() {
 
 case "${1:-}" in
   --path) echo "$LOG"; exit 0 ;;
+  --body-hash) [ -f "${2:-}" ] || die "usage: log.sh --body-hash <file>"; body_hash "$2"; exit 0 ;;
   --rounds)
     branch_rows | awk -F'\t' -v repo="$repo" -v b="$branch" '
       # Counted, not ordered: rows from different logs in one second can sort either way.

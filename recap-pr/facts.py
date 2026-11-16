@@ -13,7 +13,8 @@ on the head (log.sh --check) and the time it was written. The declared sections:
 
 It reads the live body, replaces only its own block (inserting it before the bots' summaries the first
 time), writes, and reads the body back; a bot that rewrites the body from an older copy is outrun by
-fetching and writing again, up to three times. --dry-run prints the block and writes nothing.
+fetching and writing again, up to three times, and stops if the description's own text changed
+meanwhile rather than writing an older copy back. --dry-run prints the block and writes nothing.
 """
 
 import datetime
@@ -178,9 +179,28 @@ def own_block(body):
     return body[start:end + len(END)] if start != -1 and end > start else None
 
 
+def own_text(body):
+    """log.sh's hash of the body without this block, so bots' summaries and blank lines don't count."""
+    start, end = body.find(START), body.find(END)
+    rest = body[:start] + body[end + len(END):] if start != -1 and end > start else body
+    with tempfile.NamedTemporaryFile("w", suffix=".md", delete=False) as f:
+        f.write(rest)
+    try:
+        return run([str(Path(__file__).resolve().with_name("log.sh")), "--body-hash", f.name]).stdout.strip()
+    finally:
+        os.unlink(f.name)
+
+
 def write(slug, pr, block):
+    changed = ("the description's own text changed while facts.py was writing (a bot may have restored an "
+               "older copy, or someone edited it): compare it with the last edit, restore it if needed, and rerun")
+    first = None
     for attempt in range(1, WRITE_ATTEMPTS + 1):
         live = pr_view(pr, "body").get("body") or ""
+        text = own_text(live)
+        first = first or text
+        if text != first:
+            fail(changed)
         updated = splice(live, block)
         with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as payload:
             json.dump({"body": updated}, payload)
@@ -188,7 +208,10 @@ def write(slug, pr, block):
             run(["gh", "api", "-X", "PATCH", f"repos/{slug}/pulls/{pr}", "--input", payload.name])
         finally:
             os.unlink(payload.name)
-        if own_block(pr_view(pr, "body").get("body") or "") == block:
+        back = pr_view(pr, "body").get("body") or ""
+        if own_text(back) != first:
+            fail(changed)
+        if own_block(back) == block:
             return attempt
         time.sleep(float(os.environ.get("FACTS_RETRY_SECONDS", "5")))
     fail(f"the body kept losing the facts block after {WRITE_ATTEMPTS} writes; a bot is rewriting it, so rerun once it settles")

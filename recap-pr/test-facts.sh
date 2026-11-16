@@ -29,7 +29,7 @@ elif a[0] == "api" and "PATCH" in a:
     left = int(read("clobbers")) if os.path.exists(clobbers) else 0
     if left > 0:
         open(clobbers, "w").write(str(left - 1))
-        body = "## Summary\n\n<!-- CURSOR_SUMMARY -->\nrewritten from an old copy\n<!-- /CURSOR_SUMMARY -->\n"
+        body = read("stale") + "\n<!-- CURSOR_SUMMARY -->\nrewritten from an old copy\n<!-- /CURSOR_SUMMARY -->\n"
     open(os.path.join(fake, "body"), "w").write(body)
     print("{}")
 elif a[0] == "api" and a[1].endswith("/check-runs"):
@@ -93,11 +93,15 @@ check "a refresh with unchanged sources keeps Spec clean" "$("$D/log.sh" --check
 echo "| bytes | 202,000 |" > perf.md
 python3 "$D/facts.py" 7 >/dev/null
 check "a changed figure sends Spec round again" "$("$D/log.sh" --check "$head" 7 | tail -1)" "Not clean on ${head:0:8}: spec"
+printf '## Summary\n\nDoes the thing.\n' > "$FAKE/stale"
 echo 1 > "$FAKE/clobbers"
 check "a bot's stale rewrite is outrun" "$(python3 "$D/facts.py" 7)" "facts block written to PR #7 for ${head:0:8} after 2 writes"
 check "the bot's own section survives the retry" "$(grep -c 'rewritten from an old copy' "$FAKE/body")" "1"
 echo 5 > "$FAKE/clobbers"
 check "a body that keeps losing the block fails" "$(python3 "$D/facts.py" 7 >/dev/null 2>&1; echo $?)" "1"
+printf '## Summary\n\nDoes an older thing.\n' > "$FAKE/stale"
+echo 1 > "$FAKE/clobbers"
+check "a stale copy of the author's text is refused, not written back" "$(python3 "$D/facts.py" 7 2>&1 >/dev/null | grep -c "own text changed")" "1"
 rm "$FAKE/clobbers"
 printf 'text\n<!-- pr-facts:end -->\n<!-- pr-facts:start -->\n' > "$FAKE/body"
 check "broken markers are refused, not guessed at" "$(python3 "$D/facts.py" 7 2>&1 >/dev/null | grep -c 'markers are broken')" "1"
