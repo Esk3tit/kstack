@@ -14,7 +14,8 @@ Resolve the log key once in the main repo (`log.sh --path` reuses the key the br
 
 **The pass sequence** is `/codexloop --until-converged --base <base>`. Before step 1, run `log.sh --check HEAD` in each repo's branch: an exit 2 hands back `Merge-ready: no: check could not run: <its message>`, and when its first line starts `Required passes on` (the repo, or its default branch, declares them in `docs/agents/pr-loop.md`), read [PASSES.md](PASSES.md) for that repo: there the sequence runs every required pass, each push and the hand-back wait on `log.sh --check`, and a `fable` line can stand. Record every pass as it lands, declared or not (LEDGER.md, **Review passes**).
 
-- **A pass whose reviewer cannot run or finish** (it fails or times out, Spec finds no spec, or `/codexloop` exits `FAIL` on a reviewer error) is recorded `not-reviewed` and not rerun on that head in this run; a later run tries it again, and a clean result replaces the record. The run still pushes, goes through step 9 and hands back `Merge-ready: no: <pass> not reviewed`; a lint, test or merge failure is the run's to fix.
+- **A pass whose reviewer cannot run or finish** (it fails or times out, Spec finds no spec, or `/codexloop` exits `FAIL` on a reviewer error) is recorded `not-reviewed` and not rerun on that head in this run; a later run tries it again, and a clean result replaces the record. The run still makes a guarded push, goes through step 9 and hands back `Merge-ready: no: <pass> not reviewed`; a lint, test or merge failure is the run's to fix.
+- **A guarded push** is `git push -u origin HEAD` from a branch other than `master`/`main` that has commits beyond the base, made when the remote lacks the head and never forced; a diverged remote hands back `Merge-ready: no: remote diverged`.
 
 ## 1. Two-axis review
 
