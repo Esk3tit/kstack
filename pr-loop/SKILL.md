@@ -21,7 +21,7 @@ A repo declares the review passes a PR needs before merge in `docs/agents/pr-loo
 - pass: codexloop
 ```
 
-`standards` and `spec` are step 1's two axes, `codexloop` is step 2's converged loop, and `fable` is step 5; naming `fable` is the user's standing request for Fable passes in that repo. The same file can declare sections for the PR's facts block (the line format heads `~/.claude/skills/recap-pr/facts.py`). Record every pass as it lands, declared or not (LEDGER.md, **Review passes**). A declaring repo's head is merge-ready only when `log.sh --check <head> <pr>` exits 0: every required pass clean on that exact head, and a pass that reads the PR body clean on the current body too. So any new commit, a base merge, rebase or restack included, sends the passes round again on the new head, and a body edit sends round the passes that read it; a pass already clean on the head and body is not rerun. A repo with no declaration keeps the per-step rules below, and its check only lists what ran.
+`standards` and `spec` are step 1's two axes, `codexloop` is step 2's converged loop, and `fable` is step 5; naming `fable` is the user's standing request for Fable passes in that repo. The same file can declare sections for the PR's facts block (the line format is documented at the top of `~/.claude/skills/recap-pr/facts.py`). Record every pass as it lands, declared or not (LEDGER.md, **Review passes**). A declaring repo's head is merge-ready only when `log.sh --check <head> <pr>` exits 0: every required pass clean on that exact head, and a pass that reads the PR body clean on the current body too. So any new commit, a base merge, rebase or restack included, sends the passes round again on the new head, and a body edit sends round the passes that read it; a pass already clean on the head and body is not rerun. A pass that cannot finish (its reviewer fails or times out, or `/codexloop` exits `FAIL`) is recorded `not-reviewed` once and not run again on that head: the run hands back with `Merge-ready: no: <pass> not reviewed`. A repo with no declaration keeps the per-step rules below, and its check only lists what ran.
 
 ## 1. Two-axis review
 
@@ -47,7 +47,7 @@ Done when every repo with commits on the branch has an open PR carrying its fact
 
 Commit any fix from steps 5–8. A branch with unpushed commits first runs the required passes `log.sh --check <head>` names, in step order: step 1's axes, then step 5's Fable, then `/codexloop --until-converged --base <base>`, which pushes; repeat while a pass changes the head. A repo with no declaration runs `/codexloop` alone. Then follow `/address-pr-comments` on each PR, judging every bot finding and red check on the pushed head. Its finalize step sends accepted fixes through `/codexloop`, which picks up from its last logged round (Round scope).
 
-A red check that passes on a re-run has a cause still unknown, not a flake: take the failure to the repo's CI-only reproduction recipe (in its CI or e2e doc) and the `diagnosing-bugs` skill, and report it as `cause unknown` until a cause is named.
+A red check that passes on a re-run has a cause still unknown, not a flake: diagnose the failure in this run through the repo's CI-only reproduction recipe (in its CI or e2e doc) and the `diagnosing-bugs` skill. Until a cause is named, the hand-back's CI line reports it as `cause unknown`; a cause found in the change is a finding like any other.
 
 Done when every PR has converged, has no open bot finding (threads and review-body items alike), and every reviewer on its final pushed head has reviewed that head and passed, or is reported `NOT_REVIEWED` (the `/address-pr-comments` convergence gate). A final-pass reviewer is judged in step 8.
 
@@ -57,7 +57,7 @@ A repo that declares `fable` among its required passes runs it on every head the
 
 Run it read-only, briefed with the diffs, the settled decisions, and what to look for: judgement calls, taste, simpler shapes of the problem and the code, edge cases, an adversarial read. A taste finding that departs from the spec's agreed prototype goes to the user as a question showing both pictures, the prototype as built and the proposal; the prototype stays built until they choose. In Claude Code that is a subagent with `model: fable`; in Codex, `/Users/<you>/.codex/bin/claude-read claude-fable-5-1 "<brief>" [<extra dirs to read>]` (a copy of kstack `codex/bin/`), pointing the brief at files to Read; Codex allows only that read-only wrapper outside the sandbox, as a plain command. Record it: `log.sh --pass fable <head> clean|fixed`. Accepted Fable changes go back through step 4.
 
-Done when the run-or-skip decision and its reason are logged, every Fable finding is fixed, logged as rejected or put to the user as a question, and the pass is recorded.
+Done when the run-or-skip decision and its reason are logged, every Fable finding is fixed, logged as rejected or put to the user as a question, and a pass that ran is recorded.
 
 ## 6. Verify in the running app, when the diff changes what renders
 
@@ -79,7 +79,7 @@ Done when each final-pass reviewer is done (**The final pass**, "It's done") and
 
 ## 9. Recap and hand-back
 
-Follow `~/.claude/skills/recap-pr/SKILL.md`. Once CI has finished on each final head, refresh its PR's facts block (`facts.py <pr>`) and run `log.sh --check <head> <pr>` in its repo. While the check names a pass, run that pass and check again: a recap or facts edit that changed the body sends Spec round once more. Then hand back this block for each PR, every line filled from the final head:
+Follow `~/.claude/skills/recap-pr/SKILL.md`. Then run `log.sh --check <head> <pr>` in each repo. While it names a pass, run that pass and check again; the recap's edit to the body sends Spec round once more, and a pass that changes the head sends that head back through step 4. Once the check passes and CI has finished on the final head, refresh the PR's facts block (`facts.py <pr>`) last, since its block is outside every pass's body hash. Then hand back this block for each PR, every line filled from the final head:
 
 ```text
 PR <url>: <what it changes, in a user's words> · head <sha> · merge order <n>

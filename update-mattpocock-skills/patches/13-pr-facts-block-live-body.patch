@@ -17,7 +17,7 @@
  ### Behavior changes vs master
  
 -Every difference from master someone outside the code will notice: placement, order, labels, collapse state, wording, payload shape, throughput, where data is stored. One line each, with the reason. Take them from the decision log's accepted rows whose `prod_delta` is not `none` and whose change is still in the diff (`~/.claude/skills/recap-pr/LEDGER.md`); write `None` when the change is invisible outside the code.
-+Every difference from master someone outside the code will notice: placement, order, labels, collapse state, wording, payload shape, throughput, where data is stored. One line each, with the reason. Take them from the decision log's accepted rows whose `prod_delta` is not `none` and whose change is still in the diff (`~/.claude/skills/recap-pr/LEDGER.md`), listing its `dev:` rows apart, under **For developers and agents**; write `None` when nobody, user or developer, will notice a difference.
++Every difference from master someone will notice: first what users, customers or ops see (placement, order, labels, collapse state, wording, payload shape, throughput, where data is stored), then, under **For developers and agents**, what only people working on the code see (the `dev:` rows). One line each, with the reason. Take them from the decision log's accepted rows whose `prod_delta` is not `none` and whose change is still in the diff (`~/.claude/skills/recap-pr/LEDGER.md`); write `None` when nobody will notice a difference.
  
  ### Evidence
  

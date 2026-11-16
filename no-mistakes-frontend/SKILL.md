@@ -305,8 +305,7 @@ Then post it with every path written out:
 node /Users/<you>/.claude/skills/no-mistakes-frontend/harness/post-evidence.mjs --pr <N> --repo <owner/name> --marker design-choices --run-dir <folder> --results <folder>/results.json
 ```
 
-The poster uploads each capture, swaps every `./file` reference for its attachment, and reads the
-comment back, failing while one is left. Cite only what it posted.
+Cite only the captures it posted.
 
 Posting is all-or-nothing: the poster reads back the gallery to prove every capture uploaded, and on
 any failure removes the new gallery and leaves the PR as it was. `pr_post=spliced` = posted;
