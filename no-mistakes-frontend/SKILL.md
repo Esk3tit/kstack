@@ -21,7 +21,7 @@ branch or its history.
 This file is the runtime playbook. Follow the steps in order. Stop and emit the matching
 `NOMISTAKES_FRONTEND_STATUS` the moment a gate fails — do not push past a blocked gate. To post a
 before/after or design-choice gallery from captures already taken, go straight to **A standalone
-gallery** in step 8; its captures still meet step 5's capture rules and step 9's confidentiality.
+gallery** in step 8.
 
 ## 0. Resolve the harness + project config (gate)
 
@@ -215,9 +215,9 @@ On a failing script, first **classify**:
 - (a) **product bug** → record FAIL + repro, never patch;
 - (b) **driver/selector bug** → escalate locator tier / re-recon;
 - (c) **environment/auth** (app unreachable, session expired) → re-auth / re-poll **once**, else BLOCKED.
-  On a memory-limited Linux cloud machine, a browser killed for memory (exit 137, or an OOM in the
-  kernel log or the scope's memory events) is a result: stop after the first kill and cover that
-  case through CI or a smaller page instead of running the same command again.
+- (d) **browser memory kill** on a memory-limited Linux cloud machine (exit 137, or an OOM in the
+  kernel log or the scope's memory events) → a result, not a retry: stop after the first kill and
+  cover that case through CI or a smaller page instead of running the same command again.
 
 **Concrete bounds:** cap = **2 driver retries per test case**; total-run soft cap ≈ **10 minutes**.
 On exceeding a cap, classify the unresolved case:
@@ -295,7 +295,7 @@ re-run the post. The verdict is never lost.
 
 **A standalone gallery** (a before/after or a design choice for the owner, outside a verification
 run) goes through the same poster under its own `--marker`, one per question, so it never replaces a
-run's gallery or block. Its captures prove their subject as §5 says. Put them in a scratch folder with
+run's gallery or block. Its captures prove their subject as step 5 says and keep step 9's confidentiality. Put them in a scratch folder with
 a small `results.json`, each case passing when its picture shows what it names:
 
 ```json

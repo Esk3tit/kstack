@@ -63,7 +63,7 @@ fi
 ## Contract
 **Inputs:**
 - `--max-iterations N` — safety cap on loop count (default: 5)
-- `--until-converged` — no iteration cap; each round reviews the whole PR or only the fixes since the last round, and the loop ends as **Round scope** (below) says. Commits stay local until the loop converges, then step 4 pushes that head once (under `/pr-loop` on a declaring repo, once its required passes allow), because bots and CI run on every push and bots bill per run. `/pr-loop` runs this mode.
+- `--until-converged` — no iteration cap; each round reviews the whole PR or only the fixes since the last round, and the loop ends as **Round scope** (below) says. Commits stay local until the loop converges, then step 4 pushes that head once, because bots and CI run on every push and bots bill per run. `/pr-loop` runs this mode.
 - `--model MODEL` — reviewer model (default: the one its Reviewer section names)
 - `--base BRANCH` — base branch to diff against (default: auto-detect `master` or `main`)
 - `--scope auto|working-tree|branch` — review target (default: `auto`: branch when it has commits beyond base, else working-tree)

@@ -53,9 +53,9 @@ Done when every repo with commits on the branch has an open PR carrying its fact
 
 ## 4. Bot and CI findings
 
-Commit any fix from steps 5–8. A branch with unpushed commits first runs the pass sequence. Then follow `/address-pr-comments` on each PR, judging every bot finding and red check on the pushed head. Its finalize step sends accepted fixes through the same passes, and `/codexloop` picks up from its last logged round (Round scope).
+Commit any fix from steps 5–8. A branch with unpushed commits first runs the pass sequence. Then follow `/address-pr-comments` on each PR, judging every bot finding and red check on the pushed head; a `LOOP_STATUS=FAIL` from it goes to step 9 and hands back `Merge-ready: no: <its ERROR>`. Its finalize step sends accepted fixes through the same passes, and `/codexloop` picks up from its last logged round (Round scope).
 
-A red check that passes on a re-run has a cause still unknown, not a flake: diagnose the failure in this run through the repo's CI-only reproduction recipe (in its CI or e2e doc) and the `diagnosing-bugs` skill. The diagnosis ends when a cause is named, a finding like any other when it lies in the change; or when the recipe has run without reproducing the failure, or the repo has no recipe, and then the hand-back's CI line reports `cause unknown` and says which.
+A red check that passes on a re-run has a cause still unknown, not a flake: diagnose the failure in this run through the repo's CI-only reproduction recipe (in its CI or e2e doc) and the `diagnosing-bugs` skill. The diagnosis ends when a cause is named (in the change, a finding like any other; older than the branch, step 7's own-commit fix), or when the recipe has run without reproducing the failure or the repo has no recipe; then the hand-back's CI line reports `cause unknown` and says which.
 
 Done when every PR has converged, has no open bot finding (threads and review-body items alike), and every reviewer on its final pushed head has reviewed that head and passed, or is reported `NOT_REVIEWED` (the `/address-pr-comments` convergence gate). A final-pass reviewer is judged in step 8.
 
@@ -90,7 +90,7 @@ Done when each final-pass reviewer is done (**The final pass**, "It's done") and
 1. Follow `~/.claude/skills/recap-pr/SKILL.md`.
 2. Once CI has finished on each final head, refresh its PR's facts block from its repo: `facts.py <pr>`.
 3. Run `log.sh --check <head> <pr>` in its repo. While it exits 1, run the passes it names, skipping any recorded `not-reviewed` on that head, and check again: a changed fact or the recap's edit sends Spec round, so Spec reads the finished description last. A pass that changes the head sends it back through steps 4 to 8, then step 9 starts again from 1 on the new head; so does a PR whose head has moved past the one checked. A stale body the run did not cause (no edit of its own since Spec read it) means a bot or person changed the description: compare it with the body Spec read, restore any lost edit, then rerun Spec. An error (exit 2) from `gh` is retried once; it, or any other error, is then handed back as `Merge-ready: no: check could not run: <its message>`.
-4. Refresh only the block's review record (`facts.py <pr> --record-only`), keeping the facts Spec read, and run the check a last time: its output is the one handed back. Exit 3 (only `not-reviewed` passes left) hands back `Merge-ready: no`; any other failure of the check goes back to 3. When `facts.py` finds no block to refresh, go back to 2; any other `facts.py` failure goes back to 2 once, then hands back `Merge-ready: no: facts block not written`.
+4. Refresh only the block's review record (`facts.py <pr> --record-only`), keeping the facts Spec read, and run the check a last time: its output is the one handed back. Exit 3 (only `not-reviewed` passes left) hands back `Merge-ready: no`; any other failure of the check goes back to 3. A `facts.py` failure at 2 or 4 goes back to 2, which rebuilds a missing block; a second one in this step hands back `Merge-ready: no: facts block not written: <its message>`.
 5. Hand back this block for each PR, every line filled from the final head:
 
 ```text
