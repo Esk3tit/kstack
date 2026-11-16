@@ -118,14 +118,17 @@ case "${1:-}" in
   --path) echo "$LOG"; exit 0 ;;
   --rounds)
     branch_rows | awk -F'\t' -v repo="$repo" -v b="$branch" '
+      # Counted, not ordered: rows from different logs in one second can sort either way.
       $2 != repo || $3 != "codexloop" || $6 !~ /^round [0-9]+ / { next }
       { split($6, w, " "); n = w[2] }
-      $6 == "round " n " dispatched on " b { pending[n] = $1 ", " $9; next }
-      $6 == "round " n " dropped on " b { delete pending[n]; next }
-      index($6, " on " b ": ") { delete pending[n]; before = last; last = $0 }
+      $6 == "round " n " dispatched on " b { sent[n]++; at[n] = $1 ", " $9; next }
+      $6 == "round " n " dropped on " b { ended[n]++; next }
+      $6 ~ /^round [0-9]+ \((whole-PR|fixes)\) on / && substr($6, index($6, ") on ") + 5, length(b) + 2) == b ": " {
+        ended[n]++; before = last; last = $0
+      }
       END {
-        for (n in pending) {
-          printf "round %s on %s (dispatched %s) has no round row: collect and triage its findings and log its round row, or log \"round %s dropped on %s\" if it ended without a review\n", n, b, pending[n], n, b > "/dev/stderr"
+        for (n in sent) if (sent[n] > ended[n]) {
+          printf "round %s on %s (dispatched %s) has no round row: collect and triage its findings and log its round row, or log \"round %s dropped on %s\" if it ended without a review\n", n, b, at[n], n, b > "/dev/stderr"
           stuck = 1
         }
         if (stuck) exit 1
@@ -135,8 +138,9 @@ case "${1:-}" in
     exit $? ;;
   --rejected)
     branch_rows | awk -F'\t' -v repo="$repo" -v b="$branch" '
-      $2 == repo && $3 == "codexloop" && ($4 == "codex" || $4 == "claude") && $6 ~ /^F[0-9]+\.[0-9]+ on / && index($6, " on " b ": ") {
+      $2 == repo && $3 == "codexloop" && ($4 == "codex" || $4 == "claude") && $6 ~ /^F[0-9]+\.[0-9]+ on / {
         id = $6; sub(/ .*/, "", id)
+        if (substr($6, length(id) + 1, length(b) + 6) != " on " b ": ") next
         if (!(id in text)) order[++k] = id
         rejected[id] = ($10 ~ /^rejected/); text[id] = "- " $6 " (" $7 ")"
       }

@@ -151,6 +151,12 @@ round "round 9 dispatched on feat/other" "$H3, whole-PR"
 check "a dropped round and another branch's round block nothing" "$("$L" --rounds | cut -f6)" "round 1 (whole-PR) on feat/passes: 2 findings, 1 accepted, fixed"
 round "round 3 dispatched on feat/passes" "$H3, fixes"
 round "round 3 (fixes) on feat/passes: 0 findings, 0 accepted, clean" "$H3"
+"$L" --bind ROUNDS2 >/dev/null
+RECAP_TS=2026-01-01T00:00:00Z round "round 4 dispatched on feat/passes" "$H3, fixes"
+"$L" --bind ROUNDS >/dev/null
+RECAP_TS=2026-01-01T00:00:00Z round "round 4 dropped on feat/passes" "$H3"
+check "a drop in another log in the same second still ends its round" "$("$L" --rounds >/dev/null 2>&1; echo $?)" "0"
+round "round 9 (whole-PR) on feat/other: rebased on feat/passes: 0 findings, 0 accepted, clean" "$H3"
 check "the last two round rows, oldest first" "$("$L" --rounds | cut -f6 | tr '\n' '|')" "round 1 (whole-PR) on feat/passes: 2 findings, 1 accepted, fixed|round 3 (fixes) on feat/passes: 0 findings, 0 accepted, clean|"
 
 finding() { "$L" codexloop codex no "$1" "$2" none ev "$3"; }
@@ -161,6 +167,7 @@ finding "F2.1 on feat/passes: title says undimmed" "wording only" rejected
 finding "F1.1 on feat/passes: retry token kept stale" "new trace shows a 401" "accepted, tests green"
 finding "F2.1 on feat/other: unrelated finding" "another branch's" "accepted, tests green"
 finding "F3.1 on feat/other: another branch's rejection" "not ours" rejected
+finding "F2.1 on feat/other: a regression on feat/passes: same ID" "another branch's, naming ours" "accepted, tests green"
 check "rejected findings keep their IDs across logs, and a reopened one leaves" "$("$L" --rejected)" "- F2.1 on feat/passes: title says undimmed (wording only)"
 
 exit $fail
