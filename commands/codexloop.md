@@ -152,7 +152,7 @@ Done when the round has started or the run has exited `PAUSED`.
      if(x.recommendation)console.log("  rec: "+x.recommendation.replace(/\s+/g," "));
    });' "<the round's R path>"
    ```
-   - **CLEAN detection:** `COUNT: 0` (empty `findings`) → log the round row, print `STATUS=CLEAN ITERATIONS=<n>` and exit the loop. Under `--until-converged`: a clean round (Round scope).
+   - **CLEAN detection:** `COUNT: 0` (empty `findings`) → print `STATUS=CLEAN ITERATIONS=<n>` and exit the loop. Under `--until-converged`: a clean round (Round scope).
    - **PARSE_ERROR with no result:** retry the review once, in a fresh `R`; if it still fails, `STATUS=FAIL ERROR="reviewer returned unparseable review"`. Never treat a parse failure as CLEAN.
    - Otherwise list the findings to the user (severity, `file:line`, issue) and proceed to 2d.
 
