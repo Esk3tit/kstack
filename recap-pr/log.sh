@@ -5,7 +5,7 @@
 #   log.sh --pins    print the user's settled decisions, one "- " line each (RECAP_PIN_KEYS adds logs)
 #   log.sh --bind K  point the current branch at log K from now on (earlier rows stay where they are)
 #   log.sh --rounds  print this branch's last two /codexloop round rows; exit 1 while a dispatched round has none
-#   log.sh --rejected  print this repo's /codexloop findings whose latest row rejects them, one "- " line each
+#   log.sh --rejected  print this branch's /codexloop findings whose latest row rejects them, one "- " line each
 #   log.sh --pass <pass> <head> <clean|fixed|not-reviewed> [<PR body file it read>]  record a review pass
 #   log.sh --check <head> [<PR number | body file>]  exit 1, naming each, unless every required pass is clean there
 set -euo pipefail
@@ -86,6 +86,14 @@ stamp() {
   echo "$ts"
 }
 
+# Every decision row in the branch's logs, in time order.
+branch_rows() {
+  branch_keys | while read -r k; do
+    f="$HOME/.local/share/recap/$k/decisions.tsv"
+    if [ -f "$f" ]; then tail -n +2 "$f"; fi
+  done | sort -s -t$'\t' -k1,1
+}
+
 commit_of() { git rev-parse --verify --quiet "$1^{commit}" || die "not a commit in this repo: $1"; }
 
 # Hashes the PR body's own text: the blocks facts.py and the review bots rewrite are dropped
@@ -109,8 +117,7 @@ body_hash() {
 case "${1:-}" in
   --path) echo "$LOG"; exit 0 ;;
   --rounds)
-    [ -f "$LOG" ] || exit 0
-    awk -F'\t' -v repo="$repo" -v b="$branch" '
+    branch_rows | awk -F'\t' -v repo="$repo" -v b="$branch" '
       $2 != repo || $3 != "codexloop" || $6 !~ /^round [0-9]+ / { next }
       { split($6, w, " "); n = w[2] }
       $6 == "round " n " dispatched on " b { pending[n] = $1 ", " $9; next }
@@ -124,17 +131,16 @@ case "${1:-}" in
         if (stuck) exit 1
         if (before != "") print before
         if (last != "") print last
-      }' "$LOG"
+      }'
     exit $? ;;
   --rejected)
-    [ -f "$LOG" ] || exit 0
-    awk -F'\t' -v repo="$repo" '
-      $2 == repo && $3 == "codexloop" && ($4 == "codex" || $4 == "claude") && $6 ~ /^F[0-9]+\.[0-9]+ / {
+    branch_rows | awk -F'\t' -v repo="$repo" -v b="$branch" '
+      $2 == repo && $3 == "codexloop" && ($4 == "codex" || $4 == "claude") && $6 ~ /^F[0-9]+\.[0-9]+ on / && index($6, " on " b ": ") {
         id = $6; sub(/ .*/, "", id)
         if (!(id in text)) order[++k] = id
         rejected[id] = ($10 ~ /^rejected/); text[id] = "- " $6 " (" $7 ")"
       }
-      END { for (i = 1; i <= k; i++) if (rejected[order[i]]) print text[order[i]] }' "$LOG"
+      END { for (i = 1; i <= k; i++) if (rejected[order[i]]) print text[order[i]] }'
     exit 0 ;;
   --pass)
     [ "$#" -eq 4 ] || [ "$#" -eq 5 ] || die "usage: log.sh --pass <pass> <head> <clean|fixed|not-reviewed> [<PR body file it read>]"

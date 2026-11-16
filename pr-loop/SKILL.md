@@ -79,7 +79,7 @@ Done when each final-pass reviewer is done (**The final pass**, "It's done") and
 
 ## 9. Recap and hand-back
 
-Follow `~/.claude/skills/recap-pr/SKILL.md`. Then run `log.sh --check <head> <pr>` in each repo. While it names a pass, run that pass and check again; the recap's edit to the body sends Spec round once more, and a pass that changes the head sends that head back through step 4. Once the check passes and CI has finished on the final head, refresh the PR's facts block (`facts.py <pr>`) last, since its block is outside every pass's body hash. Then hand back this block for each PR, every line filled from the final head:
+Follow `~/.claude/skills/recap-pr/SKILL.md`. Then run `log.sh --check <head> <pr>` in each repo. While it names a pass, run that pass and check again; the recap's edit to the body sends Spec round once more, and a pass that changes the head sends that head back through steps 4 to 8, then this step starts again on it. Once the check passes and CI has finished on the final head, refresh the PR's facts block (`facts.py <pr>`) last, since its block is outside every pass's body hash. Then hand back this block for each PR, every line filled from the final head:
 
 ```text
 PR <url>: <what it changes, in a user's words> · head <sha> · merge order <n>

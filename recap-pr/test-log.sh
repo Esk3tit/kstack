@@ -141,6 +141,8 @@ check "no rounds yet" "$("$L" --rounds; echo $?)" "0"
 round "round 1 dispatched on feat/passes" "$H1, whole-PR"
 check "a dispatched round blocks the next" "$("$L" --rounds 2>/dev/null; echo $?)" "1"
 check "the block names the round" "$("$L" --rounds 2>&1 | cut -c1-34)" "round 1 on feat/passes (dispatched"
+"$L" --bind ROUNDS >/dev/null
+check "binding to another log keeps the pending round" "$("$L" --rounds 2>/dev/null; echo $?)" "1"
 round "round 1 (whole-PR) on feat/passes: 2 findings, 1 accepted, fixed" "$H1"
 check "a round row unblocks" "$("$L" --rounds | cut -f6)" "round 1 (whole-PR) on feat/passes: 2 findings, 1 accepted, fixed"
 round "round 2 dispatched on feat/passes" "$H3, fixes"
@@ -152,10 +154,13 @@ round "round 3 (fixes) on feat/passes: 0 findings, 0 accepted, clean" "$H3"
 check "the last two round rows, oldest first" "$("$L" --rounds | cut -f6 | tr '\n' '|')" "round 1 (whole-PR) on feat/passes: 2 findings, 1 accepted, fixed|round 3 (fixes) on feat/passes: 0 findings, 0 accepted, clean|"
 
 finding() { "$L" codexloop codex no "$1" "$2" none ev "$3"; }
-finding "F1.1 retry token kept stale" "the old token is still valid" rejected
-finding "F1.2 missing await" "real" "accepted, tests green"
-finding "F2.1 title says undimmed" "wording only" rejected
-finding "F1.1 retry token kept stale" "new trace shows a 401" "accepted, tests green"
-check "rejected findings keep their IDs, and a reopened one leaves" "$("$L" --rejected)" "- F2.1 title says undimmed (wording only)"
+finding "F1.1 on feat/passes: retry token kept stale" "the old token is still valid" rejected
+finding "F1.2 on feat/passes: missing await" "real" "accepted, tests green"
+"$L" --bind FINDINGS >/dev/null
+finding "F2.1 on feat/passes: title says undimmed" "wording only" rejected
+finding "F1.1 on feat/passes: retry token kept stale" "new trace shows a 401" "accepted, tests green"
+finding "F2.1 on feat/other: unrelated finding" "another branch's" "accepted, tests green"
+finding "F3.1 on feat/other: another branch's rejection" "not ours" rejected
+check "rejected findings keep their IDs across logs, and a reopened one leaves" "$("$L" --rejected)" "- F2.1 on feat/passes: title says undimmed (wording only)"
 
 exit $fail
