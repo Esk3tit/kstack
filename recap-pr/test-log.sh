@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Checks for log.sh: key resolution, binding, the header, and settled-decision pins. Run: bash test-log.sh
+# Checks for log.sh: keys, binding, the header, pins, review passes and the check, round order, rejected findings. Run: bash test-log.sh
 set -euo pipefail
 L="$(cd "$(dirname "$0")" && pwd)/log.sh"
 export HOME=$(mktemp -d)

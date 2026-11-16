@@ -61,7 +61,7 @@ People who work on the code see differences too. Write those with a `dev: ` pref
 ```
 ts	repo	phase	source	asked	decision	why	prod_delta	evidence	result
 2026-10-16T18:02:11Z	AI-ARG	implement	me	no	put Show quotes above the alert text	evidence reads before the claim	analysts see quotes above the alert text; master shows them below	commit 1a2b3c4	reverted after the analyst flagged it
-2026-10-16T19:40:05Z	TPRM-API	codexloop	codex	no	cap cold-record fetches with a semaphore of 8	avoid bursts against S3	comparisons load slower on busy days	src/cont_mon/event_artifacts.py:41	rejected: no measured S3 pressure
+2026-10-16T19:40:05Z	TPRM-API	codexloop	codex	no	F2.1 on feat/cont-mon: cap cold-record fetches with a semaphore of 8	avoid bursts against S3	comparisons load slower on busy days	src/cont_mon/event_artifacts.py:41	rejected: no measured S3 pressure
 2026-10-16T20:15:30Z	TPRM-API	user	you	yes	newly linked documents are Added and sit in the main list	the new link is the change	linked quotes return to the main list, now labelled Added	PR #3164	accepted
 2026-10-17T09:12:44Z	TPRM-API	implement	me	no	run the migration check in CI	a broken migration reached staging	dev: CI fails a PR whose migrations do not apply to a fresh database; master did not check	commit 9f8e7d6	accepted, CI red on a broken fixture
 ```

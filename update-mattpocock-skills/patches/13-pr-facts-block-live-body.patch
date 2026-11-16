@@ -1,5 +1,13 @@
 --- a/SKILL.md
 +++ b/SKILL.md
+@@ -1,6 +1,6 @@
+ ---
+ name: pr
+-description: "Use when writing a PR body."
++description: "Use when writing or editing a PR body."
+ metadata:
+   credits:
+     skill: show-me
 @@ -20,11 +20,20 @@
  
  - <what users, customers or ops see differently, and why> | None

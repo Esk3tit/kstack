@@ -217,7 +217,8 @@ On a failing script, first **classify**:
 - (c) **environment/auth** (app unreachable, session expired) → re-auth / re-poll **once**, else BLOCKED.
 - (d) **browser memory kill** on a memory-limited Linux cloud machine (exit 137, or an OOM in the
   kernel log or the scope's memory events) → a result, not a retry: stop after the first kill and
-  cover that case through CI or a smaller page instead of running the same command again.
+  cover that case through CI or a smaller page instead of running the same command again, naming the
+  kill and where the case was covered in `gaps`.
 
 **Concrete bounds:** cap = **2 driver retries per test case**; total-run soft cap ≈ **10 minutes**.
 On exceeding a cap, classify the unresolved case:
