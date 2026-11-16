@@ -50,7 +50,7 @@ git push -q origin main
 git switch -q -c feat/x
 mkdir -p docs/agents
 printf '%s\n' '- pass: standards' '- pass: spec, reads the PR body' '- facts: Tests = run: printf "chromium {head}"' '- facts: Perf = file: perf.md' \
-  '- facts: Broken = run: exit 3' > docs/agents/pr-loop.md
+  '- facts: Broken = run: exit 3' '- facts: Runs = run: echo x >> .runs && wc -l < .runs | tr -d " "' > docs/agents/pr-loop.md
 git add docs && git commit -q -m "branch work"
 git switch -q main
 git commit -q --allow-empty -m "tighten the budget (#2)"
@@ -88,11 +88,13 @@ check "a rerun replaces the block in place" "$(grep -c 'pr-facts:start' "$FAKE/b
 check "a rerun keeps the bots' summaries" "$(grep -c '^macroscope$' "$FAKE/body")" "1"
 check "the review record sits in its own markers" "$(sed -n '/pr-facts:record:start/,/pr-facts:record:end/p' "$FAKE/body" | grep -c 'Review passes')" "1"
 "$D/log.sh" --pass spec "$head" clean "$FAKE/body"
+facts_before=$(sed -n '/pr-facts:start/,/pr-facts:record:start/p' "$FAKE/body")
+check "a record-only refresh says so" "$(python3 "$D/facts.py" 7 --record-only)" "review record refreshed on PR #7 for ${head:0:8}"
+check "it keeps every fact, measured ones included" "$(sed -n '/pr-facts:start/,/pr-facts:record:start/p' "$FAKE/body")" "$facts_before"
+check "so Spec stays clean" "$("$D/log.sh" --check "$head" 7 | tail -1)" "Every required pass is clean on ${head:0:8} and its PR body."
+check "and the record shows it" "$(sed -n '/pr-facts:record:start/,/pr-facts:record:end/p' "$FAKE/body" | grep -c 'Every required pass is clean')" "1"
 python3 "$D/facts.py" 7 >/dev/null
-check "a refresh with unchanged sources keeps Spec clean" "$("$D/log.sh" --check "$head" 7 | tail -1)" "Every required pass is clean on ${head:0:8} and its PR body."
-echo "| bytes | 202,000 |" > perf.md
-python3 "$D/facts.py" 7 >/dev/null
-check "a changed figure sends Spec round again" "$("$D/log.sh" --check "$head" 7 | tail -1)" "Not clean on ${head:0:8}: spec"
+check "a full refresh reruns the measured facts, so Spec goes round again" "$("$D/log.sh" --check "$head" 7 | tail -1)" "Not clean on ${head:0:8}: spec"
 printf '## Summary\n\nDoes the thing.\n' > "$FAKE/stale"
 echo 1 > "$FAKE/clobbers"
 check "a bot's stale rewrite is outrun" "$(python3 "$D/facts.py" 7)" "facts block written to PR #7 for ${head:0:8} after 2 writes"
@@ -103,6 +105,8 @@ printf '## Summary\n\nDoes an older thing.\n' > "$FAKE/stale"
 echo 1 > "$FAKE/clobbers"
 check "a stale copy of the author's text is refused, not written back" "$(python3 "$D/facts.py" 7 2>&1 >/dev/null | grep -c "own text changed")" "1"
 rm "$FAKE/clobbers"
+printf '## Summary\n\nNo block yet.\n' > "$FAKE/body"
+check "a record-only refresh needs a block to refresh" "$(python3 "$D/facts.py" 7 --record-only 2>&1 >/dev/null | grep -c 'run facts.py <pr> first')" "1"
 printf 'text\n<!-- pr-facts:end -->\n<!-- pr-facts:start -->\n' > "$FAKE/body"
 check "broken markers are refused, not guessed at" "$(python3 "$D/facts.py" 7 2>&1 >/dev/null | grep -c 'markers are broken')" "1"
 

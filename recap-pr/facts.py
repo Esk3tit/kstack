@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Write a PR's facts block from its sources, between <!-- pr-facts:start --> and <!-- pr-facts:end -->.
 
-    facts.py <pr> [--dry-run]
+    facts.py <pr> [--dry-run | --record-only]
 
 Run it in the PR's checkout. The block holds the head's check runs and commit statuses with their
 results, the PRs a base merge brought in since the branch point, each section the repo declares in
@@ -15,6 +15,8 @@ It reads the live body, replaces only its own block (inserting it before the bot
 time), writes, and reads the body back; a bot that rewrites the body from an older copy is outrun by
 fetching and writing again, up to three times, and stops if the description's own text changed
 meanwhile rather than writing an older copy back. --dry-run prints the block and writes nothing.
+--record-only rewrites only the review record, keeping every fact as it stands, so a pass that read
+the facts stays clean.
 """
 
 import datetime
@@ -150,7 +152,6 @@ def declared_sections(pr, head, base, top):
 
 
 def build_block(pr, slug, head, base, top):
-    now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%MZ")
     lines = [START,
              f"**Facts on `{head[:8]}`**, written by `facts.py` from their sources; "
              "rerun it to refresh them rather than editing this block.", ""]
@@ -158,8 +159,21 @@ def build_block(pr, slug, head, base, top):
     lines += brought_in_section(base, head)
     lines += declared_sections(pr, head, base, top)
     # The review record changes as passes land; log.sh leaves it out of the body hash.
-    lines += ["", RECORD_START] + passes_section(pr, head) + ["", f"_Written at {now}._", RECORD_END, END]
+    lines += ["", record(pr, head), END]
     return "\n".join(lines)
+
+
+def record(pr, head):
+    now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%MZ")
+    return "\n".join([RECORD_START] + passes_section(pr, head) + ["", f"_Written at {now}._", RECORD_END])
+
+
+def with_record(block, new_record):
+    """The block as it stands, its review record replaced and every fact kept."""
+    start, end = (block or "").find(RECORD_START), (block or "").find(RECORD_END)
+    if start == -1 or end < start:
+        fail("the description has no facts block with a review record yet: run facts.py <pr> first")
+    return block[:start] + new_record + block[end + len(RECORD_END):]
 
 
 def splice(body, block):
@@ -191,7 +205,7 @@ def own_text(body):
         os.unlink(f.name)
 
 
-def write(slug, pr, block):
+def write(slug, pr, make_block):
     changed = ("the description's own text changed while facts.py was writing (a bot may have restored an "
                "older copy, or someone edited it): compare it with the last edit, restore it if needed, and rerun")
     first = None
@@ -201,6 +215,7 @@ def write(slug, pr, block):
         first = first or text
         if text != first:
             fail(changed)
+        block = make_block(live)
         updated = splice(live, block)
         with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as payload:
             json.dump({"body": updated}, payload)
@@ -218,9 +233,10 @@ def write(slug, pr, block):
 
 
 def main(argv):
-    args = [a for a in argv if a != "--dry-run"]
-    if len(args) != 1 or not args[0].isdigit():
-        fail("usage: facts.py <pr number> [--dry-run]")
+    flags = {"--dry-run", "--record-only"}
+    args = [a for a in argv if a not in flags]
+    if len(args) != 1 or not args[0].isdigit() or len(flags & set(argv)) > 1:
+        fail("usage: facts.py <pr number> [--dry-run | --record-only]")
     pr = int(args[0])
     view = pr_view(pr, "headRefOid,baseRefName,url")
     head, base = view["headRefOid"], view["baseRefName"]
@@ -229,11 +245,16 @@ def main(argv):
     git("fetch", "--quiet", "origin", base)
     if run(["git", "cat-file", "-e", f"{head}^{{commit}}"], check=False).returncode != 0:
         git("fetch", "--quiet", "origin", head)
+    if "--record-only" in argv:
+        new_record = record(pr, head)
+        attempts = write(slug, pr, lambda live: with_record(own_block(live), new_record))
+        print(f"review record refreshed on PR #{pr} for {head[:8]}" + (f" after {attempts} writes" if attempts > 1 else ""))
+        return
     block = build_block(pr, slug, head, base, top)
     if "--dry-run" in argv:
         print(block)
         return
-    attempts = write(slug, pr, block)
+    attempts = write(slug, pr, lambda live: block)
     print(f"facts block written to PR #{pr} for {head[:8]}" + (f" after {attempts} writes" if attempts > 1 else ""))
 
 
