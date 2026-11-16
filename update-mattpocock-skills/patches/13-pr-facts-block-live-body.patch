@@ -27,7 +27,7 @@
  
 +### On the head
 +
-+Once the PR exists, `python3 ~/.claude/skills/recap-pr/facts.py <pr>` fills the block between the markers from its sources: the head's checks, the review passes recorded on it, the PRs a base merge brought in, and any facts the repo declares. Rerun it to refresh the block rather than editing it, and cite its figures elsewhere in the body rather than retyping them.
++Once the PR exists, `python3 ~/.claude/skills/recap-pr/facts.py <pr>` fills the block between the markers from its sources: the head's checks, the review passes recorded on it, the PRs a base merge brought in, and any facts the repo declares. Rerun it to refresh the block rather than editing it. Elsewhere in the body, point to the block for its figures rather than retyping them.
 +
  ### Merge Danger
  

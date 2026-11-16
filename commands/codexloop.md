@@ -20,7 +20,7 @@ Pick by the harness you are running in. Both reviewers return the same JSON, `{v
 ```bash
 mktemp -d "/tmp/codexloop-$(basename "$(git rev-parse --show-toplevel)").XXXXXX"
 ```
-Use the printed path as `R` for the whole round. Shell variables do not survive between shell calls in either harness: write `COMPANION`, `R`, `SCOPE`, `BASE` and `MODEL` into each command as literals, and run step 2b's `FOCUS`/`PINS`/`REJECTED` lines in the same shell as the companion call in Claude Code, or as step 1's `printf` into `focus.txt` in Codex. A round can outlast the shell timeout, so it runs for at most 30 minutes: in Claude Code, launch it from a background shell with that timeout and wait for that shell to exit; in Codex, run it in the foreground with that timeout. `$SCOPE` is this round's target, resolved per preflight: `branch` or `working-tree` (an explicit `--scope` holds for every round).
+Use the printed path as `R` for the whole round. Shell variables do not survive between shell calls in either harness: write `COMPANION`, `R`, `SCOPE`, `BASE` and `MODEL` into each command as literals, and run step 2b's `FOCUS`/`PINS`/`REJECTED` lines in the same shell as the companion call in Claude Code, or as step 1's `printf` into `focus.txt` in Codex. A round runs for at most 30 minutes, which can outlast the shell timeout: in Claude Code, launch it from a background shell with that timeout and wait for that shell to exit; in Codex, run it in the foreground with that timeout. `$SCOPE` is this round's target, resolved per preflight: `branch` or `working-tree` (an explicit `--scope` holds for every round).
 
 ### In Claude Code: Codex, through the openai-codex plugin
 
@@ -185,6 +185,7 @@ Done when the round has started or the run has exited `PAUSED`.
    - Confirm commits exist beyond the base: `git log origin/<base>..HEAD --oneline` is non-empty.
    - Push the current branch with upstream tracking: `git push -u origin HEAD`.
    - Never force-push. If the remote has diverged, STOP and surface the conflict to the user instead.
+   - Under `/pr-loop` on a repo that declares required passes, push only once `~/.claude/skills/recap-pr/log.sh --check HEAD` exits 0; until then exit `STATUS=CLEAN` unpushed and leave the push to its pass sequence.
    - If an open PR exists for this branch, print its URL (`gh pr view --json url -q .url`).
 
 5. **Final summary:**
