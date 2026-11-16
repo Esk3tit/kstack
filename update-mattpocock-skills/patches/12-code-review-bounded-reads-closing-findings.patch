@@ -1,0 +1,53 @@
+--- a/SKILL.md
++++ b/SKILL.md
+@@ -31,9 +31,11 @@
+ 3. A spec file under `docs/`, `specs/`, or `.scratch/` matching the branch name or feature.
+ 4. If nothing is found, ask the user where the spec is. If they say there isn't one, the **Spec** sub-agent will skip and report "no spec available".
+ 
++When the branch has an open PR, its description is checked too: save the live body to a file (`gh pr view <n> --json body -q .body > <file>`) just before spawning the sub-agents, and give the Spec sub-agent that file.
++
+ ### 3. Identify the standards sources
+ 
+-Search the repo for every file that documents how code should be written. When `CODING_STANDARDS.md` or `CONTRIBUTING.md` exists, it must be on the list.
++Search the repo for every file that documents how code should be written. When `CODING_STANDARDS.md` or `CONTRIBUTING.md` exists, it must be on the list. Note each file's size in bytes (`wc -c`).
+ 
+ On top of whatever the repo documents, the Standards axis always carries the **smell baseline** below: a fixed set of Fowler code smells (_Refactoring_, ch.3) that applies even when a repo documents nothing. Two rules bind it:
+ 
+@@ -42,7 +44,7 @@
+ 
+ Each smell reads *what it is* → *how to fix*; match it against the diff:
+ 
+-- **Mysterious Name**: a function, variable, or type whose name doesn't reveal what it does or holds. → rename it; if no honest name comes, the design's murky.
++- **Mysterious Name**: a function, variable, or type whose name doesn't reveal what it does or holds. → rename it and its whole naming family (the type, its factory, every use) into one vocabulary; if no honest name comes, the design's murky.
+ - **Duplicated Code**: the same logic shape appears in more than one hunk or file in the change. → extract the shared shape, call it from both.
+ - **Feature Envy**: a method that reaches into another object's data more than its own. → move the method onto the data it envies.
+ - **Data Clumps**: the same few fields or params keep travelling together (a type wanting to be born). → bundle them into one type, pass that.
+@@ -59,6 +61,12 @@
+ 
+ Issue both sub-agent calls together, in the foreground, and aggregate the reports they return.
+ 
++Both prompts carry:
++
++- **Each source's size and its bounded route.** List every file the sub-agent reads (standards sources, the spec, the PR body file, saved reports) with its size, and the diff's per-file size (`git diff --stat`). A file or diff over 4 KB is read in slices: Read with `offset` and `limit`, about 40 lines at a time, or `ctx_execute` with `file=` set to it, printing the parts needed. Where context-mode runs, it refuses a whole Read over 16 KB and cuts any longer output to a few matching lines. The sub-agent still accounts for every rule in every source.
++- **Findings that close.** A wording finding names the concrete misreading the current words invite. A rename finding names the whole family it renames: the type, its factory, every use.
++- **The agreed prototype stands.** Where the spec carries an agreed prototype (a picture, mock or layout the user approved), a finding that would move the change away from it is a question for the user showing both pictures, the prototype as built and the proposal. The prototype stays built until they choose.
++
+ **Standards sub-agent prompt** should include:
+ 
+ - The full diff command and commit list.
+@@ -69,13 +77,13 @@
+ 
+ - The diff command and commit list.
+ - The path or fetched contents of the spec.
+-- The brief: "Report: (a) requirements the spec asked for that are missing or partial; (b) behaviour in the diff that wasn't asked for (scope creep); (c) requirements that look implemented but where the implementation looks wrong. Quote the spec line for each finding. Under 400 words."
++- The brief: "Report: (a) requirements the spec asked for that are missing or partial; (b) behaviour in the diff that wasn't asked for (scope creep); (c) requirements that look implemented but where the implementation looks wrong; (d) when you have the PR body file, every figure and coverage claim in it that its source (the facts block, a saved measurement, a test run, the diff) does not bear out, quoted with what the source shows. Keep 'no measurable difference' (measured, within noise) apart from 'unchanged' (the same code path), and 'observed' (seen in a run or capture) apart from 'inferred' (reasoned from the code). Quote the spec line for each finding. Under 400 words."
+ 
+ If the spec is missing, skip the Spec sub-agent and note this in the final report.
+ 
+ ### 5. Aggregate
+ 
+-Present the two reports under `## Standards` and `## Spec` headings, verbatim or lightly cleaned. Do **not** merge or rerank findings, because the two axes are deliberately separate (see _Why two axes_).
++Present the two reports under `## Standards` and `## Spec` headings, verbatim or lightly cleaned. Do **not** merge or rerank findings, because the two axes are deliberately separate (see _Why two axes_). Mark each prototype question as the user's call.
+ 
+ End with a one-line summary: total findings per axis, and the worst issue _within each axis_ (if any). Don't pick a single winner across axes: that's the reranking the separation exists to prevent.
+ 

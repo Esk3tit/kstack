@@ -1,0 +1,5 @@
+{"type":"user","isSidechain":true,"uuid":"s1u1","timestamp":"2026-11-14T08:45:01.000Z","message":{"role":"user","content":"Review the diff."}}
+{"type":"assistant","isSidechain":true,"uuid":"s1a1","timestamp":"2026-11-14T08:45:05.000Z","message":{"id":"sm1","role":"assistant","content":[{"type":"tool_use","id":"toolu_A1","name":"Read","input":{"file_path":"/repo/CODING_STANDARDS.md","offset":1,"limit":40}}]}}
+{"type":"user","isSidechain":true,"uuid":"s1u2","timestamp":"2026-11-14T08:45:06.000Z","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_A1","content":"1\t# Coding standards"}]}}
+{"type":"assistant","isSidechain":true,"uuid":"s1a2","timestamp":"2026-11-14T08:45:10.000Z","message":{"id":"sm2","role":"assistant","content":[{"type":"tool_use","id":"toolu_A2","name":"Grep","input":{"pattern":"TODO"}}]}}
+{"type":"user","isSidechain":true,"uuid":"s1u3","timestamp":"2026-11-14T08:45:11.000Z","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"toolu_A2","is_error":true,"content":"ripgrep: invalid regex"}]}}
