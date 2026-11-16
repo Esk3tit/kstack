@@ -128,12 +128,19 @@ def brought_in_section(base, head):
     return lines
 
 
-def declared_sections(pr, head, base, top):
+def declaration(head):
+    """The head's declaration, or the default branch's when the head predates it, as log.sh --check reads it."""
     shown = run(["git", "show", f"{head}:{DECLARATION}"], check=False)
-    if shown.returncode != 0:
-        return []
+    if shown.returncode == 0:
+        return shown.stdout
+    default = run(["git", "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"], check=False).stdout.strip()
+    shown = run(["git", "show", f"{default}:{DECLARATION}"], check=False) if default else shown
+    return shown.stdout if shown.returncode == 0 else ""
+
+
+def declared_sections(pr, head, base, top):
     lines = []
-    for raw in shown.stdout.splitlines():
+    for raw in declaration(head).splitlines():
         match = FACT_LINE.match(raw)
         if not match:
             continue

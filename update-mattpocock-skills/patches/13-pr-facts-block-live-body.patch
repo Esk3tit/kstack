@@ -46,4 +46,4 @@
 +
 +## Editing the body
 +
-+Edit a PR description from its live text: fetch it (`gh pr view <n> --json body -q .body`) just before the edit, change only the section you mean to, and keep every other section as it is, bots' summaries and other tools' blocks included. Read it back after writing: a review bot can rewrite the body from an older copy just after a push, so reapply your change on the latest body when it is gone.
++Edit a PR description from its live text: fetch it (`gh pr view <n> --json body -q .body`) just before the edit, change only the section you mean to, and keep every other section as it is, bots' summaries and other tools' blocks included. Read it back after writing: a review bot can rewrite the body from an older copy just after a push, so reapply your change on the latest body when it is gone, up to three times, then report that a bot keeps reverting it.

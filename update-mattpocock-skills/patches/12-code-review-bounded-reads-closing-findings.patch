@@ -1,6 +1,6 @@
 --- a/SKILL.md
 +++ b/SKILL.md
-@@ -31,9 +31,11 @@
+@@ -31,6 +31,8 @@
  3. A spec file under `docs/`, `specs/`, or `.scratch/` matching the branch name or feature.
  4. If nothing is found, ask the user where the spec is. If they say there isn't one, the **Spec** sub-agent will skip and report "no spec available".
  
@@ -8,21 +8,20 @@
 +
  ### 3. Identify the standards sources
  
--Search the repo for every file that documents how code should be written. When `CODING_STANDARDS.md` or `CONTRIBUTING.md` exists, it must be on the list.
-+Search the repo for every file that documents how code should be written. When `CODING_STANDARDS.md` or `CONTRIBUTING.md` exists, it must be on the list. Note each file's size in bytes (`wc -c`).
+ Search the repo for every file that documents how code should be written. When `CODING_STANDARDS.md` or `CONTRIBUTING.md` exists, it must be on the list.
+@@ -55,10 +57,16 @@
+ - **Middle Man**: a class or function that mostly just delegates onward. → cut it, call the real target direct.
+ - **Refused Bequest**: a subclass or implementer that ignores or overrides most of what it inherits. → drop the inheritance, use composition.
  
- On top of whatever the repo documents, the Standards axis always carries the **smell baseline** below: a fixed set of Fowler code smells (_Refactoring_, ch.3) that applies even when a repo documents nothing. Two rules bind it:
- 
-@@ -57,8 +59,14 @@
- 
- ### 4. Spawn both sub-agents in parallel
+-### 4. Spawn both sub-agents in parallel
++### 4. Spawn the sub-agents in parallel
  
 -Issue both sub-agent calls together, in the foreground, and aggregate the reports they return.
 +Issue both sub-agent calls together, in the foreground, and aggregate the reports they return. When the caller names one axis (a Spec re-check after a PR description edit), spawn only that sub-agent and report its axis alone.
  
 +Both prompts carry:
 +
-+- **Each source's size and its bounded route.** List every file the sub-agent reads (standards sources, the spec, the PR body file, saved reports) with its size in bytes, and each changed file's diff size (`git diff <fixed-point>...HEAD -- <path> | wc -c`). A file over 4 KB is read in slices: Read with `offset` and `limit`, about 40 lines at a time, or `ctx_execute` with `file=` set to it, printing the parts needed. A diff over 4 KB is saved to a file first (`git diff <fixed-point>...HEAD -- <path> > <file>`) and read the same way. Where context-mode runs, it refuses a whole Read over 16 KB and cuts any output over 4 KB to a few matching lines. The sub-agent still accounts for every rule in every source.
++- **Each source's size and its bounded route.** List every file the sub-agent reads (standards sources, the spec, the PR body file, saved reports) with its size in bytes (`wc -c`), and each changed file's diff size (`git diff <fixed-point>...HEAD -- <path> | wc -c`). A file over 4 KB is read in slices: Read with `offset` and `limit`, about 40 lines at a time, or `ctx_execute` with `file=` set to it, printing the parts needed. A diff over 4 KB is saved to a file first (`git diff <fixed-point>...HEAD -- <path> > <file>`) and read the same way. Where context-mode runs, it refuses a whole Read over 16 KB and cuts any output over 4 KB to a few matching lines. The sub-agent still accounts for every rule in every source.
 +- **Findings that close.** A wording finding names the concrete misreading the current words invite. A rename finding names the whole family it renames: the type, its factory, every use.
 +- **The agreed prototype stands.** Where the spec carries an agreed prototype (a picture, mock or layout the user approved), a finding that would move the change away from it is a question for the user showing both pictures, the prototype as built and the proposal (with a PR open, posted as `no-mistakes-frontend`'s standalone gallery). The prototype stays built until they choose.
 +

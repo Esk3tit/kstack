@@ -114,4 +114,10 @@ check "a record-only refresh needs a block to refresh" "$(python3 "$D/facts.py" 
 printf 'text\n<!-- pr-facts:end -->\n<!-- pr-facts:start -->\n' > "$FAKE/body"
 check "broken markers are refused, not guessed at" "$(python3 "$D/facts.py" 7 2>&1 >/dev/null | grep -c 'markers are broken')" "1"
 
+git update-ref refs/remotes/origin/decl "$head" && git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/decl
+git switch -q -c feat/early "$(git rev-list --max-parents=0 HEAD)"
+git commit -q --allow-empty -m "work begun before the declaration"
+git rev-parse HEAD > "$FAKE/head"
+check "a branch cut before the declaration gets the default branch's facts" "$(python3 "$D/facts.py" 7 --dry-run | grep -c "^chromium $(cat "$FAKE/head")")" "1"
+
 exit $fail
