@@ -9,3 +9,5 @@ Read this before delegating implementation, evaluation or verification. Put thes
 - The return contract: changed paths, revision or patch, collected/executed checks, retained resources and unresolved findings. Account for how isolated edits reach the parent before calling them fixed.
 
 A child follows its own authorized brief. A completed turn can still have live jobs; carry those identities into close-out.
+
+A cloud machine's threads see this Mac's agent memory only through `~/.local/share/research/agent-cloud-2026-11-05/pool/pool-memory-sync.sh`: push it before launching threads there (`pool-memory-sync.sh push wt-N`), and pull it back when they finish, before pausing the machine (`pool-memory-sync.sh pull wt-N`). A lesson every agent needs goes into the repo's docs instead, where every machine and thread reads it.

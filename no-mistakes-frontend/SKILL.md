@@ -159,6 +159,12 @@ For each case: drive the flow, assert behavior, capture evidence → PASS/FAIL +
   from a throwaway worktree (`git worktree add <tmp> origin/<base>`, then its `devCommand` on another
   port). For a **bug fix**, reproduce the bug on base first, then show it gone on the PR head. No
   runnable base target → name that in `gaps`.
+- **Each capture proves its subject.** Before a shot, assert the subject is on screen in its stated
+  state: `get box <selector>` gives a non-empty box inside the viewport, and the theme, viewport and
+  focus the claim names hold (`eval` on `document.activeElement` for focus). A shot whose assertion
+  fails is not evidence. A capture script that opens its own browser session closes it in the same
+  shell, on failure too (`trap 'agent-browser --session <name> close' EXIT`); the run's own session
+  closes when the run ends.
 - **Inspect every capture before posting** — every screenshot, and frames across each whole clip.
   Leave one out of `results.json` if it shows setup noise, a secret, or not the claim.
 
@@ -207,6 +213,9 @@ On a failing script, first **classify**:
 - (a) **product bug** → record FAIL + repro, never patch;
 - (b) **driver/selector bug** → escalate locator tier / re-recon;
 - (c) **environment/auth** (app unreachable, session expired) → re-auth / re-poll **once**, else BLOCKED.
+  On a memory-limited Linux cloud machine, a browser killed for memory (exit 137, or an OOM in the
+  kernel log or the scope's memory events) is a result: stop after the first kill and cover that
+  case through CI or a smaller page instead of running the same command again.
 
 **Concrete bounds:** cap = **2 driver retries per test case**; total-run soft cap ≈ **10 minutes**.
 On exceeding a cap, classify the unresolved case:
@@ -276,6 +285,28 @@ It posts on **two idempotent surfaces**:
 
 Cap: **50 files per run** — capture what answers a review question, not every viewport of every
 screen. Name captures plainly (`[A-Za-z0-9_.-]`).
+
+**A standalone gallery** (a before/after or a design choice for the owner, outside a verification
+run) goes through the same poster under its own `--marker`, so it never replaces a run's gallery or
+block. Put its captures in a scratch folder with a small `results.json`:
+
+```json
+{"revision": "c5ef2589", "intentSource": "owner question 3: where a lone picture sits",
+ "cases": [{"name": "Agreed prototype: low and left", "pass": true, "observed": "built on c5ef2589",
+            "evidence": ["prototype-1280.png", "prototype-390.png"]},
+           {"name": "Proposal: centred", "pass": true, "observed": "mocked on c5ef2589",
+            "evidence": ["centred-1280.png"]}],
+ "findings": []}
+```
+
+Then post it with every path written out:
+
+```bash
+node /Users/<you>/.claude/skills/no-mistakes-frontend/harness/post-evidence.mjs --pr <N> --repo <owner/name> --marker design-choices --run-dir <folder> --results <folder>/results.json
+```
+
+The poster uploads each capture, swaps every `./file` reference for its attachment, and reads the
+comment back, failing while one is left. Cite only what it posted.
 
 Posting is all-or-nothing: the poster reads back the gallery to prove every capture uploaded, and on
 any failure removes the new gallery and leaves the PR as it was. `pr_post=spliced` = posted;
