@@ -90,7 +90,7 @@ Done when each final-pass reviewer is done (**The final pass**, "It's done") and
 1. Follow `~/.claude/skills/recap-pr/SKILL.md`.
 2. Once CI has finished on each final head, refresh its PR's facts block from its repo: `facts.py <pr>`.
 3. Run `log.sh --check <head> <pr>` in its repo. While it exits 1, run the passes it names, skipping any recorded `not-reviewed` on that head, and check again: a changed fact or the recap's edit sends Spec round, so Spec reads the finished description last. A pass that changes the head sends it back through steps 4 to 8, then this step starts again on it; so does a PR whose head has moved past the one checked. A `gh` failure (exit 2) is retried once, then handed back as `Merge-ready: no: check could not run`.
-4. Refresh only the block's review record (`facts.py <pr> --record-only`), keeping the facts Spec read, and run the check a last time: its output is the one handed back. Exit 3 (only `not-reviewed` passes left) hands back `Merge-ready: no`; any other failure goes back to 3.
+4. Refresh only the block's review record (`facts.py <pr> --record-only`), keeping the facts Spec read, and run the check a last time: its output is the one handed back. Exit 3 (only `not-reviewed` passes left) hands back `Merge-ready: no`; any other failure of the check goes back to 3. When `facts.py` finds no block to refresh, go back to 2; any other `facts.py` failure goes back to 2 once, then hands back `Merge-ready: no: facts block not written`.
 5. Hand back this block for each PR, every line filled from the final head:
 
 ```text
