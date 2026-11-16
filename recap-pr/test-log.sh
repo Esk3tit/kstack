@@ -186,6 +186,9 @@ round "round 2 dropped on feat/passes" "$H3"
 round "round 9 dispatched on feat/other" "$H3, whole-PR"
 check "a dropped round and another branch's round block nothing, and a dropped number is not reused" "$("$L" --rounds | cut -f6)" "round 1 (whole-PR) on feat/passes: 2 findings, 1 accepted, fixed
 next round 3"
+round "round 1 dispatched on feat/wt" "$H3, working-tree"
+round "round 1 (working-tree) on feat/wt: 0 findings, 0 accepted, clean" "$H3"
+check "a working-tree round row closes its dispatch" "$(git switch -q -c feat/wt; RECAP_KEY=ROUNDS "$L" --rounds >/dev/null 2>&1; echo $?; git switch -q feat/passes)" "0"
 round "round 3 dispatched on feat/passes" "$H3, fixes"
 round "round 3 (fixes) on feat/passes: 0 findings, 0 accepted, clean" "$H3"
 "$L" --bind ROUNDS2 >/dev/null

@@ -9,7 +9,7 @@
 #   log.sh --rejected  print this branch's /codexloop findings whose latest row rejects them, one "- " line each
 #   log.sh --pass <pass> <head> <clean|fixed|not-reviewed> [<PR body file it read>]  record a review pass
 #   log.sh --check <head> [<PR number | body file>]  exit 1, naming each, unless every required pass is clean
-#                    there; exit 3 when the only passes left are recorded not-reviewed on it
+#                    there; exit 3 when the only passes left are recorded not-reviewed on it; exit 2 when it cannot run
 #   log.sh --body-hash <file>  print the hash --pass and --check keep for a PR body
 set -euo pipefail
 
@@ -136,7 +136,7 @@ case "${1:-}" in
       { split($6, w, " "); n = w[2] }
       $6 == "round " n " dispatched on " b { sent[n]++; at[n] = $1 ", " $9; if (n + 0 > top) top = n + 0; next }
       $6 == "round " n " dropped on " b { ended[n]++; if (n + 0 > top) top = n + 0; next }
-      $6 ~ /^round [0-9]+ \((whole-PR|fixes)\) on / && substr($6, index($6, ") on ") + 5, length(b) + 2) == b ": " {
+      $6 ~ /^round [0-9]+ \([a-zA-Z-]+\) on / && substr($6, index($6, ") on ") + 5, length(b) + 2) == b ": " {
         ended[n]++; before = last; last = $0; if (n + 0 > top) top = n + 0
       }
       END {
