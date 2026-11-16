@@ -12,11 +12,11 @@ Resolve the log key once in the main repo (`log.sh --path` reuses the key the br
 
 ## Required passes
 
-**The pass sequence**, which steps 2 and 4 run, is `/codexloop --until-converged --base <base>`. When the repo declares required passes in `docs/agents/pr-loop.md`, read [PASSES.md](PASSES.md) before step 1: there the sequence runs every required pass, each push and the hand-back wait on `log.sh --check`, and a `fable` line can stand. Record every pass as it lands, declared or not (LEDGER.md, **Review passes**).
+**The pass sequence**, which steps 2 and 4 run, is `/codexloop --until-converged --base <base>`. Before step 1, run `log.sh --check HEAD`: an exit 2 hands back `Merge-ready: no: check could not run: <its message>`, and when it prints `Required passes` (the repo, or its default branch, declares them in `docs/agents/pr-loop.md`), read [PASSES.md](PASSES.md): there the sequence runs every required pass, each push and the hand-back wait on `log.sh --check`, and a `fable` line can stand. Record every pass as it lands, declared or not (LEDGER.md, **Review passes**).
 
 ## 1. Two-axis review
 
-Run `/code-review` on each repo's branch with the fixed point `origin/<base>` (the branch it merges into) and the spec given up front: the ticket plus the user's settled decisions (`log.sh --pins`). Fix every hard violation and every spec gap; take a judgement call only when it makes the change simpler or clearer. Log each finding with its outcome. Record both axes on the head they reviewed: `log.sh --pass standards <head> clean|fixed`, and `log.sh --pass spec <head> clean|fixed [<body file>]`, with the PR body file Spec read, if any, saved beside the log as `spec-body-<head>.md` for step 9.
+Run `/code-review` on each repo's branch with the fixed point `origin/<base>` (the branch it merges into) and the spec given up front: the ticket plus the user's settled decisions (`log.sh --pins`). Fix every hard violation and every spec gap; take a judgement call only when it makes the change simpler or clearer. Log each finding with its outcome. Record both axes on the head they reviewed: `log.sh --pass standards <head> clean|fixed`, and `log.sh --pass spec <head> clean|fixed [<body file>]`, with the PR body file Spec read, if any, saved beside the log as `spec-body-<head>.md` for step 9 (every Spec run, step 9's included).
 
 Done when each branch's findings are fixed, logged as rejected with a reason, or logged with result `open` as questions for the user, and both axes are recorded.
 
@@ -30,9 +30,9 @@ Done when every branch has converged, or has a required pass recorded `not-revie
 
 ## 3. Open the PRs
 
-Open one PR per repo against `<base>` with the `/pr` template, marked as closing the spec and tickets it finishes, its "Behavior changes vs master" section filled from the log's accepted rows with a `prod_delta` other than `none`, and the log's `open` rows listed as open questions. A branch that already has a PR keeps it, with its body updated the same way, and a draft opened under step 2 is marked ready. For a cross-repo change, name the merge order in every body and cross-link the PRs. Then, in each repo, write its PR's facts block (`python3 ~/.claude/skills/recap-pr/facts.py <pr>`) and post each pending prototype question's gallery (step 5).
+Open one PR per repo against `<base>` with the `/pr` template, marked as closing the spec and tickets it finishes, its "Behavior changes vs master" section filled from the log's accepted rows with a `prod_delta` other than `none`, and the log's `open` rows listed as open questions. A branch that already has a PR keeps it, with its body updated the same way, and a draft opened under step 2 is marked ready. For a cross-repo change, name the merge order in every body and cross-link the PRs. Then, in each repo, write its PR's facts block (`python3 ~/.claude/skills/recap-pr/facts.py <pr>`; a failure is retried in step 9) and post each pending prototype question's gallery (step 5).
 
-Done when every repo with commits on the branch has an open PR carrying its facts block and any pending prototype gallery.
+Done when every repo with commits on the branch has an open PR carrying its facts block (or a `facts.py` failure left for step 9) and any pending prototype gallery.
 
 ## 4. Bot and CI findings
 

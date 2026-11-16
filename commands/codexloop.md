@@ -124,7 +124,7 @@ Done when the round has started or the run has exited `PAUSED`.
    git fetch origin <base> --quiet
    ```
 
-   Confirm `log.sh --rounds` exits 0 and take this round's number from its `next round`. Under `--until-converged`, pick this iteration's round scope, which may end the loop, and run the **Design pause** check (Round scope). Then log the round's dispatch row (**Round rows**).
+   Confirm `~/.claude/skills/recap-pr/log.sh --rounds` exits 0 and take this round's number from its `next round`. Under `--until-converged`, pick this iteration's round scope, which may end the loop, and run the **Design pause** check (Round scope). Then log the round's dispatch row (**Round rows**).
 
    **b. Run the review call** from the Reviewer section with this focus text, plus, under `--until-converged`, the round's scope and focus lines from **Round scope**:
    ```bash
@@ -174,6 +174,8 @@ Done when the round has started or the run has exited `PAUSED`.
    - If every finding this iteration was rejected (no real issues), exit with `STATUS=CLEAN` instead of committing — the loop has converged. Under `--until-converged`: a clean round (Round scope).
    - Keep commits local until the loop exits CLEAN (step 4). Under `--until-converged` on a draft PR opened so CI can judge the change, also push a commit whose next step needs CI's answer; review bots can bill for that push too.
 
+   Every way out of a round, an exit included, first logs its round row, or its dropped row (**Round rows**).
+
 3. **Exit conditions:**
    - `STATUS=CLEAN` — the reviewer returned zero findings, or every remaining finding was a rejected nit/flip-flop. Under `--until-converged`: Round scope rule 3's convergence.
    - `STATUS=MAX_ITERATIONS` — hit cap with real findings remaining; print remaining findings for human review and DO NOT push.
@@ -181,7 +183,7 @@ Done when the round has started or the run has exited `PAUSED`.
    - `STATUS=FAIL ERROR="..."` — reviewer error (non-zero exit with no review output / auth failure / unparseable review), lint/test failure, or merge conflict; DO NOT push.
 
 4. **Post-loop push (only on `STATUS=CLEAN`):**
-   - Under `/pr-loop` on a repo that declares required passes, push only once `~/.claude/skills/recap-pr/log.sh --check HEAD` exits 0 or 3 (step 2e's draft-PR pushes for CI aside); until then exit `STATUS=CLEAN` unpushed and leave the push to its pass sequence.
+   - Under `/pr-loop`, push only once `~/.claude/skills/recap-pr/log.sh --check HEAD` exits 0 or 3 (step 2e's draft-PR pushes for CI aside); on exit 1 exit `STATUS=CLEAN` unpushed and leave the push to its pass sequence, and on exit 2 exit `STATUS=FAIL ERROR="check could not run: <its message>"`.
    - Confirm current branch is not `master`/`main` (abort push if it is).
    - Confirm commits exist beyond the base: `git log origin/<base>..HEAD --oneline` is non-empty.
    - Push the current branch with upstream tracking: `git push -u origin HEAD`.
