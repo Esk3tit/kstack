@@ -20,6 +20,12 @@ if a[:2] == ["pr", "view"]:
     if "-q" in a:
         print(read("head").strip() if fields == "headRefOid" else read("body"))
     elif fields == "body":
+        swap = os.path.join(fake, "swap_on_read")
+        if os.path.exists(swap):
+            n = int(read("swap_on_read")) - 1
+            open(swap, "w").write(str(n))
+            if n == 0:
+                open(os.path.join(fake, "body"), "w").write(read("stale"))
         print(json.dumps({"body": read("body")}))
     else:
         print(json.dumps({"headRefOid": read("head").strip(), "baseRefName": "main", "url": "https://github.com/o/r/pull/7"}))
@@ -106,6 +112,11 @@ check "a bot's stale rewrite is outrun" "$(python3 "$D/facts.py" 7)" "facts bloc
 check "the bot's own section survives the retry" "$(grep -c 'rewritten from an old copy' "$FAKE/body")" "1"
 echo 5 > "$FAKE/clobbers"
 check "a body that keeps losing the block fails" "$(python3 "$D/facts.py" 7 >/dev/null 2>&1; echo $?)" "1"
+printf '## Summary\n\nDoes the thing.\n\n<!-- pr-facts:start -->\nan older block\n<!-- pr-facts:record:start -->\nEvery required pass is clean\n<!-- pr-facts:record:end -->\n<!-- pr-facts:end -->\n' > "$FAKE/stale"
+rm -f "$FAKE/clobbers"; echo 3 > "$FAKE/swap_on_read"
+python3 "$D/facts.py" 7 >/dev/null
+check "a bot's older copy between the two writes loses to the fresh facts" "$(grep -c 'an older block' "$FAKE/body") $(grep -c '^\*\*Checks:\*\* 5 on this head' "$FAKE/body")" "0 1"
+rm -f "$FAKE/swap_on_read"
 printf '## Summary\n\nDoes an older thing.\n' > "$FAKE/stale"
 echo 1 > "$FAKE/clobbers"
 check "a stale copy of the author's text is refused, not written back" "$(python3 "$D/facts.py" 7 2>&1 >/dev/null | grep -c "own text changed")" "1"

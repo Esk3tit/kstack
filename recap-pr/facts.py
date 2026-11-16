@@ -95,9 +95,15 @@ def checks_section(slug, head):
     return lines
 
 
-def passes_section(pr, head):
+def passes_section(pr, head, body=None):
+    """log.sh --check on the head, against the live PR body or, when given, the body facts.py wrote."""
     log_sh = Path(__file__).resolve().with_name("log.sh")
-    result = run([str(log_sh), "--check", head, str(pr)], check=False)
+    with tempfile.NamedTemporaryFile("w", suffix=".md", delete=False) as f:
+        f.write(body or "")
+    try:
+        result = run([str(log_sh), "--check", head, f.name if body is not None else str(pr)], check=False)
+    finally:
+        os.unlink(f.name)
     output = (result.stdout + result.stderr).strip() or f"log.sh --check exited {result.returncode} with no output"
     return ["**Review passes:**", "", "```text", output, "```"]
 
@@ -174,9 +180,9 @@ def build_block(pr, slug, head, base, top):
     return "\n".join(lines)
 
 
-def record(pr, head):
+def record(pr, head, body=None):
     now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%MZ")
-    return "\n".join([RECORD_START] + passes_section(pr, head) + ["", f"_Written at {now}._", RECORD_END])
+    return "\n".join([RECORD_START] + passes_section(pr, head, body) + ["", f"_Written at {now}._", RECORD_END])
 
 
 def with_record(block, new_record):
@@ -216,10 +222,11 @@ def own_text(body):
         os.unlink(f.name)
 
 
-def write(slug, pr, make_block):
+def write(slug, pr, make_block, first=None):
+    """Write the block into the live body and read it back; returns (attempts, author-text baseline, body written)."""
     changed = ("the description's own text changed while facts.py was writing (a bot may have restored an "
                "older copy, or someone edited it): compare it with the last edit, restore it if needed, and rerun")
-    first = block = None
+    block = None
     for attempt in range(1, WRITE_ATTEMPTS + 1):
         live = pr_view(pr, "body").get("body") or ""
         text = own_text(live)
@@ -239,7 +246,7 @@ def write(slug, pr, make_block):
         if own_text(back) != first:
             fail(changed)
         if own_block(back) == block:
-            return attempt
+            return attempt, first, updated
         time.sleep(float(os.environ.get("FACTS_RETRY_SECONDS", "5")))
     fail(f"the body kept losing the facts block after {WRITE_ATTEMPTS} writes; a bot is rewriting it, so rerun once it settles")
 
@@ -259,17 +266,18 @@ def main(argv):
         git("fetch", "--quiet", "origin", head)
     if "--record-only" in argv:
         new_record = record(pr, head)
-        attempts = write(slug, pr, lambda live: with_record(own_block(live), new_record))
+        attempts, _, _ = write(slug, pr, lambda live: with_record(own_block(live), new_record))
         print(f"review record refreshed on PR #{pr} for {head[:8]}" + (f" after {attempts} writes" if attempts > 1 else ""))
         return
     block = build_block(pr, slug, head, base, top)
     if "--dry-run" in argv:
         print(block)
         return
-    attempts = write(slug, pr, lambda live: block)
-    # The record read the description before these facts landed; read it again now that they have.
-    new_record = record(pr, head)
-    write(slug, pr, lambda live: with_record(own_block(live), new_record))
+    attempts, first, written = write(slug, pr, lambda live: block)
+    # The record read the description before these facts landed: rebuild it from the body just written, and
+    # write the same facts again with the same author-text baseline, so a bot's older copy can't slip in.
+    new_record = record(pr, head, written)
+    write(slug, pr, lambda live: with_record(block, new_record), first)
     print(f"facts block written to PR #{pr} for {head[:8]}" + (f" after {attempts} writes" if attempts > 1 else ""))
 
 
