@@ -136,7 +136,9 @@ check "a branch cut before the declaration answers to origin/main's, with no ori
 Required passes on ${undeclared:0:8} (docs/agents/pr-loop.md on origin/main, PR body $("$L" --body-hash "$body")):"
 git update-ref refs/remotes/origin/trunk "$H1" && git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/trunk && git update-ref -d refs/remotes/origin/main
 check "origin/HEAD names the default branch when set" "$("$L" --check "$undeclared" 2>&1 | head -1 | grep -c 'pr-loop.md on origin/trunk,')" "1"
-git symbolic-ref --delete refs/remotes/origin/HEAD && git update-ref -d refs/remotes/origin/trunk
+git update-ref refs/remotes/origin/main "$H1" && git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/gone
+check "an origin/HEAD naming a deleted branch falls through to origin/main" "$("$L" --check "$undeclared" 2>&1 | head -1 | grep -c 'pr-loop.md on origin/main,')" "1"
+git symbolic-ref --delete refs/remotes/origin/HEAD && git update-ref -d refs/remotes/origin/trunk && git update-ref -d refs/remotes/origin/main
 "$L" --pass spec "$H3" clean "$body"
 "$L" --pass fable "$H3" not-reviewed
 check "a pass recorded not-reviewed on the head exits 3" "$("$L" --check "$H3" "$body" >/dev/null 2>&1; echo $?)" "3"

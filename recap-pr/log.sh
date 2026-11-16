@@ -97,12 +97,11 @@ branch_rows() {
   done | sort -s -t$'\t' -k1,1
 }
 
-# The remote's default branch: origin/HEAD when set, else origin/main, else origin/master.
+# The remote's default branch: origin/HEAD when it names a branch that exists, else origin/main, else origin/master.
 default_branch() {
-  git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null && return
   local b
-  for b in origin/main origin/master; do
-    if git rev-parse --verify --quiet "$b^{commit}" >/dev/null; then echo "$b"; return; fi
+  for b in "$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null)" origin/main origin/master; do
+    if [ -n "$b" ] && git rev-parse --verify --quiet "$b^{commit}" >/dev/null; then echo "$b"; return; fi
   done
   return 1
 }

@@ -37,7 +37,7 @@ DEFINITIONS = {
 }
 
 
-INDEXED = re.compile(r'^(?:mcp__[\w-]+__)?ctx_search\(\{queries:\[.*\], source:"[^"]+"\}\)')
+INDEXED = re.compile(r'^(?:mcp__[\w-]+__)?ctx_search\(\{queries:\[.*\], source:"(?:[^"\\]|\\.)+"\}\)')
 
 
 def text_of(content):
