@@ -16,7 +16,7 @@ time), writes, and reads the body back; a bot that rewrites the body from an old
 fetching and writing again, up to three times, and stops if the description's own text changed
 meanwhile rather than writing an older copy back. --dry-run prints the block and writes nothing.
 --record-only rewrites only the review record, keeping every fact as it stands, so a pass that read
-the facts stays clean.
+the facts stays clean; a full write ends with one, so its record describes the description it left.
 """
 
 import datetime
@@ -267,6 +267,9 @@ def main(argv):
         print(block)
         return
     attempts = write(slug, pr, lambda live: block)
+    # The record read the description before these facts landed; read it again now that they have.
+    new_record = record(pr, head)
+    write(slug, pr, lambda live: with_record(own_block(live), new_record))
     print(f"facts block written to PR #{pr} for {head[:8]}" + (f" after {attempts} writes" if attempts > 1 else ""))
 
 

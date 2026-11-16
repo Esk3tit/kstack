@@ -99,6 +99,7 @@ check "a record-only refresh outruns a bot that drops the block" "$(python3 "$D/
 check "and puts the same facts back" "$(sed -n '/pr-facts:start/,/pr-facts:record:start/p' "$FAKE/body")" "$facts_before"
 python3 "$D/facts.py" 7 >/dev/null
 check "a full refresh reruns the measured facts, so Spec goes round again" "$("$D/log.sh" --check "$head" 7 | tail -1)" "Not clean on ${head:0:8}: spec"
+check "and the record it writes says so" "$(sed -n '/pr-facts:record:start/,/pr-facts:record:end/p' "$FAKE/body" | grep -c 'STALE BODY')" "1"
 printf '## Summary\n\nDoes the thing.\n' > "$FAKE/stale"
 echo 1 > "$FAKE/clobbers"
 check "a bot's stale rewrite is outrun" "$(python3 "$D/facts.py" 7)" "facts block written to PR #7 for ${head:0:8} after 2 writes"
