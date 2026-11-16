@@ -163,8 +163,7 @@ For each case: drive the flow, assert behavior, capture evidence → PASS/FAIL +
   state: `get box <selector>` gives a non-empty box inside the viewport, and the theme, viewport and
   focus the claim names hold (`eval` on `document.activeElement` for focus). A shot whose assertion
   fails is not evidence. A capture script that opens its own browser session closes it in the same
-  shell, on failure too (`trap 'agent-browser --session <name> close' EXIT`); the run's own session
-  closes when the run ends.
+  shell, on failure too (`trap 'agent-browser --session <name> close' EXIT`).
 - **Inspect every capture before posting** — every screenshot, and frames across each whole clip.
   Leave one out of `results.json` if it shows setup noise, a secret, or not the claim.
 
@@ -287,8 +286,9 @@ Cap: **50 files per run** — capture what answers a review question, not every 
 screen. Name captures plainly (`[A-Za-z0-9_.-]`).
 
 **A standalone gallery** (a before/after or a design choice for the owner, outside a verification
-run) goes through the same poster under its own `--marker`, so it never replaces a run's gallery or
-block. Put its captures in a scratch folder with a small `results.json`:
+run) goes through the same poster under its own `--marker`, one per question, so it never replaces a
+run's gallery or block. Its captures prove their subject as §5 says. Put them in a scratch folder with
+a small `results.json`, each case passing when its picture shows what it names:
 
 ```json
 {"revision": "c5ef2589", "intentSource": "owner question 3: where a lone picture sits",
@@ -302,7 +302,7 @@ block. Put its captures in a scratch folder with a small `results.json`:
 Then post it with every path written out:
 
 ```bash
-node /Users/<you>/.claude/skills/no-mistakes-frontend/harness/post-evidence.mjs --pr <N> --repo <owner/name> --marker design-choices --run-dir <folder> --results <folder>/results.json
+node /Users/<you>/.claude/skills/no-mistakes-frontend/harness/post-evidence.mjs --pr <N> --repo <owner/name> --marker design-q3 --run-dir <folder> --results <folder>/results.json
 ```
 
 Cite only the captures it posted.

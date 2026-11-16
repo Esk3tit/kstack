@@ -49,7 +49,7 @@ git commit -q --allow-empty -m "start (#1)"
 git push -q origin main
 git switch -q -c feat/x
 mkdir -p docs/agents
-printf '%s\n' '- pass: standards' '- facts: Tests = run: printf "chromium {head}"' '- facts: Perf = file: perf.md' \
+printf '%s\n' '- pass: standards' '- pass: spec, reads the PR body' '- facts: Tests = run: printf "chromium {head}"' '- facts: Perf = file: perf.md' \
   '- facts: Broken = run: exit 3' > docs/agents/pr-loop.md
 git add docs && git commit -q -m "branch work"
 git switch -q main
@@ -63,6 +63,7 @@ echo "$head" > "$FAKE/head"
 echo "| bytes | 198,603 |" > perf.md
 "$D/log.sh" --pass standards "$head" clean
 printf '## Summary\n\nDoes the thing.\n' > "$FAKE/body"
+"$D/log.sh" --pass spec "$head" clean "$FAKE/body"
 
 block=$(python3 "$D/facts.py" 7 --dry-run)
 has() { printf '%s\n' "$block" | grep -cF -- "$1" || true; }
@@ -85,6 +86,13 @@ echo "| bytes | 201,000 |" > perf.md
 python3 "$D/facts.py" 7 >/dev/null
 check "a rerun replaces the block in place" "$(grep -c 'pr-facts:start' "$FAKE/body") $(grep -c '201,000' "$FAKE/body") $(grep -c '198,603' "$FAKE/body")" "1 1 0"
 check "a rerun keeps the bots' summaries" "$(grep -c '^macroscope$' "$FAKE/body")" "1"
+check "the review record sits in its own markers" "$(sed -n '/pr-facts:record:start/,/pr-facts:record:end/p' "$FAKE/body" | grep -c 'Review passes')" "1"
+"$D/log.sh" --pass spec "$head" clean "$FAKE/body"
+python3 "$D/facts.py" 7 >/dev/null
+check "a refresh with unchanged sources keeps Spec clean" "$("$D/log.sh" --check "$head" 7 | tail -1)" "Every required pass is clean on ${head:0:8} and its PR body."
+echo "| bytes | 202,000 |" > perf.md
+python3 "$D/facts.py" 7 >/dev/null
+check "a changed figure sends Spec round again" "$("$D/log.sh" --check "$head" 7 | tail -1)" "Not clean on ${head:0:8}: spec"
 echo 1 > "$FAKE/clobbers"
 check "a bot's stale rewrite is outrun" "$(python3 "$D/facts.py" 7)" "facts block written to PR #7 for ${head:0:8} after 2 writes"
 check "the bot's own section survives the retry" "$(grep -c 'rewritten from an old copy' "$FAKE/body")" "1"

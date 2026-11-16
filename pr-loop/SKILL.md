@@ -21,7 +21,7 @@ A repo declares the review passes a PR needs before merge in `docs/agents/pr-loo
 - pass: codexloop
 ```
 
-`standards` and `spec` are step 1's two axes, `codexloop` is step 2's converged loop, and `fable` is step 5; naming `fable` is the user's standing request for Fable passes in that repo. The same file can declare sections for the PR's facts block (the line format is documented at the top of `~/.claude/skills/recap-pr/facts.py`). Record every pass as it lands, declared or not (LEDGER.md, **Review passes**). A declaring repo's head is merge-ready only when `log.sh --check <head> <pr>` exits 0: every required pass clean on that exact head, and a pass that reads the PR body clean on the current body too. So any new commit, a base merge, rebase or restack included, sends the passes round again on the new head, and a body edit sends round the passes that read it; a pass already clean on the head and body is not rerun. A pass that cannot finish (its reviewer fails or times out, or `/codexloop` exits `FAIL`) is recorded `not-reviewed` once and not run again on that head: the run hands back with `Merge-ready: no: <pass> not reviewed`. A repo with no declaration keeps the per-step rules below, and its check only lists what ran.
+`standards` and `spec` are step 1's two axes, `codexloop` is step 2's converged loop, and `fable` is step 5; naming `fable` is the user's standing request for Fable passes in that repo. The same file can declare sections for the PR's facts block (the line format is documented at the top of `~/.claude/skills/recap-pr/facts.py`). Record every pass as it lands, declared or not. A declaring repo's head is merge-ready only when `log.sh --check <head> <pr>` exits 0 (LEDGER.md, **Review passes**). So any new commit, a base merge, rebase or restack included, sends the passes round again on the new head, and a body edit sends round the passes that read it; a pass already clean on the head and body is not rerun, and `/code-review` runs only the axis the check names. A pass whose reviewer cannot finish (it fails or times out, or `/codexloop` exits `FAIL` on a reviewer error) is recorded `not-reviewed` once and not run again on that head: the run hands back with `Merge-ready: no: <pass> not reviewed`. A lint, test or merge failure is the run's to fix, not a reviewer's. A repo with no declaration keeps the per-step rules below, and its check only lists what ran.
 
 ## 1. Two-axis review
 
@@ -47,7 +47,7 @@ Done when every repo with commits on the branch has an open PR carrying its fact
 
 Commit any fix from steps 5–8. A branch with unpushed commits first runs the required passes `log.sh --check <head>` names, in step order: step 1's axes, then step 5's Fable, then `/codexloop --until-converged --base <base>`, which pushes; repeat while a pass changes the head. A repo with no declaration runs `/codexloop` alone. Then follow `/address-pr-comments` on each PR, judging every bot finding and red check on the pushed head. Its finalize step sends accepted fixes through `/codexloop`, which picks up from its last logged round (Round scope).
 
-A red check that passes on a re-run has a cause still unknown, not a flake: diagnose the failure in this run through the repo's CI-only reproduction recipe (in its CI or e2e doc) and the `diagnosing-bugs` skill. Until a cause is named, the hand-back's CI line reports it as `cause unknown`; a cause found in the change is a finding like any other.
+A red check that passes on a re-run has a cause still unknown, not a flake: diagnose the failure in this run through the repo's CI-only reproduction recipe (in its CI or e2e doc) and the `diagnosing-bugs` skill. The diagnosis ends when a cause is named, or when the recipe has run without reproducing it; then the hand-back's CI line reports it as `cause unknown`. A cause found in the change is a finding like any other.
 
 Done when every PR has converged, has no open bot finding (threads and review-body items alike), and every reviewer on its final pushed head has reviewed that head and passed, or is reported `NOT_REVIEWED` (the `/address-pr-comments` convergence gate). A final-pass reviewer is judged in step 8.
 
@@ -79,7 +79,7 @@ Done when each final-pass reviewer is done (**The final pass**, "It's done") and
 
 ## 9. Recap and hand-back
 
-Follow `~/.claude/skills/recap-pr/SKILL.md`. Then run `log.sh --check <head> <pr>` in each repo. While it names a pass, run that pass and check again; the recap's edit to the body sends Spec round once more, and a pass that changes the head sends that head back through steps 4 to 8, then this step starts again on it. Once the check passes and CI has finished on the final head, refresh the PR's facts block (`facts.py <pr>`) last, since its block is outside every pass's body hash. Then hand back this block for each PR, every line filled from the final head:
+Follow `~/.claude/skills/recap-pr/SKILL.md`. Once CI has finished on each final head, refresh its PR's facts block (`facts.py <pr>`), then run `log.sh --check <head> <pr>` in its repo. While it names a pass not recorded `not-reviewed` on that head, run that pass and check again: a changed fact or the recap's edit sends Spec round, so Spec reads the finished description last, and a pass that changes the head sends that head back through steps 4 to 8, then this step starts again on it. A `not-reviewed` pass ends the loop. Then run `facts.py <pr>` once more, so the block's review record matches the check; the record is outside every pass's body hash. Then hand back this block for each PR, every line filled from the final head:
 
 ```text
 PR <url>: <what it changes, in a user's words> · head <sha> · merge order <n>
@@ -91,7 +91,7 @@ App evidence: <taken on <sha> | skipped: reason>
 Merge-ready: <yes | yes, after <sibling PR> merges | no: what blocks it>
 ```
 
-A deploy job's result is reported but never sets `Merge-ready: no`; a failed reviewer, an open finding, a failing required check or a check that exits non-zero does.
+A deploy job's result is reported but never sets `Merge-ready: no`; a failed reviewer, an open finding, a failing required CI check, or `log.sh --check` exiting non-zero does.
 
 Done when `recap.html` exists beside the log, every PR body's "Behavior changes vs master" section matches it, each PR's facts block was written on its final head, and each PR's block is handed back with its check's output.
 

@@ -96,12 +96,12 @@ branch_rows() {
 
 commit_of() { git rev-parse --verify --quiet "$1^{commit}" || die "not a commit in this repo: $1"; }
 
-# Hashes the PR body's own text: the blocks facts.py and the review bots rewrite are dropped
-# (an unclosed one is kept), as are blank lines, trailing spaces and carriage returns.
+# Hashes the PR body's own text: the review bots' summaries and the review record inside facts.py's
+# block are dropped (an unclosed one is kept), as are blank lines, trailing spaces and carriage returns.
 body_hash() {
   tr -d '\r' < "$1" | awk '
     function closer(l) {
-      if (l ~ /<!-- pr-facts:start -->/) return "<!-- pr-facts:end -->"
+      if (l ~ /<!-- pr-facts:record:start -->/) return "<!-- pr-facts:record:end -->"
       if (l ~ /<!-- Macroscope.s pull request summary starts here -->/) return "<!-- Macroscope.s pull request summary ends here -->"
       if (l ~ /<!-- This is an auto-generated comment: release notes by coderabbit\.ai -->/) return "<!-- end of auto-generated comment: release notes by coderabbit\\.ai -->"
       if (l ~ /<!-- CURSOR_SUMMARY -->/) return "<!-- /CURSOR_SUMMARY -->"

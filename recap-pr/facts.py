@@ -4,8 +4,9 @@
     facts.py <pr> [--dry-run]
 
 Run it in the PR's checkout. The block holds the head's check runs and commit statuses with their
-results, the review passes recorded on the head (log.sh --check), the PRs a base merge brought in
-since the branch point, and each section the repo declares in docs/agents/pr-loop.md:
+results, the PRs a base merge brought in since the branch point, each section the repo declares in
+docs/agents/pr-loop.md, and, between <!-- pr-facts:record:start/end -->, the review passes recorded
+on the head (log.sh --check) and the time it was written. The declared sections:
 
     - facts: <title> = run: <shell command>   (its stdout, as Markdown; {pr}, {head}, {base} filled in)
     - facts: <title> = file: <path from the repo root>
@@ -26,6 +27,7 @@ import time
 from pathlib import Path
 
 START, END = "<!-- pr-facts:start -->", "<!-- pr-facts:end -->"
+RECORD_START, RECORD_END = "<!-- pr-facts:record:start -->", "<!-- pr-facts:record:end -->"
 BOT_STARTS = (
     "<!-- Macroscope's pull request summary starts here -->",
     "<!-- This is an auto-generated comment: release notes by coderabbit.ai -->",
@@ -149,13 +151,13 @@ def declared_sections(pr, head, base, top):
 def build_block(pr, slug, head, base, top):
     now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%MZ")
     lines = [START,
-             f"**Facts on `{head[:8]}`**, written by `facts.py` from their sources at {now}; "
+             f"**Facts on `{head[:8]}`**, written by `facts.py` from their sources; "
              "rerun it to refresh them rather than editing this block.", ""]
     lines += checks_section(slug, head) + [""]
-    lines += passes_section(pr, head) + [""]
     lines += brought_in_section(base, head)
     lines += declared_sections(pr, head, base, top)
-    lines.append(END)
+    # The review record changes as passes land; log.sh leaves it out of the body hash.
+    lines += ["", RECORD_START] + passes_section(pr, head) + ["", f"_Written at {now}._", RECORD_END, END]
     return "\n".join(lines)
 
 

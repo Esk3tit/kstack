@@ -13,9 +13,12 @@
  
  On top of whatever the repo documents, the Standards axis always carries the **smell baseline** below: a fixed set of Fowler code smells (_Refactoring_, ch.3) that applies even when a repo documents nothing. Two rules bind it:
  
-@@ -59,6 +61,12 @@
+@@ -57,8 +59,14 @@
  
- Issue both sub-agent calls together, in the foreground, and aggregate the reports they return.
+ ### 4. Spawn both sub-agents in parallel
+ 
+-Issue both sub-agent calls together, in the foreground, and aggregate the reports they return.
++Issue both sub-agent calls together, in the foreground, and aggregate the reports they return. When the caller names one axis (a Spec re-check after a PR description edit), spawn only that sub-agent and report its axis alone.
  
 +Both prompts carry:
 +

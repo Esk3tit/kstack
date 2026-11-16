@@ -29,7 +29,7 @@ A **review-body item** is a finding a bot writes inside a review's body instead 
 
 ## A green bot is one that reviewed the head
 
-A review bot's green check counts only once that bot has reviewed the current head: a review whose `commit_id` is the head SHA, or the bot's own summary naming the head commit. A bot that is rate-limited, paused, skipping the PR for size, or only reviews when tagged still reports green. Re-trigger it once with its tag (`@coderabbitai review`, `@greptileai`) and give it one pass; if it still hasn't reviewed the head, report it as `NOT_REVIEWED=<bot>:<reason>` instead of counting it green.
+A review bot's green check counts only once that bot has reviewed the current head: a review whose `commit_id` is the head SHA, or the bot's own summary naming the head commit. A bot that is rate-limited, paused, skipping the PR for size, or only reviews when tagged still reports green. Re-trigger it once with its tag (`@coderabbitai review`, `@greptileai`) and give it until its deadline (**Waits**); if it still hasn't reviewed the head, report it as `NOT_REVIEWED=<bot>:<reason>` instead of counting it green.
 
 ## The final pass
 
@@ -45,7 +45,7 @@ A repo can name **final-pass reviewers** in `docs/agents/review-bots.md`, each w
 
 ## Waits
 
-Every wait names its **deadline** and a **wake source** that fires by then, and a turn ends on a wait only once that wake source is set. A PR watch fires on PR events (a comment, a review, a push), never on the clock. A clock deadline (a rate limit's reset, a promised re-request, a reviewer that may never answer) needs a timer: in T3, a one-time `schedule_task` bound to this thread; in a native CLI, the poll in step 6 or a background command that exits at the deadline. A review bot's deadline is 30 minutes from its request or the push, a check's 30 minutes from the push, unless the repo's `docs/agents/review-bots.md` names a longer one for it; any other wait names its deadline when it starts. At the deadline, report each review bot still silent as `NOT_REVIEWED=<bot>:<why>, waited <minutes> min`; it then drops out of step 1's green gate and step 6's wait on this head, and the loop carries on, reporting the missing review rather than counting it clean; a check still pending ends the loop with `LOOP_STATUS=FAIL ERROR="<check> still pending after <minutes> min"`.
+Every wait names its **deadline** and a **wake source** that fires by then, and a turn ends on a wait only once that wake source is set. A PR watch fires on PR events (a comment, a review, a push), never on the clock. A clock deadline (a rate limit's reset, a promised re-request, a reviewer that may never answer) needs a timer: in T3, a one-time `schedule_task` bound to this thread; in a native CLI, the poll in step 6 or a background command that exits at the deadline. A review bot's deadline is 30 minutes from its request or the push, a check's 30 minutes from the push, unless the repo's `docs/agents/review-bots.md` names a longer one for it; any other wait (a delegated round or child) names its deadline when it starts, and at that deadline the run reports what is still running and for how long, and carries on without it. At its deadline, report each review bot still silent as `NOT_REVIEWED=<bot>:<why> after <minutes> min`; it then drops out of step 1's green gate and step 6's wait on this head, and the loop carries on, reporting the missing review rather than counting it clean; a check still pending ends the loop with `LOOP_STATUS=FAIL ERROR="<check> still pending after <minutes> min"`.
 
 ## Each pass
 
