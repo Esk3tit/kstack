@@ -124,7 +124,7 @@ Done when the round has started or the run has exited `PAUSED`.
    git fetch origin <base> --quiet
    ```
 
-   Confirm `~/.claude/skills/recap-pr/log.sh --rounds` exits 0 and take this round's number from its `next round`. Under `--until-converged`, pick this iteration's round scope, which may end the loop, and run the **Design pause** check (Round scope). Then log the round's dispatch row (**Round rows**).
+   Confirm `~/.claude/skills/recap-pr/log.sh --rounds` exits 0 (on exit 1, settle the round it names, **Round rows**) and take this round's number from its `next round`. Under `--until-converged`, pick this iteration's round scope, which may end the loop, and run the **Design pause** check (Round scope). Then log the round's dispatch row (**Round rows**).
 
    **b. Run the review call** from the Reviewer section with this focus text, plus, under `--until-converged`, the round's scope and focus lines from **Round scope**:
    ```bash

@@ -12,11 +12,13 @@ Resolve the log key once in the main repo (`log.sh --path` reuses the key the br
 
 ## Required passes
 
-**The pass sequence**, which steps 2 and 4 run, is `/codexloop --until-converged --base <base>`. Before step 1, run `log.sh --check HEAD`: an exit 2 hands back `Merge-ready: no: check could not run: <its message>`, and when it prints `Required passes` (the repo, or its default branch, declares them in `docs/agents/pr-loop.md`), read [PASSES.md](PASSES.md): there the sequence runs every required pass, each push and the hand-back wait on `log.sh --check`, and a `fable` line can stand. Record every pass as it lands, declared or not (LEDGER.md, **Review passes**).
+**The pass sequence** is `/codexloop --until-converged --base <base>`. Before step 1, run `log.sh --check HEAD` in each repo's branch: an exit 2 hands back `Merge-ready: no: check could not run: <its message>`, and when its first line starts `Required passes on` (the repo, or its default branch, declares them in `docs/agents/pr-loop.md`), read [PASSES.md](PASSES.md) for that repo: there the sequence runs every required pass, each push and the hand-back wait on `log.sh --check`, and a `fable` line can stand. Record every pass as it lands, declared or not (LEDGER.md, **Review passes**).
+
+- **A pass whose reviewer cannot run or finish** (it fails or times out, Spec finds no spec, or `/codexloop` exits `FAIL` on a reviewer error) is recorded `not-reviewed` and not rerun on that head in this run; a later run tries it again, and a clean result replaces the record. The run still pushes, goes through step 9 and hands back `Merge-ready: no: <pass> not reviewed`; a lint, test or merge failure is the run's to fix.
 
 ## 1. Two-axis review
 
-Run `/code-review` on each repo's branch with the fixed point `origin/<base>` (the branch it merges into) and the spec given up front: the ticket plus the user's settled decisions (`log.sh --pins`). Fix every hard violation and every spec gap; take a judgement call only when it makes the change simpler or clearer. Log each finding with its outcome. Record both axes on the head they reviewed: `log.sh --pass standards <head> clean|fixed`, and `log.sh --pass spec <head> clean|fixed [<body file>]`, with the PR body file Spec read, if any, saved beside the log as `spec-body-<head>.md` for step 9 (every Spec run, step 9's included).
+Run `/code-review` on each repo's branch with the fixed point `origin/<base>` (the branch it merges into) and the spec given up front: the ticket plus the user's settled decisions (`log.sh --pins`). A prototype question from either axis goes to the user through step 5's gallery. Fix every hard violation and every spec gap; take a judgement call only when it makes the change simpler or clearer. Log each finding with its outcome. Record both axes on the head they reviewed: `log.sh --pass standards <head> clean|fixed`, and `log.sh --pass spec <head> clean|fixed [<body file>]`, with the PR body file Spec read, if any, saved beside the log as `spec-body-<head>.md` for step 9 (every Spec run, step 9's included).
 
 Done when each branch's findings are fixed, logged as rejected with a reason, or logged with result `open` as questions for the user, and both axes are recorded.
 
@@ -26,7 +28,7 @@ When only CI can judge the change (a failure seen only on CI's runners, a suite 
 
 Wherever this run calls `/codexloop`, a `PAUSED` exit (its design pause) stops the run on that branch. With a Fable pass approved, brief it on the cluster as step 5 does and carry its proposal to the user unapplied. Hand back the branch, and its PR if one is open, with the design question as the open item and `Merge-ready: no: design pause`.
 
-Done when every branch has converged, or has a required pass recorded `not-reviewed`, and its head is on the remote; or has stopped on a design pause or a check that could not run.
+Done when every branch has converged, or has a pass recorded `not-reviewed`, and its head is on the remote; or has stopped on a design pause or a check that could not run.
 
 ## 3. Open the PRs
 
@@ -86,9 +88,9 @@ App evidence: <taken on <sha> | skipped: reason>
 Merge-ready: <yes | yes, after <sibling PR> merges | no: what blocks it>
 ```
 
-A deploy job's result is reported but never sets `Merge-ready: no`; a failed reviewer, an open finding, a failing or still-pending required CI check, or `log.sh --check` exiting non-zero does. A description edit after the hand-back (a settled question) reruns Spec and the check before a `yes` stands again.
+A deploy job's result is reported but never sets `Merge-ready: no`; a failed reviewer, an open finding, a failing or still-pending required CI check, or `log.sh --check` exiting non-zero does. In a repo that declares passes, a description edit after the hand-back (a settled question) reruns Spec and the check before a `yes` stands again.
 
-Done when `recap.html` exists beside the log, every PR body's "Behavior changes vs master" section matches it, each PR's facts block was written on its final head, and each PR's block is handed back with its check's output.
+Done when `recap.html` exists beside the log, every PR body's "Behavior changes vs master" section matches it, each PR's facts block was written on its final head or its failure handed back, and each PR's block is handed back with its check's output.
 
 ## When the user says merged
 
