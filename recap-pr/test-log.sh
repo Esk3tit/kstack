@@ -131,6 +131,7 @@ check "with no default branch to read, an undeclared head is refused" "$("$L" --
 git update-ref refs/remotes/origin/main "$undeclared"
 check "no declaration lists what ran" "$(verdict "$undeclared" "$body")" "pass"
 check "no declaration says where it looked" "$(head -1 "$HOME/check.out")" "No required passes declared (docs/agents/pr-loop.md at ${undeclared:0:8} or on origin/main)."
+check "and lists each pass's latest record, wherever it ran" "$(sed -n 3p "$HOME/check.out")" "Latest per pass: standards clean on ${H3:0:8}, fable clean on ${H3:0:8}, codexloop clean on ${H3:0:8}, spec clean on ${H3:0:8}"
 git update-ref refs/remotes/origin/main "$H1"
 check "a branch cut before the declaration answers to origin/main's, with no origin/HEAD" "$(verdict "$undeclared" "$body"; head -1 "$HOME/check.out")" "fail: Not clean on ${undeclared:0:8}: standards spec fable codexloop
 Required passes on ${undeclared:0:8} (docs/agents/pr-loop.md on origin/main, PR body $("$L" --body-hash "$body")):"

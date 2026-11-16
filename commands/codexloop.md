@@ -70,7 +70,7 @@ fi
 
 **Outputs:** `STATUS=<CLEAN|MAX_ITERATIONS|PAUSED|FAIL> ITERATIONS=<N> FINDINGS_REMAINING=<N> [ERROR="..."]`
 
-## Round scope (`--until-converged`)
+## Round scope (`--until-converged`; round rows in every mode)
 
 The loop ends on two clean rounds at the final head, the second over the whole PR: each fix gets a look aimed at it, and unchanged code is not re-read after every one-line fix. A round is **clean** when it commits nothing: zero findings, or every finding rejected (a flip-flop is one more rejected finding, surfaced to the user). Under `--until-converged` a clean round never exits by itself; the rules below pick the next round or declare convergence. (A `--scope working-tree` run reviews the working tree every round and converges on two clean rounds in a row.)
 

@@ -166,7 +166,11 @@ For each case: drive the flow, assert behavior, capture evidence → PASS/FAIL +
   state: `get box <selector>` gives a non-empty box inside the viewport, and the theme, viewport and
   focus the claim names hold (`eval` on `document.activeElement` for focus). A shot whose assertion
   fails is not evidence. A capture script that opens its own browser session closes it in the same
-  shell, on failure too (`trap 'agent-browser --session <name> close' EXIT`).
+  shell, on failure too (`trap 'agent-browser --session <name> close' EXIT`). On a memory-limited
+  Linux cloud machine, a browser killed for memory (exit 137, or an OOM in the kernel log or the
+  scope's memory events) is a result: stop after the first kill and cover that case through CI or a
+  smaller page instead of running the same command again. The case is unverified (coverage gap,
+  `reason=memory-kill`), named in `gaps` with where it was covered.
 - **Inspect every capture before posting** — every screenshot, and frames across each whole clip.
   Leave one out of `results.json` if it shows setup noise, a secret, or not the claim.
 
@@ -215,10 +219,7 @@ On a failing script, first **classify**:
 - (a) **product bug** → record FAIL + repro, never patch;
 - (b) **driver/selector bug** → escalate locator tier / re-recon;
 - (c) **environment/auth** (app unreachable, session expired) → re-auth / re-poll **once**, else BLOCKED.
-- (d) **browser memory kill** on a memory-limited Linux cloud machine (exit 137, or an OOM in the
-  kernel log or the scope's memory events) → a result, not a retry: stop after the first kill and
-  cover that case through CI or a smaller page instead of running the same command again. The case
-  is unverified (coverage gap, `reason=memory-kill`), named in `gaps` with where it was covered.
+- (d) **browser memory kill** on a memory-limited Linux cloud machine → a result, not a retry (step 5).
 
 **Concrete bounds:** cap = **2 driver retries per test case**; total-run soft cap ≈ **10 minutes**.
 On exceeding a cap, classify the unresolved case:

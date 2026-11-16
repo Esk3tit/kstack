@@ -21,13 +21,12 @@ A repo declares the review passes a PR needs before merge in `docs/agents/pr-loo
 - pass: codexloop
 ```
 
-`standards` and `spec` are step 1's two axes, `codexloop` is step 2's converged loop, and `fable` is step 5; a declaration naming any other pass is handed back naming it, since no step runs it. The file can also declare facts-block sections (format at the top of `~/.claude/skills/recap-pr/facts.py`). A `fable` line **stands**, as the user's standing request for Fable passes, once it is on the default branch or they have approved it. Until it stands, record Fable `not-reviewed` on each head and ask for approval in the hand-back; once approved, run it on the current head, and its result supersedes that record. A repo with no declaration keeps the per-step rules below, and its check only lists what ran.
+Step 1 runs `standards` and `spec`, step 2 `codexloop`, step 5 `fable`; a declaration naming any other pass is handed back naming it. The file can also declare facts-block sections (format at the top of `~/.claude/skills/recap-pr/facts.py`). A `fable` line **stands**, as the user's standing request for Fable passes, once it is on the default branch or they have approved it. Until it stands, record Fable `not-reviewed` on each head and ask for approval in the hand-back; once approved, run it on the current head, and its result supersedes that record. A repo with no declaration keeps the per-step rules below, and its check only lists what ran.
 
 - **Record** every pass as it lands, declared or not (LEDGER.md, **Review passes**).
-- **The pass sequence** runs the passes `log.sh --check <head>` names, in step order: step 1's axes (`/code-review` runs only the axis the check names), then step 5's Fable, then `/codexloop --until-converged --base <base>`. On a repo with no declaration it is `/codexloop --until-converged --base <base>` alone.
+- **The pass sequence** runs the passes `log.sh --check <head>` names, in step order: step 1's axes (`/code-review` runs only the axis the check names), then step 5's Fable, then `/codexloop --until-converged --base <base>`. With no declaration, it is that `/codexloop` alone.
   - It repeats until the check exits 0, or 3 when the only passes left are recorded `not-reviewed`; an exit 2 (the check could not run) stops it and hands back `Merge-ready: no: check could not run: <its message>`. Any new commit, a base merge, rebase or restack included, sends the passes round again on the new head; a pass already clean there is not rerun.
-  - On a declaring repo a head reaches the remote only once the check exits 0 or 3, apart from step 2's draft-PR pushes for CI (`/codexloop` step 2e); `/codexloop`'s step 4 holds its push until then.
-  - It ends with that push: once the check allows it on a head the remote lacks, push the branch directly (`git push -u origin HEAD`, never forced; a diverged remote stops the run).
+  - On a declaring repo a head reaches the remote only once the check exits 0 or 3 (step 2's draft-PR pushes for CI aside; `/codexloop`'s step 4 holds its push), and the sequence ends with that push: `git push -u origin HEAD` when the remote lacks the head, never forced; a diverged remote stops the run.
 - **A pass whose reviewer cannot run or finish** (it fails or times out, Spec finds no spec, or `/codexloop` exits `FAIL` on a reviewer error) is recorded `not-reviewed` once and not run again on that head. The run still pushes and goes on through step 9, and hands back `Merge-ready: no: <pass> not reviewed`. A lint, test or merge failure is the run's to fix, not a reviewer's.
 
 ## 1. Two-axis review
@@ -56,7 +55,7 @@ Commit any fix from steps 5–8. A branch with unpushed commits first runs the p
 
 A red check that passes on a re-run is an unexplained failure: diagnose the failure in this run through the repo's CI-only reproduction recipe (in its CI or e2e doc) and the `diagnosing-bugs` skill. The diagnosis ends when a cause is named (in the change, a finding like any other; older than the branch, step 7's own-commit fix), or when the recipe has run without reproducing the failure or the repo has no recipe; then the hand-back's CI line reports `cause unknown` and says which.
 
-Done when every PR has converged, has no open bot finding (threads and review-body items alike), and every reviewer on its final pushed head has reviewed that head and passed, or is reported `NOT_REVIEWED` (the `/address-pr-comments` convergence gate). A final-pass reviewer is judged in step 8.
+Done when every PR has converged, has no open bot finding (threads and review-body items alike), and every reviewer on its final pushed head has reviewed that head and passed, or is reported `NOT_REVIEWED` or `PENDING` (the `/address-pr-comments` convergence gate). A final-pass reviewer is judged in step 8.
 
 ## 5. Fable pass
 
@@ -89,7 +88,7 @@ Done when each final-pass reviewer is done (**The final pass**, "It's done") and
 1. Follow `~/.claude/skills/recap-pr/SKILL.md`.
 2. Once CI has finished on each final head, or its deadline (**Waits**) has passed (at once after a FAIL from step 4), so any check still pending shows as pending, refresh its PR's facts block from its repo: `facts.py <pr>`.
 3. Run `log.sh --check <head> <pr>` in its repo. While it exits 1, run the passes it names, skipping any recorded `not-reviewed` on that head, and check again: a changed fact or the recap's edit reruns Spec, so Spec reads the finished description last. A pass that changes the head sends it back through steps 4 to 8, then step 9 starts again from 1 on the new head; so does a PR whose head has moved past the one checked. A stale body the run did not cause means a bot or person changed the description: compare it with `spec-body-<head>.md`, restore any lost edit, then rerun Spec. An error (exit 2) from `gh` is retried once; it, or any other error, is then handed back as `Merge-ready: no: check could not run: <its message>`.
-4. Refresh only the block's review record (`facts.py <pr> --record-only`), keeping the facts Spec read, and run the check a last time: its output is the one handed back. Exit 3 (only `not-reviewed` passes left) hands back `Merge-ready: no`; any other failure of the check goes back to 3. A `facts.py` failure at 2 or 4 goes back to 2, which rebuilds a missing block; a second one in this step hands back `Merge-ready: no: facts block not written: <its message>`.
+4. Refresh only the block's review record (`facts.py <pr> --record-only`), keeping the facts Spec read, and run the check a last time: its output is the one handed back. Exit 3 (only `not-reviewed` passes left) hands back `Merge-ready: no: <passes> not reviewed`; any other failure of the check goes back to 3. A `facts.py` failure at 2 or 4 goes back to 2, which rebuilds a missing block; a second one in this step hands back `Merge-ready: no: facts block not written: <its message>`.
 5. Hand back this block for each PR, every line filled from the final head:
 
 ```text
@@ -102,7 +101,7 @@ App evidence: <taken on <sha> | skipped: reason>
 Merge-ready: <yes | yes, after <sibling PR> merges | no: what blocks it>
 ```
 
-A deploy job's result is reported but never sets `Merge-ready: no`; a failed reviewer, an open finding, a failing required CI check, or `log.sh --check` exiting non-zero does.
+A deploy job's result is reported but never sets `Merge-ready: no`; a failed reviewer, an open finding, a failing or still-pending required CI check, or `log.sh --check` exiting non-zero does. A description edit after the hand-back (a settled question) reruns Spec and the check before a `yes` stands again.
 
 Done when `recap.html` exists beside the log, every PR body's "Behavior changes vs master" section matches it, each PR's facts block was written on its final head, and each PR's block is handed back with its check's output.
 

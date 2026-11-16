@@ -211,6 +211,7 @@ case "${1:-}" in
       -v declared="$declared" -v where="$where" '
       $2 == repo && NF >= 7 {
         p = $4
+        if (!(p in lasthead)) every[++e] = p
         lasthead[p] = $5; lastverdict[p] = $6
         if ($5 == head) { verdict[p] = $6; body[p] = $7; if (!(p in seen)) { seen[p] = 1; ran[++r] = p } }
       }
@@ -220,6 +221,8 @@ case "${1:-}" in
           printf "No required passes declared (%s).\n", where
           s = ""; for (i = 1; i <= r; i++) s = s (i > 1 ? ", " : "") ran[i] " " verdict[ran[i]]
           printf "Recorded on %s: %s\n", short, (s == "" ? "none" : s)
+          s = ""; for (i = 1; i <= e; i++) s = s (i > 1 ? ", " : "") every[i] " " lastverdict[every[i]] " on " substr(lasthead[every[i]], 1, 8)
+          printf "Latest per pass: %s\n", (s == "" ? "none" : s)
           exit 0
         }
         printf "Required passes on %s (%s, PR body %s):\n", short, where, (cur == "" ? "not checked" : cur)
