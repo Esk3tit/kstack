@@ -81,8 +81,8 @@ A branch-scope round reviews one of two scopes:
 
 **Round rows.** A round logs two decision-log rows, each with `phase codexloop`, `source me`, `asked yes`, `prod_delta none` and result `accepted`: a dispatch row as it starts, and a round row once it is finished (its findings triaged, any accepted fix committed). The dispatch row's decision is `round <n> dispatched on <branch>`, its evidence `head <sha>, <whole-PR or fixes>`. The round row's decision is `round <n> (<whole-PR or fixes>) on <branch>: <k> findings, <a> accepted, <clean or fixed>` (plus `, reviewer asks whole-PR next` when its summary said `WHOLE_PR`), its evidence `head <sha the review ran on, before this round's fixes>, merge-base <sha>`. A round that ends without a review (the reviewer failed, or its run was lost) logs `round <n> dropped on <branch>` in place of a round row, with the reason as `why`.
 
-- `~/.claude/skills/recap-pr/log.sh --rounds` prints the branch's last two round rows, oldest first: the last holds the **last reviewed head**, and survives a compacted context. It reads only this repo's and this branch's rows, since sibling repos and branches sharing a ticket can share one log; a round row without a branch counts for nothing.
-- It exits 1, naming the round, while a dispatched round has neither a round row nor a dropped row: that round is still pending or untriaged. Wait for its review until 30 minutes after its dispatch, the round limit in **Reviewer**; then triage it and log its round row, or log it dropped; dispatch nothing beside it.
+- `~/.claude/skills/recap-pr/log.sh --rounds` prints the branch's last two round rows, oldest first, then `next round <n>`: the last round row holds the **last reviewed head**, and survives a compacted context. Rounds are numbered per branch across every run, so a new round takes that `<n>`. It reads only this repo's and this branch's rows, since sibling repos and branches sharing a ticket can share one log; a round row without a branch counts for nothing.
+- It exits 1, naming the round, while a dispatched round has neither a round row nor a dropped row: that round is still pending or untriaged. Wait for its review until 30 minutes after its dispatch, the round limit in **Reviewer**; then triage it and log its round row, or cancel its job and log it dropped; dispatch nothing beside it.
 - A run starts with a whole-PR round unless the branch already has a round row; then it picks up from that row.
 
 Take the next round's scope from the first rule that applies:
@@ -124,7 +124,7 @@ Done when the round has started or the run has exited `PAUSED`.
    git fetch origin <base> --quiet
    ```
 
-   Under `--until-converged`, confirm `log.sh --rounds` exits 0, pick this iteration's round, run the **Design pause** check, and log the round's dispatch row (all in Round scope) now.
+   Under `--until-converged`, confirm `log.sh --rounds` exits 0, pick this iteration's round and take its number from `next round`, run the **Design pause** check, and log the round's dispatch row (all in Round scope) now.
 
    **b. Run the review call** from the Reviewer section with this focus text, plus, under `--until-converged`, the round's scope and focus lines from **Round scope**:
    ```bash
@@ -185,7 +185,7 @@ Done when the round has started or the run has exited `PAUSED`.
    - Confirm commits exist beyond the base: `git log origin/<base>..HEAD --oneline` is non-empty.
    - Push the current branch with upstream tracking: `git push -u origin HEAD`.
    - Never force-push. If the remote has diverged, STOP and surface the conflict to the user instead.
-   - Under `/pr-loop` on a repo that declares required passes, push only once `~/.claude/skills/recap-pr/log.sh --check HEAD` exits 0 or 3; until then exit `STATUS=CLEAN` unpushed and leave the push to its pass sequence.
+   - Under `/pr-loop` on a repo that declares required passes, push only once `~/.claude/skills/recap-pr/log.sh --check HEAD` exits 0 or 3 (step 2e's draft-PR pushes for CI aside); until then exit `STATUS=CLEAN` unpushed and leave the push to its pass sequence.
    - If an open PR exists for this branch, print its URL (`gh pr view --json url -q .url`).
 
 5. **Final summary:**

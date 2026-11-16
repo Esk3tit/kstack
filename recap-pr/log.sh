@@ -4,7 +4,8 @@
 #   log.sh --path    print the log path for the current branch
 #   log.sh --pins    print the user's settled decisions, one "- " line each (RECAP_PIN_KEYS adds logs)
 #   log.sh --bind K  point the current branch at log K from now on (earlier rows stay where they are)
-#   log.sh --rounds  print this branch's last two /codexloop round rows; exit 1 while a dispatched round has none
+#   log.sh --rounds  print this branch's last two /codexloop round rows, then "next round <n>"; exit 1 while
+#                    a dispatched round has no round or dropped row
 #   log.sh --rejected  print this branch's /codexloop findings whose latest row rejects them, one "- " line each
 #   log.sh --pass <pass> <head> <clean|fixed|not-reviewed> [<PR body file it read>]  record a review pass
 #   log.sh --check <head> [<PR number | body file>]  exit 1, naming each, unless every required pass is clean
@@ -124,10 +125,10 @@ case "${1:-}" in
       # Counted, not ordered: rows from different logs in one second can sort either way.
       $2 != repo || $3 != "codexloop" || $6 !~ /^round [0-9]+ / { next }
       { split($6, w, " "); n = w[2] }
-      $6 == "round " n " dispatched on " b { sent[n]++; at[n] = $1 ", " $9; next }
-      $6 == "round " n " dropped on " b { ended[n]++; next }
+      $6 == "round " n " dispatched on " b { sent[n]++; at[n] = $1 ", " $9; if (n + 0 > top) top = n + 0; next }
+      $6 == "round " n " dropped on " b { ended[n]++; if (n + 0 > top) top = n + 0; next }
       $6 ~ /^round [0-9]+ \((whole-PR|fixes)\) on / && substr($6, index($6, ") on ") + 5, length(b) + 2) == b ": " {
-        ended[n]++; before = last; last = $0
+        ended[n]++; before = last; last = $0; if (n + 0 > top) top = n + 0
       }
       END {
         for (n in sent) if (sent[n] > ended[n]) {
@@ -137,6 +138,7 @@ case "${1:-}" in
         if (stuck) exit 1
         if (before != "") print before
         if (last != "") print last
+        print "next round " top + 1
       }'
     exit $? ;;
   --rejected)
@@ -179,7 +181,13 @@ case "${1:-}" in
       fi
       current=$(body_hash "$body_file")
     fi
-    declaration=$(git show "$head:$DECLARATION" 2>/dev/null) || true
+    # A branch cut before its repo declared passes still answers to the default branch's declaration.
+    where="$DECLARATION at $short"
+    if ! declaration=$(git show "$head:$DECLARATION" 2>/dev/null); then
+      default=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null || true)
+      declaration=""
+      if [ -n "$default" ] && declaration=$(git show "$default:$DECLARATION" 2>/dev/null); then where="$DECLARATION on $default"; fi
+    fi
     declared=$(printf '%s\n' "$declaration" | awk '
       /^- pass:/ && !/^- pass: [a-z0-9-]+(, reads the PR body)?[ \t]*$/ { bad = $0; exit }
       /^- pass:/ { sub(/,$/, "", $3); out = out (out == "" ? "" : ";") $3 " " ($4 == "reads") }
@@ -190,7 +198,7 @@ case "${1:-}" in
       if [ -f "$f" ]; then tail -n +2 "$f"; fi
     done | sort -s -t$'\t' -k1,1)
     printf '%s\n' "$records" | awk -F'\t' -v repo="$repo" -v head="$head" -v short="$short" -v cur="$current" \
-      -v declared="$declared" -v where="$DECLARATION" '
+      -v declared="$declared" -v where="$where" '
       $2 == repo && NF >= 7 {
         p = $4
         lasthead[p] = $5; lastverdict[p] = $6
@@ -199,7 +207,7 @@ case "${1:-}" in
       END {
         n = split(declared, lines, ";")
         if (n == 0) {
-          printf "No required passes declared (%s at %s).\n", where, short
+          printf "No required passes declared (%s).\n", where
           s = ""; for (i = 1; i <= r; i++) s = s (i > 1 ? ", " : "") ran[i] " " verdict[ran[i]]
           printf "Recorded on %s: %s\n", short, (s == "" ? "none" : s)
           exit 0

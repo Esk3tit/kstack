@@ -128,6 +128,10 @@ check "a later fixed verdict on the same head reopens the pass" "$(verdict "$H3"
 check "a body-reading pass that read no body" "$(verdict "$H3" "$body" >/dev/null; line spec)" "STALE BODY: it read no PR body"
 check "no declaration lists what ran" "$(verdict "$undeclared" "$body")" "pass"
 check "no declaration says so" "$(head -1 "$HOME/check.out")" "No required passes declared (docs/agents/pr-loop.md at ${undeclared:0:8})."
+git update-ref refs/remotes/origin/main "$H1" && git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/main
+check "a branch cut before the declaration answers to the default branch's" "$(verdict "$undeclared" "$body"; head -1 "$HOME/check.out")" "fail: Not clean on ${undeclared:0:8}: standards spec fable codexloop
+Required passes on ${undeclared:0:8} (docs/agents/pr-loop.md on origin/main, PR body $("$L" --body-hash "$body")):"
+git symbolic-ref --delete refs/remotes/origin/HEAD && git update-ref -d refs/remotes/origin/main
 "$L" --pass spec "$H3" clean "$body"
 "$L" --pass fable "$H3" not-reviewed
 check "a pass recorded not-reviewed on the head exits 3" "$("$L" --check "$H3" "$body" >/dev/null 2>&1; echo $?)" "3"
@@ -160,18 +164,21 @@ check "a PR number reads its live head and body" "$(PATH="$HOME/bin:$PATH" verdi
 check "a PR number with another head" "$(PATH="$HOME/bin:$PATH" verdict "$H2" 7)" "fail: PR #7's head is ${H3:0:8}, not ${H2:0:8}: check the head it will merge."
 
 round() { "$L" codexloop me yes "$1" scope none "head $2" accepted; }
-check "no rounds yet" "$("$L" --rounds; echo $?)" "0"
+check "no rounds yet: the first is round 1" "$("$L" --rounds; echo $?)" "next round 1
+0"
 round "round 1 dispatched on feat/passes" "$H1, whole-PR"
 check "a dispatched round blocks the next" "$("$L" --rounds 2>/dev/null; echo $?)" "1"
 check "the block names the round" "$("$L" --rounds 2>&1 | cut -c1-34)" "round 1 on feat/passes (dispatched"
 "$L" --bind ROUNDS >/dev/null
 check "binding to another log keeps the pending round" "$("$L" --rounds 2>/dev/null; echo $?)" "1"
 round "round 1 (whole-PR) on feat/passes: 2 findings, 1 accepted, fixed" "$H1"
-check "a round row unblocks" "$("$L" --rounds | cut -f6)" "round 1 (whole-PR) on feat/passes: 2 findings, 1 accepted, fixed"
+check "a round row unblocks" "$("$L" --rounds | cut -f6)" "round 1 (whole-PR) on feat/passes: 2 findings, 1 accepted, fixed
+next round 2"
 round "round 2 dispatched on feat/passes" "$H3, fixes"
 round "round 2 dropped on feat/passes" "$H3"
 round "round 9 dispatched on feat/other" "$H3, whole-PR"
-check "a dropped round and another branch's round block nothing" "$("$L" --rounds | cut -f6)" "round 1 (whole-PR) on feat/passes: 2 findings, 1 accepted, fixed"
+check "a dropped round and another branch's round block nothing, and a dropped number is not reused" "$("$L" --rounds | cut -f6)" "round 1 (whole-PR) on feat/passes: 2 findings, 1 accepted, fixed
+next round 3"
 round "round 3 dispatched on feat/passes" "$H3, fixes"
 round "round 3 (fixes) on feat/passes: 0 findings, 0 accepted, clean" "$H3"
 "$L" --bind ROUNDS2 >/dev/null
@@ -180,7 +187,7 @@ RECAP_TS=2026-01-01T00:00:00Z round "round 4 dispatched on feat/passes" "$H3, fi
 RECAP_TS=2026-01-01T00:00:00Z round "round 4 dropped on feat/passes" "$H3"
 check "a drop in another log in the same second still ends its round" "$("$L" --rounds >/dev/null 2>&1; echo $?)" "0"
 round "round 9 (whole-PR) on feat/other: rebased on feat/passes: 0 findings, 0 accepted, clean" "$H3"
-check "the last two round rows, oldest first" "$("$L" --rounds | cut -f6 | tr '\n' '|')" "round 1 (whole-PR) on feat/passes: 2 findings, 1 accepted, fixed|round 3 (fixes) on feat/passes: 0 findings, 0 accepted, clean|"
+check "the last two round rows, oldest first, then the next number" "$("$L" --rounds | cut -f6 | tr '\n' '|')" "round 1 (whole-PR) on feat/passes: 2 findings, 1 accepted, fixed|round 3 (fixes) on feat/passes: 0 findings, 0 accepted, clean|next round 5|"
 
 finding() { "$L" codexloop codex no "$1" "$2" none ev "$3"; }
 finding "F1.1 on feat/passes: retry token kept stale" "the old token is still valid" rejected

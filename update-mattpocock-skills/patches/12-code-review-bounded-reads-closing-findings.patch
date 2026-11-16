@@ -4,7 +4,7 @@
  3. A spec file under `docs/`, `specs/`, or `.scratch/` matching the branch name or feature.
  4. If nothing is found, ask the user where the spec is. If they say there isn't one, the **Spec** sub-agent will skip and report "no spec available".
  
-+When the branch has an open PR, its description is checked too: save the live body to a file (`gh pr view <n> --json body -q .body > <file>`) just before spawning the sub-agents, and give the Spec sub-agent that file.
++When the branch's open PR has `HEAD` as its head (`gh pr view --json headRefOid`), its description is checked too: save the live body to a file (`gh pr view <n> --json body -q .body > <file>`) just before spawning the sub-agents, and give the Spec sub-agent that file.
 +
  ### 3. Identify the standards sources
  
@@ -24,7 +24,7 @@
 +
 +- **Each source's size and its bounded route.** List every file the sub-agent reads (standards sources, the spec, the PR body file, saved reports) with its size in bytes, and each changed file's diff size (`git diff <fixed-point>...HEAD -- <path> | wc -c`). A file over 4 KB is read in slices: Read with `offset` and `limit`, about 40 lines at a time, or `ctx_execute` with `file=` set to it, printing the parts needed. A diff over 4 KB is saved to a file first (`git diff <fixed-point>...HEAD -- <path> > <file>`) and read the same way. Where context-mode runs, it refuses a whole Read over 16 KB and cuts any output over 4 KB to a few matching lines. The sub-agent still accounts for every rule in every source.
 +- **Findings that close.** A wording finding names the concrete misreading the current words invite. A rename finding names the whole family it renames: the type, its factory, every use.
-+- **The agreed prototype stands.** Where the spec carries an agreed prototype (a picture, mock or layout the user approved), a finding that would move the change away from it is a question for the user showing both pictures, the prototype as built and the proposal. The prototype stays built until they choose.
++- **The agreed prototype stands.** Where the spec carries an agreed prototype (a picture, mock or layout the user approved), a finding that would move the change away from it is a question for the user showing both pictures, the prototype as built and the proposal (with a PR open, posted as `no-mistakes-frontend`'s standalone gallery). The prototype stays built until they choose.
 +
  **Standards sub-agent prompt** should include:
  

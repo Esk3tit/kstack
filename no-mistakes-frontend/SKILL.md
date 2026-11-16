@@ -5,7 +5,8 @@ description: >-
   drive the expected flow, assert behavior (with API ground-truth), check the look, and post
   screenshot + clip evidence and a test-case checklist to the PR so you can judge production-readiness,
   review code, and merge. Report-only, ephemeral. Use for "verify the UI", "does this screen
-  work", "is this production ready", "dogfood this flow".
+  work", "is this production ready", "dogfood this flow", or to post a before/after or design-choice
+  gallery to a PR.
 user-invocable: true
 ---
 
@@ -310,7 +311,7 @@ Then post it with every path written out; like a run's post, it also puts that m
 node /Users/<you>/.claude/skills/no-mistakes-frontend/harness/post-evidence.mjs --pr <N> --repo <owner/name> --marker design-q3 --run-dir <folder> --results <folder>/results.json
 ```
 
-Cite only the captures it posted.
+Cite only the captures it posted. Once the owner has chosen, remove that marker's block from the description.
 
 **Never commit media to the PR branch.**
 
