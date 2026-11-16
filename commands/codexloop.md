@@ -79,7 +79,7 @@ A branch-scope round reviews one of two scopes:
 - **Whole PR:** the branch against its merge-base with `origin/<base>`. Its focus text also says what the change is for (its ticket, or a summary of the branch), so the reviewer can tell when the code doesn't do it.
 - **Fixes:** only the commits since the last reviewed head. In Claude Code, the review call passes `--base <last reviewed head>` in place of `origin/<base>`; in Codex, the round's diff is `git diff <last reviewed head> HEAD`. The focus text adds, for each finding those commits fix, `Fixed since the last round: <title> (<file>:<line>), <the fix in one line>.`, then: `Check that each fix resolves its finding and breaks nothing the change reaches; read whole files, callers and tests, and report a defect wherever the change reaches. If the change needs the whole PR reviewed again, put WHOLE_PR in your summary.`
 
-**Round rows.** A round logs two decision-log rows, each with `phase codexloop`, `source me`, `asked yes`, `prod_delta none` and result `accepted`: a dispatch row as it starts, and a round row once it is finished (its findings triaged, any accepted fix committed). The dispatch row's decision is `round <n> dispatched on <branch>`, its evidence `head <sha>, <whole-PR or fixes>`. The round row's decision is `round <n> (<whole-PR or fixes>) on <branch>: <k> findings, <a> accepted, <clean or fixed>` (plus `, reviewer asks whole-PR next` when its summary said `WHOLE_PR`), its evidence `head <sha the review ran on, before this round's fixes>, merge-base <sha>`. A round that ends without a review (the reviewer failed, or its run was lost) logs `round <n> dropped on <branch>` in place of a round row, with the reason as `why`.
+**Round rows.** In every mode, a round logs two decision-log rows, each with `phase codexloop`, `source me`, `asked yes`, `prod_delta none` and result `accepted`: a dispatch row as it starts, and a round row once it is finished (its findings triaged, any accepted fix committed). The dispatch row's decision is `round <n> dispatched on <branch>`, its evidence `head <sha>, <whole-PR or fixes>`. The round row's decision is `round <n> (<whole-PR or fixes>) on <branch>: <k> findings, <a> accepted, <clean or fixed>` (plus `, reviewer asks whole-PR next` when its summary said `WHOLE_PR`), its evidence `head <sha the review ran on, before this round's fixes>, merge-base <sha>`. A round that ends without a review (the reviewer failed, or its run was lost) logs `round <n> dropped on <branch>` in place of a round row, with the reason as `why`.
 
 - `~/.claude/skills/recap-pr/log.sh --rounds` prints the branch's last two round rows, oldest first, then `next round <n>`: the last round row holds the **last reviewed head**, and survives a compacted context. Rounds are numbered per branch across every run, so a new round takes that `<n>`. It reads only this repo's and this branch's rows, since sibling repos and branches sharing a ticket can share one log; a round row without a branch counts for nothing.
 - It exits 1, naming the round, while a dispatched round has neither a round row nor a dropped row: that round is still pending or untriaged. Wait for its review until 30 minutes after its dispatch, the round limit in **Reviewer**; then triage it and log its round row, or cancel its job and log it dropped; dispatch nothing beside it.
@@ -124,7 +124,7 @@ Done when the round has started or the run has exited `PAUSED`.
    git fetch origin <base> --quiet
    ```
 
-   Under `--until-converged`, confirm `log.sh --rounds` exits 0, pick this iteration's round and take its number from `next round`, run the **Design pause** check, and log the round's dispatch row (all in Round scope) now.
+   Confirm `log.sh --rounds` exits 0, take this round's number from its `next round`, and log the round's dispatch row (**Round rows**); under `--until-converged`, also pick this iteration's round scope and run the **Design pause** check (Round scope) before logging it.
 
    **b. Run the review call** from the Reviewer section with this focus text, plus, under `--until-converged`, the round's scope and focus lines from **Round scope**:
    ```bash
@@ -152,7 +152,7 @@ Done when the round has started or the run has exited `PAUSED`.
      if(x.recommendation)console.log("  rec: "+x.recommendation.replace(/\s+/g," "));
    });' "<the round's R path>"
    ```
-   - **CLEAN detection:** `COUNT: 0` (empty `findings`) → print `STATUS=CLEAN ITERATIONS=<n>` and exit the loop. Under `--until-converged`: a clean round (Round scope).
+   - **CLEAN detection:** `COUNT: 0` (empty `findings`) → log the round row, print `STATUS=CLEAN ITERATIONS=<n>` and exit the loop. Under `--until-converged`: a clean round (Round scope).
    - **PARSE_ERROR with no result:** retry the review once, in a fresh `R`; if it still fails, `STATUS=FAIL ERROR="reviewer returned unparseable review"`. Never treat a parse failure as CLEAN.
    - Otherwise list the findings to the user (severity, `file:line`, issue) and proceed to 2d.
 
