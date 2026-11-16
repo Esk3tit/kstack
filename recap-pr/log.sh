@@ -180,10 +180,11 @@ case "${1:-}" in
       current=$(body_hash "$body_file")
     fi
     declaration=$(git show "$head:$DECLARATION" 2>/dev/null) || true
-    unreadable=$(printf '%s\n' "$declaration" | grep -E '^- pass:' | grep -vE '^- pass: [a-z0-9-]+(, reads the PR body)?[ \t]*$' || true)
-    [ -z "$unreadable" ] || die "unreadable pass line in $DECLARATION: $(printf '%s' "$unreadable" | head -1)"
-    declared=$(printf '%s\n' "$declaration" \
-      | awk '/^- pass: [a-z0-9-]+(, reads the PR body)?[ \t]*$/ { sub(/,$/, "", $3); printf "%s%s %d", (n++ ? ";" : ""), $3, ($4 == "reads") }')
+    declared=$(printf '%s\n' "$declaration" | awk '
+      /^- pass:/ && !/^- pass: [a-z0-9-]+(, reads the PR body)?[ \t]*$/ { bad = $0; exit }
+      /^- pass:/ { sub(/,$/, "", $3); out = out (out == "" ? "" : ";") $3 " " ($4 == "reads") }
+      END { if (bad != "") { print bad; exit 3 } printf "%s", out }') \
+      || die "unreadable pass line in $DECLARATION: $declared"
     records=$(branch_keys | while read -r k; do
       f="$HOME/.local/share/recap/$k/reviews.tsv"
       if [ -f "$f" ]; then tail -n +2 "$f"; fi

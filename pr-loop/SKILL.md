@@ -27,7 +27,7 @@ A repo declares the review passes a PR needs before merge in `docs/agents/pr-loo
 - **The pass sequence** runs the passes `log.sh --check <head>` names, in step order: step 1's axes (`/code-review` runs only the axis the check names), then step 5's Fable, then `/codexloop --until-converged --base <base>`.
   - It repeats until the check exits 0, or 3 when the only passes left are recorded `not-reviewed`. Any new commit, a base merge, rebase or restack included, sends the passes round again on the new head; a pass already clean there is not rerun.
   - On a declaring repo a head reaches the remote only once the check exits 0 or 3, so `/codexloop` pushes only then, apart from step 2's draft-PR pushes for CI.
-  - It ends with that push: once the check allows it on a head the remote lacks, run `/codexloop` once more, which reviews nothing at its converged head and pushes.
+  - It ends with that push: once the check allows it on a head the remote lacks, run `/codexloop` once more, which reviews nothing at its converged head and pushes. When `codexloop` is itself recorded `not-reviewed` there, push the branch directly instead (`git push -u origin HEAD`, never forced; a diverged remote stops the run).
 - **Merge-ready** needs `log.sh --check <head> <pr>` to exit 0, which also holds a pass that reads the PR body to the current body (step 9).
 - **A pass whose reviewer cannot finish** (it fails or times out, or `/codexloop` exits `FAIL` on a reviewer error) is recorded `not-reviewed` once and not run again on that head. The run still pushes and goes on through step 9, and hands back `Merge-ready: no: <pass> not reviewed`. A lint, test or merge failure is the run's to fix, not a reviewer's.
 
@@ -43,7 +43,7 @@ When only CI can judge the change (a failure seen only on CI's runners, a suite 
 
 Wherever this run calls `/codexloop`, a `PAUSED` exit (its design pause) stops the run on that branch. With a Fable pass approved, brief it on the cluster as step 5 does and carry its proposal to the user unapplied. Hand back the branch, and its PR if one is open, with the design question as the open item and `Merge-ready: no: design pause`.
 
-Done when every branch has converged and its head is on the remote, or has stopped on a design pause.
+Done when every branch has converged, or has a required pass recorded `not-reviewed`, and its head is on the remote; or has stopped on a design pause.
 
 ## 3. Open the PRs
 

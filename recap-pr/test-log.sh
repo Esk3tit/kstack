@@ -143,6 +143,12 @@ printf '%s\n' '- pass: standards' '- pass: fable-5.2' > docs/agents/pr-loop.md
 git commit -q -am "a pass line the check cannot read"
 check "an unreadable pass line is refused, not dropped" "$("$L" --check "$(git rev-parse HEAD)" 2>&1 >/dev/null; echo $?)" "log.sh: unreadable pass line in docs/agents/pr-loop.md: - pass: fable-5.2
 2"
+printf '%s\n' '- pass: standards' '- pass: spec, reads the PR bodyt' > docs/agents/pr-loop.md
+git commit -q -am "a body suffix with a stray letter"
+check "a malformed body suffix is refused" "$("$L" --check "$(git rev-parse HEAD)" >/dev/null 2>&1; echo $?)" "2"
+printf -- '- pass: standards\n- pass: spec, reads the PR body\t\n' > docs/agents/pr-loop.md
+git commit -q -am "a body-reading pass with a trailing tab"
+check "a trailing tab is read as space" "$("$L" --check "$(git rev-parse HEAD)" 2>&1 | grep -c '^  spec ')" "1"
 git switch -q feat/passes
 check "an unknown head is refused" "$("$L" --check deadbeef 2>/dev/null; echo $?)" "2"
 
