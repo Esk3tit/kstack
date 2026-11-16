@@ -82,7 +82,7 @@ A branch-scope round reviews one of two scopes:
 **Round rows.** In every mode, a round logs two decision-log rows, each with `phase codexloop`, `source me`, `asked yes`, `prod_delta none` and result `accepted`: a dispatch row as it starts, and a round row once it is finished (its findings triaged, any accepted fix committed). The dispatch row's decision is `round <n> dispatched on <branch>`, its evidence `head <sha>, <whole-PR, fixes or working-tree>`. The round row's decision is `round <n> (<whole-PR, fixes or working-tree>) on <branch>: <k> findings, <a> accepted, <clean or fixed>` (plus `, reviewer asks whole-PR next` when its summary said `WHOLE_PR`), its evidence `head <sha the review ran on, before this round's fixes>, merge-base <sha>`. A round that ends without a review (the reviewer failed, or its run was lost) logs `round <n> dropped on <branch>` in place of a round row, with the reason as `why`.
 
 - `~/.claude/skills/recap-pr/log.sh --rounds` prints the branch's last two round rows, oldest first, then `next round <n>`: the last round row holds the **last reviewed head**, and survives a compacted context. Rounds are numbered per branch across every run, so a new round takes that `<n>`. It reads only this repo's and this branch's rows, since sibling repos and branches sharing a ticket can share one log; a round row without a branch counts for nothing.
-- It exits 1, naming the round, while a dispatched round has neither a round row nor a dropped row: that round is still pending or untriaged. Wait for its review until the round limit in **Reviewer**; then triage it and log its round row, or cancel its job when it is still known (`/codex:cancel` in Claude Code, `task_cancel` in T3) and log it dropped.
+- It exits 1, naming the round, while a dispatched round has neither a round row nor a dropped row: that round is still pending or untriaged. Wait for its review until the round limit in **Reviewer**; then triage it and log its round row, or cancel its job when it is still known (`/codex:cancel` in Claude Code, `task_cancel` in T3) and log it dropped. A round whose job this turn cannot reach is logged dropped at once.
 - A run starts with a whole-PR round unless the branch already has a round row; then it picks up from that row.
 
 Take the next round's scope from the first rule that applies:
@@ -174,7 +174,7 @@ Done when the round has started or the run has exited `PAUSED`.
    - If every finding this iteration was rejected (no real issues), exit with `STATUS=CLEAN` instead of committing — the loop has converged. Under `--until-converged`: a clean round (Round scope).
    - Keep commits local until the loop exits CLEAN (step 4). Under `--until-converged` on a draft PR opened so CI can judge the change, also push a commit whose next step needs CI's answer; review bots can bill for that push too.
 
-3. **Exit conditions:** every exit, from any step, first logs the round's row, or its dropped row (**Round rows**).
+3. **Exit conditions:** an exit after a round's dispatch row first logs that round's row, or its dropped row (**Round rows**).
    - `STATUS=CLEAN` — the reviewer returned zero findings, or every remaining finding was a rejected nit/flip-flop. Under `--until-converged`: Round scope rule 3's convergence.
    - `STATUS=MAX_ITERATIONS` — hit cap with real findings remaining; print remaining findings for human review and DO NOT push.
    - `STATUS=PAUSED` — under `--until-converged`, the **Design pause** check stopped the run; DO NOT push.

@@ -9,7 +9,11 @@ Read this before step 1 when the repo declares, in `docs/agents/pr-loop.md`, the
 - pass: codexloop
 ```
 
-`standards` and `spec` are step 1's axes, `codexloop` step 2's loop and `fable` step 5's pass, run in the order the pass sequence below sets; a required Spec that finds no spec is recorded `not-reviewed`; only `spec` takes `, reads the PR body`, and the suffix on any other pass hands back like an unknown pass; a declaration naming any other pass hands back `Merge-ready: no: unknown required pass <name>` at the first check. The file can also declare facts-block sections (format: top of `~/.claude/skills/recap-pr/facts.py`).
+- `standards` and `spec` are step 1's axes, `codexloop` step 2's loop and `fable` step 5's pass, run in the order the pass sequence below sets.
+- A required Spec that finds no spec is recorded `not-reviewed`.
+- Only `spec` takes `, reads the PR body`; the suffix on any other pass hands back like an unknown pass.
+- A declaration naming any other pass hands back `Merge-ready: no: unknown required pass <name>` at the first check.
+- The file can also declare facts-block sections (format: top of `~/.claude/skills/recap-pr/facts.py`).
 
 A `fable` line **stands**, as the user's standing request for Fable passes, once it is on the default branch or they have approved it. Until it stands, record Fable `not-reviewed` on each head where the check does not list it clean and it does not run (no single-pass approval, or step 5's skip), and ask in the hand-back for the line's approval (Fable on every head of this PR); once approved, run it on the current head.
 
