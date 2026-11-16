@@ -169,8 +169,8 @@ For each case: drive the flow, assert behavior, capture evidence → PASS/FAIL +
   shell, on failure too (`trap 'agent-browser --session <name> close' EXIT`). On a memory-limited
   Linux cloud machine, a browser killed for memory (exit 137, or an OOM in the kernel log or the
   scope's memory events) is a result: stop after the first kill and cover that case through CI or a
-  smaller page instead of running the same command again. The case is unverified (coverage gap,
-  `reason=memory-kill`), named in `gaps` with where it was covered.
+  smaller page instead of running the same command again. The case is unverified in this run
+  (coverage gap, `reason=memory-kill`); `gaps` names it and where it was covered instead.
 - **Inspect every capture before posting** — every screenshot, and frames across each whole clip.
   Leave one out of `results.json` if it shows setup noise, a secret, or not the claim.
 

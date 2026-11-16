@@ -1,5 +1,14 @@
 --- a/SKILL.md
 +++ b/SKILL.md
+@@ -8,7 +8,7 @@
+ - **Standards**: does the code conform to this repo's documented coding standards?
+ - **Spec**: does the code faithfully implement the originating issue / spec?
+ 
+-Both axes run as **parallel sub-agents** so they don't pollute each other's context, then this skill aggregates their findings. Start every sub-agent with a fresh context window.
++Both axes run as **parallel sub-agents** (or the one the caller names) so they don't pollute each other's context, then this skill aggregates their findings. Start every sub-agent with a fresh context window.
+ 
+ The issue tracker should have been provided to you. If not, tell the user to run `/setup-matt-pocock-skills`.
+ 
 @@ -31,6 +31,8 @@
  3. A spec file under `docs/`, `specs/`, or `.scratch/` matching the branch name or feature.
  4. If nothing is found, ask the user where the spec is. If they say there isn't one, the **Spec** sub-agent will skip and report "no spec available".
@@ -40,7 +49,7 @@
  ### 5. Aggregate
  
 -Present the two reports under `## Standards` and `## Spec` headings, verbatim or lightly cleaned. Do **not** merge or rerank findings, because the two axes are deliberately separate (see _Why two axes_).
-+Present the two reports under `## Standards` and `## Spec` headings, verbatim or lightly cleaned. Do **not** merge or rerank findings, because the two axes are deliberately separate (see _Why two axes_). Mark each prototype question as the user's call; with a PR open, post its two pictures as `no-mistakes-frontend`'s standalone gallery.
++Present the two reports under `## Standards` and `## Spec` headings, verbatim or lightly cleaned. Do **not** merge or rerank findings, because the two axes are deliberately separate (see _Why two axes_). Mark each prototype question as the user's call; the caller posts its pictures.
  
  End with a one-line summary: total findings per axis, and the worst issue _within each axis_ (if any). Don't pick a single winner across axes: that's the reranking the separation exists to prevent.
  
