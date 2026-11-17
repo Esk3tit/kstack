@@ -180,8 +180,9 @@ git switch -q -c trusted origin/main
 printf '%s\n' '- facts: Trusted = run: printf from-the-default-branch' > docs/agents/pr-loop.md
 git commit -q -am "the default branch's declaration" && git push -q origin trusted && git update-ref -d refs/remotes/origin/trusted
 git switch -q feat/x && echo trusted > "$FAKE/default"
+git config remote.origin.fetch +refs/heads/feat/x:refs/remotes/origin/feat/x
 trusted=$(python3 "$D/facts.py" 7 --dry-run)
-check "facts come from the default branch GitHub names, fetched fresh, not main or the head" "$(count "$trusted" '^from-the-default-branch$') $(count "$trusted" '^chromium ')" "1 0"
+check "facts come from the default branch GitHub names, fetched fresh even by a one-branch clone, not main or the head" "$(count "$trusted" '^from-the-default-branch$') $(count "$trusted" '^chromium ')" "1 0"
 git switch -q --detach HEAD~1
 away=$(python3 "$D/facts.py" 7 --dry-run)
 check "a checkout away from the PR head runs no declared fact" "$(count "$away" 'from-the-default-branch') $(count "$away" 'not the PR head; rerun')" "0 1"

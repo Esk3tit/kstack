@@ -143,7 +143,8 @@ def brought_in_section(base, head):
 def declaration(slug):
     """The declaration on the default branch GitHub names, fetched fresh: a PR can't add or change its commands."""
     default = run(["gh", "api", f"repos/{slug}", "--jq", ".default_branch"]).stdout.strip()
-    git("fetch", "--quiet", "origin", default)
+    # An explicit refspec updates the tracking ref even in a clone that fetches only its own branch.
+    git("fetch", "--quiet", "origin", f"+refs/heads/{default}:refs/remotes/origin/{default}")
     shown = run(["git", "show", f"origin/{default}:{DECLARATION}"], check=False)
     return shown.stdout if shown.returncode == 0 else ""
 
