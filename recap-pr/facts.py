@@ -8,7 +8,8 @@ results, the PRs a base merge brought in since the branch point, each section th
 docs/agents/pr-loop.md, and, between <!-- pr-facts:record:start/end -->, the review passes recorded
 on the head (log.sh --check) and the time it was written. Sections are read from the declaration on the
 default branch GitHub names, fetched fresh, never the PR's, because their commands run on this machine with
-its credentials; when it declares any, a checkout away from the PR head stops facts.py before it writes:
+its credentials. When that declaration has facts lines, a full run or --dry-run from a checkout away from
+the PR head stops before it writes:
 
     - facts: <title> = run: <command and arguments>   (run without a shell and within FACTS_COMMAND_SECONDS,
       default 600, its stdout as Markdown; {pr}, {head}, {base} filled in; it still runs the checkout's
@@ -214,13 +215,12 @@ def declared_sections(pr, slug, head, base, top):
             path = Path(top, source).resolve()
             if not path.is_relative_to(Path(top).resolve()):
                 text = f"_`{source}` is outside the checkout._"
-            elif not path.is_file():
-                text = f"_`{source}` does not exist._"
             else:
+                # The reason alone: the error's own text names the local path.
                 try:
-                    text = path.read_text(errors="replace").strip()
+                    text = path.read_text(errors="replace").strip() if path.is_file() else f"_`{source}` does not exist._"
                 except OSError as problem:
-                    text = f"_`{source}` could not be read: {cell(str(problem))}_"
+                    text = f"_`{source}` could not be read: {cell(problem.strerror or type(problem).__name__)}_"
         lines += ["", f"**{title}** (`{source}`):", "", text or "_empty_"]
     return lines
 

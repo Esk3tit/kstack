@@ -137,18 +137,24 @@ check "a declared command reads no input" "$(sleep 2 | FACTS_COMMAND_SECONDS=1 P
 import importlib.util, sys
 spec = importlib.util.spec_from_file_location("facts", sys.argv[1]); m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
 print("finished", repr(m.run_declared(["cat"], ".").stdout))' "$D/facts.py" 2>&1 | tail -1)" "finished ''"
-check "an empty command, a file that is not UTF-8 and one that can't be read are reported, not raised" "$(PYTHONDONTWRITEBYTECODE=1 python3 - "$D/facts.py" "$HOME" <<'PY'
+check "an empty command and files that are not UTF-8 or can't be read are reported, without the local path, not raised" "$(PYTHONDONTWRITEBYTECODE=1 python3 - "$D/facts.py" "$HOME" <<'PY'
 import importlib.util, pathlib, sys
 spec = importlib.util.spec_from_file_location("facts", sys.argv[1]); m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
 pathlib.Path(sys.argv[2], "bytes.dat").write_bytes(b"ok \xff\xfe")
 locked = pathlib.Path(sys.argv[2], "locked.dat"); locked.write_text("secret"); locked.chmod(0)
-m.declaration = lambda slug: "- facts: Empty = run:  \n- facts: Bytes = file: bytes.dat\n- facts: Locked = file: locked.dat"
+shut = pathlib.Path(sys.argv[2], "shut"); shut.mkdir(); (shut / "in.dat").write_text("secret"); shut.chmod(0)
+m.declaration = lambda slug: ("- facts: Empty = run:  \n- facts: Bytes = file: bytes.dat\n- facts: Locked = file: locked.dat\n"
+                              "- facts: Shut = file: shut/in.dat")
 m.git = lambda *args, **kw: "a" * 40
-lines = m.declared_sections(7, "o/r", "a" * 40, "main", sys.argv[2])
+try:
+    lines = m.declared_sections(7, "o/r", "a" * 40, "main", sys.argv[2])
+finally:
+    shut.chmod(0o700)
 print(sum("could not run: no command" in l for l in lines), sum(l.startswith("ok ") for l in lines),
-      sum("`locked.dat` could not be read" in l for l in lines))
+      sum("`locked.dat` could not be read: Permission denied" in l for l in lines),
+      sum(l.startswith("_`shut/in.dat`") for l in lines), sum(sys.argv[2] in l for l in lines))
 PY
-)" "1 1 1"
+)" "1 1 1 1 0"
 check "a command missing on this machine says so" "$(has '_`no-such-command-here` could not run: ')" "1"
 check "a facts line only the PR's head declares is not run" "$(has 'leaked-from-the-head') $(has '**Token**')" "0 0"
 check "a comment marker in declared output is escaped" "$(count "$block" '<!-- pr-facts:end -->') $(has '&lt;!-- pr-facts:end -->') $(has '&lt;!-- pr-facts:record:start -->')" "1 1 1"
