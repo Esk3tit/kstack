@@ -191,28 +191,28 @@ finding "F3.1 on feat/other: another branch's rejection" "not ours" rejected
 finding "F2.1 on feat/other: a regression on feat/passes: same ID" "another branch's, naming ours" "accepted, tests green"
 check "rejected findings keep their IDs across logs, and a reopened one leaves" "$("$L" --rejected)" "- F2.1 on feat/passes: title says undimmed (wording only)"
 
-git switch -q -c feat/tie && git commit -q --allow-empty -m tie && Ht=$(git rev-parse HEAD)
-at() { RECAP_TS="2026-01-02T00:00:0$1Z" "$L" --pass standards "$Ht" "$2"; }
+git switch -q -c feat/tie && git commit -q --allow-empty -m tie && H4=$(git rev-parse HEAD)
+standards_at() { RECAP_TS="2026-01-02T00:00:0$1Z" "$L" --pass standards "$H4" "$2"; }
 "$L" --bind TIE1 >/dev/null && "$L" --bind TIE2 >/dev/null
-at 0 clean
+standards_at 0 clean
 "$L" --bind TIE1 >/dev/null
-at 0 fixed
-check "two logs' different verdicts in one second are not certified" "$(verdict "$Ht" >/dev/null; line standards)" "CONFLICT: two logs recorded different verdicts in the same second (2026-01-02T00:00:00Z)"
-at 1 fixed
-check "a later record settles the tie" "$(verdict "$Ht" >/dev/null; line standards)" "NOT CLEAN: fixed on this head"
-at 2 clean
-at 2 fixed
-check "one log's rows in one second keep their write order" "$(verdict "$Ht" >/dev/null; line standards)" "NOT CLEAN: fixed on this head"
+standards_at 0 fixed
+check "two logs' different verdicts in one second are not certified" "$(verdict "$H4" >/dev/null; line standards)" "CONFLICT: two logs recorded different verdicts in the same second (2026-01-02T00:00:00Z)"
+standards_at 1 fixed
+check "a later record settles the tie" "$(verdict "$H4" >/dev/null; line standards)" "NOT CLEAN: fixed on this head"
+standards_at 2 clean
+standards_at 2 fixed
+check "one log's rows in one second keep their write order" "$(verdict "$H4" >/dev/null; line standards)" "NOT CLEAN: fixed on this head"
 "$L" --bind TIE2 >/dev/null
-at 3 fixed
-at 3 clean
+standards_at 3 fixed
+standards_at 3 clean
 "$L" --bind TIE1 >/dev/null
-at 3 fixed
-check "logs whose last rows in one second disagree conflict, whatever came before" "$(verdict "$Ht" >/dev/null; line standards)" "CONFLICT: two logs recorded different verdicts in the same second (2026-01-02T00:00:03Z)"
-at 4 clean
+standards_at 3 fixed
+check "logs whose last rows in one second disagree conflict, whatever came before" "$(verdict "$H4" >/dev/null; line standards)" "CONFLICT: two logs recorded different verdicts in the same second (2026-01-02T00:00:03Z)"
+standards_at 4 clean
 "$L" --bind TIE2 >/dev/null
-at 4 fixed
-at 4 clean
-check "logs whose last rows agree are certified" "$(verdict "$Ht" >/dev/null; line standards)" "clean"
+standards_at 4 fixed
+standards_at 4 clean
+check "logs whose last rows agree are certified" "$(verdict "$H4" >/dev/null; line standards)" "clean"
 
 exit $fail

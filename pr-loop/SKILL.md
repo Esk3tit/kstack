@@ -22,7 +22,7 @@ Every PR needs **Standards** and **Spec** (step 1's axes; Spec also reads the PR
 
 ## 1. Two-axis review
 
-Run `/code-review` on each repo's branch for the axes on the check's closing line (skip it when that names neither), with the fixed point `origin/<base>` (the branch it merges into), the spec given up front (the ticket, or with none the request that authorized the work, logged as a `you` row so every run reads it, plus the user's settled decisions, `log.sh --pins`), and `spec-body-<head>.md` beside the log named as the file it saves the PR body to (on every Spec run, step 8's too). Fix every hard violation and every spec gap; take a judgement call only when it makes the change simpler or clearer. Log each finding with its outcome, and record each axis that ran on the head it reviewed: `log.sh --pass standards <head> clean|fixed`, and `log.sh --pass spec <head> clean|fixed [<body file>]`, giving that file when Spec read it.
+Run `/code-review` on each repo's branch for the axes on the check's closing line (skip it when that names neither), with the fixed point `origin/<base>` (the branch it merges into), the spec given up front (the ticket, or with none the request that authorized the work, quoted word for word in a `you` row so every run reads it, plus the user's settled decisions, `log.sh --pins`), and `spec-body-<head>.md` beside the log named as the file it saves the PR body to (on every Spec run, step 8's too). Fix every hard violation and every spec gap; take a judgement call only when it makes the change simpler or clearer. Log each finding with its outcome, and record each axis that ran on the head it reviewed: `log.sh --pass standards <head> clean|fixed`, and `log.sh --pass spec <head> clean|fixed [<body file>]`, giving that file when Spec read it.
 
 Done when each branch's findings are fixed, logged as rejected with a reason, or logged with result `open` as questions for the user, and each axis that ran is recorded.
 
@@ -30,7 +30,7 @@ Done when each branch's findings are fixed, logged as rejected with a reason, or
 
 When only CI can judge the change (a failure seen only on CI's runners, a suite too heavy to run locally), open a draft PR first. Run the pass sequence on each branch; `/codexloop`'s reviewer is the other model family (Codex from Claude Code, Claude Opus 5.5 from Codex).
 
-A `PAUSED` exit from `/codexloop` (its design pause), wherever this run calls it, stops the run on that branch. A design pause is a call the mechanical reviews keep circling, so judge Fable for it as for a cycle; when it runs, brief it on the cluster as [FABLE.md](FABLE.md) says and carry its proposal to the user unapplied. Hand back the branch, and its PR if one is open, with the design question as the open item and `Merge-ready: no: design pause`.
+A `PAUSED` exit from `/codexloop` (its design pause), wherever this run calls it, stops the run on that branch. A design pause is a call the mechanical reviews keep circling, so it runs Fable's read of the cluster as [FABLE.md](FABLE.md) says, carried to the user unapplied. Hand back the branch, and its PR if one is open, with the design question as the open item and `Merge-ready: no: design pause`.
 
 Done when every branch has converged, or has only passes this run recorded `not-reviewed` left, and its head is on the remote; or has stopped on a design pause.
 
@@ -77,7 +77,7 @@ Done when each final-pass reviewer is done (**The final pass**, "It's done") and
 ```text
 PR <url>: <what it changes, in a user's words> · head <sha> · merge order <n>
 Required passes: <log.sh --check's output, whole>
-Fable: <last read <sha> (<verdict>), as the check lists it | not run> · since then: <why the later changes did not warrant another>
+Fable: <last read <sha> (<verdict>), as the check lists it | not run> · later heads: <the logged call for them and its reason>
 Reviewers on this head: <each review bot and final-pass reviewer: passed | failed: why | NOT_REVIEWED: reason | its final-pass report>
 Open findings: <none | each one>
 CI on this head: <each check and its conclusion from the facts block, with test counts where the repo's facts give them; a check that passed on a re-run, with its cause or `cause unknown`: which>

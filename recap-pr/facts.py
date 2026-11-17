@@ -244,19 +244,29 @@ def live_body(pr, head):
     return view.get("body") or ""
 
 
+def fresh_record(pr, head, facts=None):
+    """A make_block for write(): keeps the facts it first sees, and on every attempt reads the review record
+    from the body that attempt publishes, wherever a retry puts the block."""
+    kept = [facts]
+
+    def make(live):
+        kept[0] = kept[0] or own_block(live)
+        placeholder = with_record(kept[0], RECORD_START + "\n" + RECORD_END)
+        return with_record(kept[0], record(pr, head, splice(live, placeholder)))
+    return make
+
+
 def write(slug, pr, head, make_block, first=None):
     """Write the block into the live body and read it back; returns (attempts, author-text baseline, body written)."""
     changed = ("the description's own text changed while facts.py was writing (a bot may have restored an "
                "older copy, or someone edited it): compare it with the last edit, restore it if needed, and rerun")
-    block = None
     for attempt in range(1, WRITE_ATTEMPTS + 1):
         live = live_body(pr, head)
         text = own_text(live)
         first = first or text
         if text != first:
             fail(changed)
-        # Built once, from the first read, so a retry after a bot's stale rewrite writes the same block.
-        block = block or make_block(live)
+        block = make_block(live)
         updated = splice(live, block)
         with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as payload:
             json.dump({"body": updated}, payload)
@@ -287,20 +297,17 @@ def main(argv):
     if run(["git", "cat-file", "-e", f"{head}^{{commit}}"], check=False).returncode != 0:
         git("fetch", "--quiet", "origin", head)
     if "--record-only" in argv:
-        # The record reads the body write() keeps; its own text is guarded and the record region is not
-        # hashed, so the body it publishes, retries included, hashes the same.
-        attempts, _, _ = write(slug, pr, head, lambda live: with_record(own_block(live), record(pr, head, live)))
+        attempts, _, _ = write(slug, pr, head, fresh_record(pr, head))
         print(f"review record refreshed on PR #{pr} for {head[:8]}" + (f" after {attempts} writes" if attempts > 1 else ""))
         return
     block = build_block(pr, slug, head, base, top)
     if "--dry-run" in argv:
         print(block)
         return
-    attempts, first, written = write(slug, pr, head, lambda live: block)
-    # The record read the description before these facts landed: rebuild it from the body just written, and
-    # write the same facts again with the same author-text baseline, so a bot's older copy can't slip in.
-    new_record = record(pr, head, written)
-    write(slug, pr, head, lambda live: with_record(block, new_record), first)
+    attempts, first, _ = write(slug, pr, head, lambda live: block)
+    # The record read the description before these facts landed: write the same facts again with a fresh
+    # record and the same author-text baseline, so a bot's older copy can't slip in.
+    write(slug, pr, head, fresh_record(pr, head, block), first)
     print(f"facts block written to PR #{pr} for {head[:8]}" + (f" after {attempts} writes" if attempts > 1 else ""))
 
 

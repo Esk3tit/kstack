@@ -1,6 +1,6 @@
 # Running a Fable pass
 
-Read this when the call for a cycle or a design pause (step 2) is to run Fable (SKILL.md, **Review cycles**).
+Read this when a cycle's call is to run Fable (SKILL.md, **Review cycles**), or at a design pause (step 2).
 
 Run it read-only, briefed with the diff since the last head it reviewed and the whole PR's, the settled decisions (`log.sh --pins`) and the spec's agreed prototype, and what to look for: judgement calls, taste, simpler shapes of the problem and the code, edge cases, an adversarial read. For a design pause, brief it on the cluster the pause names instead, and carry its proposal to the user unapplied.
 

@@ -93,6 +93,7 @@ printf '## Summary\n\nDoes the thing.\n' > "$FAKE/body"
 
 block=$(python3 "$D/facts.py" 7 --dry-run)
 has() { printf '%s\n' "$block" | grep -cF -- "$1" || true; }
+count() { printf '%s\n' "$1" | grep -c -- "$2" || true; }
 check "names the head" "$(has "**Facts on \`${head:0:8}\`**")" "1"
 check "counts every check and every page of statuses by result" "$(has "**Checks:** 5 on this head: 3 success, 1 failure, 1 in_progress.")" "1"
 check "a pipe in a check name stays in its cell" "$(has '| e2e \| webkit | in_progress |')" "1"
@@ -104,11 +105,11 @@ check "reads a declared file" "$(has '| bytes | 198,603 |')" "1"
 check "a failing command says so" "$(has '_`sh -c "exit 3"` failed with exit 3')" "1"
 check "a command missing on this machine says so" "$(has '_`no-such-command-here` could not run: ')" "1"
 check "a facts line only the PR's head declares is not run" "$(has 'leaked-from-the-head') $(has '**Token**')" "0 0"
-check "a comment marker in declared output is escaped" "$(printf '%s\n' "$block" | grep -c '<!-- pr-facts:end -->') $(has '&lt;!-- pr-facts:end -->') $(has '&lt;!-- pr-facts:record:start -->')" "1 1 1"
+check "a comment marker in declared output is escaped" "$(count "$block" '<!-- pr-facts:end -->') $(has '&lt;!-- pr-facts:end -->') $(has '&lt;!-- pr-facts:record:start -->')" "1 1 1"
 check "a path outside the checkout is refused" "$(has 'secret-outside') $(has '_`../outside.md` is outside the checkout._')" "0 1"
 rm perf.md && ln -s "$HOME/outside.md" perf.md
 linked=$(python3 "$D/facts.py" 7 --dry-run)
-check "a file that links outside the checkout is refused" "$(printf '%s\n' "$linked" | grep -c 'secret-outside') $(printf '%s\n' "$linked" | grep -cF '_`perf.md` is outside the checkout._')" "0 1"
+check "a file that links outside the checkout is refused" "$(count "$linked" 'secret-outside') $(count "$linked" '_`perf.md` is outside the checkout._')" "0 1"
 rm perf.md && echo "| bytes | 198,603 |" > perf.md
 
 printf '## Summary\n\nDoes the thing.\n\n<!-- Macroscope'"'"'s pull request summary starts here -->\nmacroscope\n<!-- Macroscope'"'"'s pull request summary ends here -->\n' > "$FAKE/body"
@@ -135,6 +136,15 @@ sed 's/201,000/205,000/' "$FAKE/body" > "$FAKE/stale"; echo 1 > "$FAKE/swap_on_r
 python3 "$D/facts.py" 7 --record-only >/dev/null
 check "a record-only refresh describes the facts it keeps, when another writer changed them meanwhile" "$(sed -n '/pr-facts:record:start/,/pr-facts:record:end/p' "$FAKE/body" | grep -c 'STALE BODY') $("$D/log.sh" --check "$head" 7 | tail -1)" "1 Not clean on ${head:0:8}: spec"
 rm -f "$FAKE/swap_on_read"
+cp "$FAKE/body" "$FAKE/body.kept"
+blk=$(sed -n '/^<!-- pr-facts:start -->$/,/^<!-- pr-facts:end -->$/p' "$FAKE/body")
+printf '## Summary\n\nDoes the thing.\n\n## Facts\n\n%s\n\n## Merge Danger\n\nTwo-way.\n' "$blk" > "$FAKE/body"
+"$D/log.sh" --pass spec "$head" clean "$FAKE/body"
+printf '## Summary\n\nDoes the thing.\n\n## Facts\n\n## Merge Danger\n\nTwo-way.\n' > "$FAKE/stale"
+echo 1 > "$FAKE/clobbers"
+python3 "$D/facts.py" 7 --record-only >/dev/null
+check "a retry that moves the block gets a record of the body it left" "$(sed -n '/pr-facts:record:start/,/pr-facts:record:end/p' "$FAKE/body" | grep -E '^(Every|Not clean)')" "$("$D/log.sh" --check "$head" 7 | tail -1)"
+rm -f "$FAKE/clobbers"; mv "$FAKE/body.kept" "$FAKE/body"
 python3 "$D/facts.py" 7 >/dev/null
 check "a full refresh reruns the measured facts, so Spec goes round again" "$("$D/log.sh" --check "$head" 7 | tail -1)" "Not clean on ${head:0:8}: spec"
 check "and the record it writes says so" "$(sed -n '/pr-facts:record:start/,/pr-facts:record:end/p' "$FAKE/body" | grep -c 'STALE BODY')" "1"
@@ -171,10 +181,10 @@ printf '%s\n' '- facts: Trusted = run: printf from-the-default-branch' > docs/ag
 git commit -q -am "the default branch's declaration" && git push -q origin trusted && git update-ref -d refs/remotes/origin/trusted
 git switch -q feat/x && echo trusted > "$FAKE/default"
 trusted=$(python3 "$D/facts.py" 7 --dry-run)
-check "facts come from the default branch GitHub names, fetched fresh, not main or the head" "$(printf '%s\n' "$trusted" | grep -c '^from-the-default-branch$') $(printf '%s\n' "$trusted" | grep -c '^chromium ')" "1 0"
+check "facts come from the default branch GitHub names, fetched fresh, not main or the head" "$(count "$trusted" '^from-the-default-branch$') $(count "$trusted" '^chromium ')" "1 0"
 git switch -q --detach HEAD~1
 away=$(python3 "$D/facts.py" 7 --dry-run)
-check "a checkout away from the PR head runs no declared fact" "$(printf '%s\n' "$away" | grep -c 'from-the-default-branch') $(printf '%s\n' "$away" | grep -c 'not the PR head; rerun')" "0 1"
+check "a checkout away from the PR head runs no declared fact" "$(count "$away" 'from-the-default-branch') $(count "$away" 'not the PR head; rerun')" "0 1"
 git switch -q feat/x
 
 exit $fail
