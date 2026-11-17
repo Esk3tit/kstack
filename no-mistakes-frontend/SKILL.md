@@ -298,10 +298,11 @@ re-run the post. The verdict is never lost.
 run) goes through the same poster under its own `--marker`, one per question, so it never replaces a
 run's gallery or block. Its captures come from the app step 0 resolves or a prototype's own page,
 prove their subject as step 5 says, and keep step 9's confidentiality. Put them in a scratch folder with a small `results.json`, each case passing when
-its picture shows what it names:
+its picture shows what it names, and an `intentSource` saying the pictures are not a verification, since
+the block prints it beside its ✅ and **Verified at**:
 
 ```json
-{"revision": "c5ef2589", "intentSource": "Design question 3: where a lone picture sits",
+{"revision": "c5ef2589", "intentSource": "Design question 3, pictures only, not a verification: where a lone picture sits",
  "cases": [{"name": "Agreed prototype: low and left", "pass": true, "observed": "built on c5ef2589",
             "evidence": ["prototype-1280.png", "prototype-390.png"]},
            {"name": "Proposal: centred", "pass": true, "observed": "mocked on c5ef2589",
@@ -315,7 +316,7 @@ Then post it with every path written out; like a run's post, it also puts that m
 node <your absolute home>/.claude/skills/no-mistakes-frontend/harness/post-evidence.mjs --pr <N> --repo <owner/name> --marker design-q3 --run-dir <folder> --results <folder>/results.json
 ```
 
-Its block's ✅ means each picture shows what it names, not a verified change. Cite only the captures it posted. Once the owner has chosen, remove that marker's block from the description as `/pr`'s **Editing the body** says.
+Cite only the captures it posted. Once the owner has chosen, remove that marker's block from the description as `/pr`'s **Editing the body** says.
 
 **Never commit media to the PR branch.**
 
