@@ -133,6 +133,20 @@ except OSError as problem:
     print(f"{type(problem).__name__}: {problem}")
 PY
 )" "timed out"
+check "a declared command reads no input" "$(sleep 2 | FACTS_COMMAND_SECONDS=1 PYTHONDONTWRITEBYTECODE=1 python3 -c '
+import importlib.util, sys
+spec = importlib.util.spec_from_file_location("facts", sys.argv[1]); m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+print("finished", repr(m.run_declared(["cat"], ".").stdout))' "$D/facts.py" 2>&1 | tail -1)" "finished ''"
+check "an empty command and a file that is not UTF-8 are reported, not raised" "$(PYTHONDONTWRITEBYTECODE=1 python3 - "$D/facts.py" "$HOME" <<'PY'
+import importlib.util, pathlib, sys
+spec = importlib.util.spec_from_file_location("facts", sys.argv[1]); m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+pathlib.Path(sys.argv[2], "bytes.dat").write_bytes(b"ok \xff\xfe")
+m.declaration = lambda slug: "- facts: Empty = run:  \n- facts: Bytes = file: bytes.dat"
+m.git = lambda *args, **kw: "a" * 40
+lines = m.declared_sections(7, "o/r", "a" * 40, "main", sys.argv[2])
+print(sum("could not run: no command" in l for l in lines), sum(l.startswith("ok ") for l in lines))
+PY
+)" "1 1"
 check "a command missing on this machine says so" "$(has '_`no-such-command-here` could not run: ')" "1"
 check "a facts line only the PR's head declares is not run" "$(has 'leaked-from-the-head') $(has '**Token**')" "0 0"
 check "a comment marker in declared output is escaped" "$(count "$block" '<!-- pr-facts:end -->') $(has '&lt;!-- pr-facts:end -->') $(has '&lt;!-- pr-facts:record:start -->')" "1 1 1"
@@ -220,8 +234,13 @@ git config remote.origin.fetch +refs/heads/feat/x:refs/remotes/origin/feat/x && 
 trusted=$(python3 "$D/facts.py" 7 --dry-run)
 check "a one-branch clone fetches the base and the default branch GitHub names, and facts come from the latter, not main or the head" "$(count "$trusted" '^from-the-default-branch$') $(count "$trusted" '^chromium ')" "1 0"
 git switch -q --detach HEAD~1
-away=$(python3 "$D/facts.py" 7 --dry-run)
-check "a checkout away from the PR head runs no declared fact" "$(count "$away" 'from-the-default-branch') $(count "$away" 'not the PR head; rerun')" "0 1"
+cp "$FAKE/body" "$FAKE/body.before"
+check "a checkout away from the PR head stops before writing" "$(python3 "$D/facts.py" 7 2>&1 >/dev/null | grep -c 'not the PR head'; cmp -s "$FAKE/body" "$FAKE/body.before" && echo unchanged)" "1
+unchanged"
+git switch -q -c bare origin/main && git rm -q docs/agents/pr-loop.md && git commit -q -m "no declaration" && git push -q origin bare
+git switch -q --detach HEAD~1 && echo bare > "$FAKE/default"
+check "a repo that declares no facts gets no note, wherever the checkout is" "$(python3 "$D/facts.py" 7 --dry-run 2>&1 | grep -c -i -e 'declared facts' -e 'not the PR head' | tr -d ' ')" "0"
+echo trusted > "$FAKE/default"
 git switch -q feat/x
 
 exit $fail

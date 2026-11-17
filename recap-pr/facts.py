@@ -8,7 +8,7 @@ results, the PRs a base merge brought in since the branch point, each section th
 docs/agents/pr-loop.md, and, between <!-- pr-facts:record:start/end -->, the review passes recorded
 on the head (log.sh --check) and the time it was written. Sections are read from the declaration on the
 default branch GitHub names, fetched fresh, never the PR's, because their commands run on this machine with
-its credentials; they run only when the checkout is at the PR head:
+its credentials; a checkout away from the PR head stops facts.py before it writes anything:
 
     - facts: <title> = run: <command and arguments>   (run without a shell and within FACTS_COMMAND_SECONDS,
       default 600, its stdout as Markdown; {pr}, {head}, {base} filled in; it still runs the checkout's
@@ -167,7 +167,7 @@ def declaration(slug):
 def run_declared(argv, top):
     """Run a declared command in its own process group; past FACTS_COMMAND_SECONDS, stop the whole group."""
     limit = float(os.environ.get("FACTS_COMMAND_SECONDS", "600"))
-    proc = subprocess.Popen(argv, cwd=top, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+    proc = subprocess.Popen(argv, cwd=top, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                             start_new_session=True)
     try:
         out, err = proc.communicate(timeout=limit)
@@ -185,19 +185,22 @@ def run_declared(argv, top):
 
 
 def declared_sections(pr, slug, head, base, top):
+    declared = [match for match in map(FACT_LINE.match, declaration(slug).splitlines()) if match]
+    if not declared:
+        return []
     at = git("rev-parse", "HEAD")
     if at != head:
-        return ["", f"_Declared facts skipped: the checkout is at `{at[:8]}`, not the PR head; rerun facts.py there._"]
+        fail(f"the checkout is at {at[:8]}, not the PR head {head[:8]}, so its declared facts would describe "
+             "another commit: check out the PR head and rerun")
     lines = []
-    for raw in declaration(slug).splitlines():
-        match = FACT_LINE.match(raw)
-        if not match:
-            continue
+    for match in declared:
         title, kind, source = match["title"], match["kind"], match["source"]
         if kind == "run":
             try:
                 argv = [arg.replace("{pr}", str(pr)).replace("{head}", head).replace("{base}", base)
                         for arg in shlex.split(source)]
+                if not argv:
+                    raise ValueError("no command")
                 result = run_declared(argv, top)
             except subprocess.TimeoutExpired as problem:
                 text = f"_`{source}` timed out after {problem.timeout:g} s._"
@@ -212,7 +215,7 @@ def declared_sections(pr, slug, head, base, top):
             if not path.is_relative_to(Path(top).resolve()):
                 text = f"_`{source}` is outside the checkout._"
             else:
-                text = path.read_text().strip() if path.is_file() else f"_`{source}` does not exist._"
+                text = path.read_text(errors="replace").strip() if path.is_file() else f"_`{source}` does not exist._"
         lines += ["", f"**{title}** (`{source}`):", "", text or "_empty_"]
     return lines
 

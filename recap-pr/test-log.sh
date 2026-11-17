@@ -197,7 +197,7 @@ standards_at() { RECAP_TS="2026-01-02T00:00:0$1Z" "$L" --pass standards "$H4" "$
 standards_at 0 clean
 "$L" --bind TIE1 >/dev/null
 standards_at 0 fixed
-check "two logs' different verdicts in one second are not certified" "$(verdict "$H4" >/dev/null; line standards)" "CONFLICT: two logs recorded different verdicts in the same second (2026-01-02T00:00:00Z)"
+check "two logs' different verdicts in one second are not certified" "$(verdict "$H4" >/dev/null; line standards)" "CONFLICT: two logs recorded different results in the same second (2026-01-02T00:00:00Z)"
 standards_at 1 fixed
 check "a later record settles the tie" "$(verdict "$H4" >/dev/null; line standards)" "NOT CLEAN: fixed on this head"
 standards_at 2 clean
@@ -208,7 +208,7 @@ standards_at 3 fixed
 standards_at 3 clean
 "$L" --bind TIE1 >/dev/null
 standards_at 3 fixed
-check "logs whose last rows in one second disagree conflict, whatever came before" "$(verdict "$H4" >/dev/null; line standards)" "CONFLICT: two logs recorded different verdicts in the same second (2026-01-02T00:00:03Z)"
+check "logs whose last rows in one second disagree conflict, whatever came before" "$(verdict "$H4" >/dev/null; line standards)" "CONFLICT: two logs recorded different results in the same second (2026-01-02T00:00:03Z)"
 standards_at 4 clean
 "$L" --bind TIE2 >/dev/null
 standards_at 4 fixed

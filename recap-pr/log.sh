@@ -213,7 +213,7 @@ case "${1:-}" in
           k = split(logs[p], at, " "); for (j = 2; j <= k; j++) if (lastrow[p, at[j]] != lastrow[p, at[1]]) conflict = 1
           if (!(p in verdict))
             state = (p in lasthead) ? "MISSING: last ran on " substr(lasthead[p], 1, 8) " (" lastverdict[p] ")" : "MISSING: never recorded"
-          else if (conflict) state = "CONFLICT: two logs recorded different verdicts in the same second (" when[p] ")"
+          else if (conflict) state = "CONFLICT: two logs recorded different results in the same second (" when[p] ")"
           else if (verdict[p] == "not-reviewed") state = "NOT REVIEWED on this head (recorded " when[p] ")"
           else if (verdict[p] != "clean") state = "NOT CLEAN: " verdict[p] " on this head"
           else if (reads && cur == "") state = "clean (PR body not checked)"
