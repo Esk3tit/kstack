@@ -55,8 +55,8 @@ People who work on the code see differences too. Write those with a `dev: ` pref
 - a stricter CI limit: `dev: CI fails a PR whose JavaScript passes 180 KB; master allowed 200 KB`;
 - a new build rule: `dev: the build refuses a server module imported from client code`;
 - a test path no longer exercised: `dev: the Safari folder-stack case no longer runs on PRs; master ran it on each one`;
-- a new coding rule: `dev: reviewers enforce colours from tokens only`;
-- a changed agent instruction: `dev: /pr-loop runs Fable on every head it hands back in a repo that requires it`.
+- a new coding rule: `dev: reviewers enforce colours from tokens only; master let raw hex through`;
+- a changed agent instruction: `dev: /pr-loop runs Fable on every head it hands back in a repo that requires it; master ran at most one Fable pass`.
 
 ```
 ts	repo	phase	source	asked	decision	why	prod_delta	evidence	result
