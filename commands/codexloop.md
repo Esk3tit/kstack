@@ -173,6 +173,7 @@ Done when the round has started or the run has exited `PAUSED`.
    - Conventional commit whose subject says what the fix changed, in the repo's own scope (`fix(api): keep the newest retry token instead of the first`), one commit per iteration.
    - If every finding this iteration was rejected (no real issues), exit with `STATUS=CLEAN` instead of committing — the loop has converged. Under `--until-converged`: a clean round (Round scope).
    - Keep commits local until the loop exits CLEAN (step 4). Under `--until-converged` on a draft PR opened so CI can judge the change, also push a commit whose next step needs CI's answer; review bots can bill for that push too.
+   - Then log the round row (**Round rows**) before the next iteration.
 
 3. **Exit conditions:** an exit after a round's dispatch row first logs that round's row, or its dropped row (**Round rows**).
    - `STATUS=CLEAN` — the reviewer returned zero findings, or every remaining finding was a rejected nit/flip-flop. Under `--until-converged`: Round scope rule 3's convergence.

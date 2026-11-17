@@ -302,7 +302,7 @@ confidentiality. Put them in a scratch folder with a small `results.json`, each 
 its picture shows what it names:
 
 ```json
-{"revision": "c5ef2589", "intentSource": "owner question 3: where a lone picture sits",
+{"revision": "c5ef2589", "intentSource": "Design question 3: where a lone picture sits",
  "cases": [{"name": "Agreed prototype: low and left", "pass": true, "observed": "built on c5ef2589",
             "evidence": ["prototype-1280.png", "prototype-390.png"]},
            {"name": "Proposal: centred", "pass": true, "observed": "mocked on c5ef2589",
