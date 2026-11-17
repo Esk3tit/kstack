@@ -137,16 +137,18 @@ check "a declared command reads no input" "$(sleep 2 | FACTS_COMMAND_SECONDS=1 P
 import importlib.util, sys
 spec = importlib.util.spec_from_file_location("facts", sys.argv[1]); m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
 print("finished", repr(m.run_declared(["cat"], ".").stdout))' "$D/facts.py" 2>&1 | tail -1)" "finished ''"
-check "an empty command and a file that is not UTF-8 are reported, not raised" "$(PYTHONDONTWRITEBYTECODE=1 python3 - "$D/facts.py" "$HOME" <<'PY'
+check "an empty command, a file that is not UTF-8 and one that can't be read are reported, not raised" "$(PYTHONDONTWRITEBYTECODE=1 python3 - "$D/facts.py" "$HOME" <<'PY'
 import importlib.util, pathlib, sys
 spec = importlib.util.spec_from_file_location("facts", sys.argv[1]); m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
 pathlib.Path(sys.argv[2], "bytes.dat").write_bytes(b"ok \xff\xfe")
-m.declaration = lambda slug: "- facts: Empty = run:  \n- facts: Bytes = file: bytes.dat"
+locked = pathlib.Path(sys.argv[2], "locked.dat"); locked.write_text("secret"); locked.chmod(0)
+m.declaration = lambda slug: "- facts: Empty = run:  \n- facts: Bytes = file: bytes.dat\n- facts: Locked = file: locked.dat"
 m.git = lambda *args, **kw: "a" * 40
 lines = m.declared_sections(7, "o/r", "a" * 40, "main", sys.argv[2])
-print(sum("could not run: no command" in l for l in lines), sum(l.startswith("ok ") for l in lines))
+print(sum("could not run: no command" in l for l in lines), sum(l.startswith("ok ") for l in lines),
+      sum("`locked.dat` could not be read" in l for l in lines))
 PY
-)" "1 1"
+)" "1 1 1"
 check "a command missing on this machine says so" "$(has '_`no-such-command-here` could not run: ')" "1"
 check "a facts line only the PR's head declares is not run" "$(has 'leaked-from-the-head') $(has '**Token**')" "0 0"
 check "a comment marker in declared output is escaped" "$(count "$block" '<!-- pr-facts:end -->') $(has '&lt;!-- pr-facts:end -->') $(has '&lt;!-- pr-facts:record:start -->')" "1 1 1"
@@ -239,7 +241,8 @@ check "a checkout away from the PR head stops before writing" "$(python3 "$D/fac
 unchanged"
 git switch -q -c bare origin/main && git rm -q docs/agents/pr-loop.md && git commit -q -m "no declaration" && git push -q origin bare
 git switch -q --detach HEAD~1 && echo bare > "$FAKE/default"
-check "a repo that declares no facts gets no note, wherever the checkout is" "$(python3 "$D/facts.py" 7 --dry-run 2>&1 | grep -c -i -e 'declared facts' -e 'not the PR head' | tr -d ' ')" "0"
+bare_block=$(python3 "$D/facts.py" 7 --dry-run 2>&1)
+check "a repo that declares no facts gets its block with no note, wherever the checkout is" "$(count "$bare_block" '^<!-- pr-facts:start -->$') $(count "$bare_block" 'not the PR head')" "1 0"
 echo trusted > "$FAKE/default"
 git switch -q feat/x
 
