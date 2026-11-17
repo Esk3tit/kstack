@@ -204,6 +204,12 @@ RECAP_TS=2026-01-01T00:00:00Z round "round 4 dropped on feat/passes" "$H3"
 check "a drop in another log in the same second still ends its round" "$("$L" --rounds >/dev/null 2>&1; echo $?)" "0"
 round "round 9 (whole-PR) on feat/other: rebased on feat/passes: 0 findings, 0 accepted, clean" "$H3"
 check "the last two round rows, oldest first, then the next number" "$("$L" --rounds | cut -f6 | tr '\n' '|')" "round 1 (whole-PR) on feat/passes: 2 findings, 1 accepted, fixed|round 3 (fixes) on feat/passes: 0 findings, 0 accepted, clean|next round 5|"
+round "round 5 (whole-PR) dispatched on feat/passes" "$H3"
+check "a dispatch row with a scope label still blocks the next round" "$("$L" --rounds 2>/dev/null; echo $?)" "1"
+round "round 5 dropped on feat/passes: reviewer timed out" "$H3"
+check "a dropped row with a reason ends its round" "$("$L" --rounds | tail -1)" "next round 6"
+round "round 6 dispatched on feat/passes-2" "$H3"
+check "a branch whose name only starts with this one's is another branch" "$("$L" --rounds >/dev/null 2>&1; echo $?)" "0"
 
 finding() { "$L" codexloop codex no "$1" "$2" none ev "$3"; }
 finding "F1.1 on feat/passes: retry token kept stale" "the old token is still valid" rejected

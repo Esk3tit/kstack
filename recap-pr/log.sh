@@ -133,10 +133,12 @@ case "${1:-}" in
   --rounds)
     branch_rows | awk -F'\t' -v repo="$repo" -v b="$branch" '
       # Counted, not ordered: rows from different logs in one second can sort either way.
+      # A dispatch or drop may carry a scope label after the number and a reason after the branch.
+      function is(word, s) { s = word " on " b; return rest == s || substr(rest, 1, length(s) + 2) == s ": " }
       $2 != repo || $3 != "codexloop" || $6 !~ /^round [0-9]+ / { next }
-      { split($6, w, " "); n = w[2] }
-      $6 == "round " n " dispatched on " b { sent[n]++; at[n] = $1 ", " $9; if (n + 0 > top) top = n + 0; next }
-      $6 == "round " n " dropped on " b { ended[n]++; if (n + 0 > top) top = n + 0; next }
+      { split($6, w, " "); n = w[2]; rest = substr($6, length(n) + 8); sub(/^\([a-zA-Z-]+\) /, "", rest) }
+      is("dispatched") { sent[n]++; at[n] = $1 ", " $9; if (n + 0 > top) top = n + 0; next }
+      is("dropped") { ended[n]++; if (n + 0 > top) top = n + 0; next }
       $6 ~ /^round [0-9]+ \([a-zA-Z-]+\) on / && substr($6, index($6, ") on ") + 5, length(b) + 2) == b ": " {
         ended[n]++; before = last; last = $0; if (n + 0 > top) top = n + 0
       }
