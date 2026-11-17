@@ -5,8 +5,8 @@ description: >-
   drive the expected flow, assert behavior (with API ground-truth), check the look, and post
   screenshot + clip evidence and a test-case checklist to the PR so you can judge production-readiness,
   review code, and merge. Report-only, ephemeral. Use for "verify the UI", "does this screen
-  work", "is this production ready", "dogfood this flow", or to post a before/after or design-choice
-  gallery to a PR.
+  work", "is this production ready", "dogfood this flow", or to post any screenshot gallery to a
+  PR outside a verification run (a before/after, a design choice, a sibling or cross-engine comparison).
 user-invocable: true
 ---
 
@@ -20,7 +20,7 @@ branch or its history.
 
 This file is the runtime playbook. Follow the steps in order. Stop and emit the matching
 `NOMISTAKES_FRONTEND_STATUS` the moment a gate fails — do not push past a blocked gate. To post a
-before/after or design-choice gallery, go straight to **A standalone gallery** in step 8.
+screenshot gallery outside a verification run, run step 0, then go to **A standalone gallery** in step 8.
 
 ## 0. Resolve the harness + project config (gate)
 
@@ -294,8 +294,8 @@ any failure removes the new gallery and leaves the PR as it was. `pr_post=splice
 `pr_post=failed` / `pr_post=no-pr` → `summary.md` (local media paths) in the run dir, stderr says why;
 re-run the post. The verdict is never lost.
 
-**A standalone gallery** (a before/after or a design choice for the owner, outside a verification
-run) goes through the same poster under its own `--marker`, one per question, so it never replaces a
+**A standalone gallery** (any screenshot gallery outside a verification run: a before/after, a design
+choice for the owner, a sibling or cross-engine comparison) goes through the same poster under its own `--marker`, one per question, so it never replaces a
 run's gallery or block. Its captures come from the app step 0 resolves or a prototype's own page,
 prove their subject as step 5 says, and keep step 9's confidentiality. Put them in a scratch folder with a small `results.json`, each case passing when
 its picture shows what it names, and an `intentSource` saying the pictures are not a verification, since
