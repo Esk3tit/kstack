@@ -29,7 +29,7 @@ A **review-body item** is a finding a bot writes inside a review's body instead 
 
 ## A green bot is one that reviewed the head
 
-A review bot's green check counts only once that bot has reviewed the current head: a review whose `commit_id` is the head SHA, or the bot's own summary naming the head commit. A bot that is rate-limited, paused, skipping the PR for size, or only reviews when tagged still reports green. Re-trigger it once with its tag (`@coderabbitai review`, `@greptileai`), after its rate limit resets when it names a reset before its deadline, and give it until its deadline (**Waits**); if it still hasn't reviewed the head, report it as `NOT_REVIEWED=<bot>:<reason>` instead of counting it green.
+A review bot's green check counts only once that bot has reviewed the current head: a review whose `commit_id` is the head SHA, or the bot's own summary naming the head commit. A bot that is rate-limited, paused, skipping the PR for size, or only reviews when tagged still reports green. Re-trigger it once with its tag (`@coderabbitai review`, `@greptileai`), after its rate limit resets when it names a reset before its deadline, and give it until its deadline (**Waits**), or only wait when the repo's `docs/agents/review-bots.md` leaves its re-trigger to someone else, such as a dispatcher; if it still hasn't reviewed the head, report it as `NOT_REVIEWED=<bot>:<reason>` instead of counting it green.
 
 ## The final pass
 
