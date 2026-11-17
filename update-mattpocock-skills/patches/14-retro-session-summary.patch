@@ -5,7 +5,7 @@
  1. Call the Skill tool with `writing-for-agents` for the writing style guide.
  
 -2. Read the primary sources for the session the user specifies. This may mean searching through session logs on this machine. If the user doesn't specify a session, default to the current one.
-+2. Read the primary sources for the session the user specifies. This may mean searching through session logs on this machine. If the user doesn't specify a session, default to the current one. For a Claude Code session, start from `python3 ~/.claude/skills/recap-pr/session_summary.py <session .jsonl>` and quote its figures rather than counting raw log lines, which include replayed API copies of earlier calls.
++2. Read the primary sources for the session the user specifies. This may mean searching through session logs on this machine. If the user doesn't specify a session, default to the current one. For a Claude Code session, start from `python3 ~/.claude/skills/recap-pr/session_summary.py <session .jsonl>` and quote its figures rather than counting raw log lines, which include replayed API copies of earlier calls; count a figure it does not print (Bash calls by program, agents by type) by its definition of an executed tool call.
  
  3. Look for candidates for improvement in these categories.
  

@@ -101,5 +101,5 @@ patch -p1 -d ~/.agents/skills/<skill> < ~/.claude/skills/update-mattpocock-skill
 
 `patches/14-retro-session-summary.patch`, added 2026-11-16. Requires `recap-pr/session_summary.py` from kstack.
 
-- **What it does:** a retro on a Claude Code session starts from the session summary's counts of executed tool calls, errors, hook denials, indexed outputs and compaction summaries, with their definitions.
+- **What it does:** a retro on a Claude Code session starts from the session summary's counts of executed tool calls, errors, hook denials, indexed outputs and compaction summaries, with their definitions, and counts any figure it does not print by the same definitions.
 - **Why:** the #579 retro first counted 336 agent calls and 157 Codex runs; the real figures were 203 and 85, because replayed API copies in the log were counted as new work.
