@@ -50,12 +50,11 @@ elif a[0] == "api" and "PATCH" in a:
     body = json.load(open(a[a.index("--input") + 1]))["body"]
     if countdown("move_head_on_patch"):
         write("head", "f" * 40 + "\n")
-    clobbers = os.path.join(fake, "clobbers")
-    left = int(read("clobbers")) if os.path.exists(clobbers) else 0
+    left = int(read("clobbers")) if os.path.exists(os.path.join(fake, "clobbers")) else 0
     if left > 0:
-        open(clobbers, "w").write(str(left - 1))
+        write("clobbers", str(left - 1))
         body = read("stale") + "\n<!-- CURSOR_SUMMARY -->\nrewritten from an old copy\n<!-- /CURSOR_SUMMARY -->\n"
-    open(os.path.join(fake, "body"), "w").write(body)
+    write("body", body)
     print("{}")
 elif a[:2] == ["api", "repos/o/r"]:
     print(read("default").strip() if os.path.exists(os.path.join(fake, "default")) else "main")
@@ -189,12 +188,12 @@ check "the bot's own section survives the retry" "$(grep -c 'rewritten from an o
 echo 5 > "$FAKE/clobbers"
 check "a body that keeps losing the block fails" "$(python3 "$D/facts.py" 7 >/dev/null 2>&1; echo $?)" "1"
 printf '## Summary\n\nDoes the thing.\n\n<!-- pr-facts:start -->\nan older block\n<!-- pr-facts:record:start -->\nEvery required pass is clean\n<!-- pr-facts:record:end -->\n<!-- pr-facts:end -->\n' > "$FAKE/stale"
-rm -f "$FAKE/clobbers"; echo 3 > "$FAKE/swap_on_read"
+rm -f "$FAKE/clobbers"; echo 4 > "$FAKE/swap_on_read"
 python3 "$D/facts.py" 7 >/dev/null
-check "a bot's older copy between the two writes loses to the fresh facts" "$(grep -c 'an older block' "$FAKE/body") $(grep -c '^\*\*Checks:\*\* 5 on this head' "$FAKE/body")" "0 1"
+check "a bot's older copy between the two writes loses to the fresh facts" "$(grep -c 'an older block' "$FAKE/body") $(grep -c '^\*\*Checks:\*\* 5 on this head' "$FAKE/body") $([ "$(cat "$FAKE/swap_on_read")" -le 0 ] && echo served)" "0 1 served"
 rm -f "$FAKE/swap_on_read"
-echo 2 > "$FAKE/move_head_on_read"
-check "a push between the two writes stops facts.py before it records the old head" "$(python3 "$D/facts.py" 7 2>&1 >/dev/null | grep -c "head moved to ffffffff")" "1"
+echo 4 > "$FAKE/move_head_on_read"
+check "a push between the two writes stops facts.py before it records the old head" "$(python3 "$D/facts.py" 7 2>&1 >/dev/null | grep -c "head moved to ffffffff") $(cat "$FAKE/move_head_on_read")" "1 0"
 rm -f "$FAKE/move_head_on_read"; echo "$head" > "$FAKE/head"
 echo 2 > "$FAKE/move_head_on_patch"
 check "a push during the last write fails rather than leaving the old head's facts" "$(python3 "$D/facts.py" 7 2>&1 >/dev/null | grep -c "head moved to ffffffff")" "1"
