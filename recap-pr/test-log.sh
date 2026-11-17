@@ -200,5 +200,16 @@ check "a later record settles the tie" "$(verdict "$Ht" >/dev/null; line standar
 RECAP_TS=2026-01-02T00:00:02Z "$L" --pass standards "$Ht" clean
 RECAP_TS=2026-01-02T00:00:02Z "$L" --pass standards "$Ht" fixed
 check "one log's rows in one second keep their write order" "$(verdict "$Ht" >/dev/null; line standards)" "NOT CLEAN: fixed on this head"
+"$L" --bind TIE2 >/dev/null
+RECAP_TS=2026-01-02T00:00:03Z "$L" --pass standards "$Ht" fixed
+RECAP_TS=2026-01-02T00:00:03Z "$L" --pass standards "$Ht" clean
+"$L" --bind TIE1 >/dev/null
+RECAP_TS=2026-01-02T00:00:03Z "$L" --pass standards "$Ht" fixed
+check "logs whose last rows in one second disagree conflict, whatever came before" "$(verdict "$Ht" >/dev/null; line standards)" "CONFLICT: two logs recorded different verdicts in the same second (2026-01-02T00:00:03Z)"
+RECAP_TS=2026-01-02T00:00:04Z "$L" --pass standards "$Ht" clean
+"$L" --bind TIE2 >/dev/null
+RECAP_TS=2026-01-02T00:00:04Z "$L" --pass standards "$Ht" fixed
+RECAP_TS=2026-01-02T00:00:04Z "$L" --pass standards "$Ht" clean
+check "logs whose last rows agree are certified" "$(verdict "$Ht" >/dev/null; line standards)" "clean"
 
 exit $fail

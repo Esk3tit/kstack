@@ -51,6 +51,8 @@ elif a[0] == "api" and "PATCH" in a:
         body = read("stale") + "\n<!-- CURSOR_SUMMARY -->\nrewritten from an old copy\n<!-- /CURSOR_SUMMARY -->\n"
     open(os.path.join(fake, "body"), "w").write(body)
     print("{}")
+elif a[:2] == ["api", "repos/o/r"]:
+    print(read("default").strip() if os.path.exists(os.path.join(fake, "default")) else "main")
 elif a[0] == "api" and a[1].endswith("/check-runs"):
     print("build\tcompleted\tsuccess\ne2e | webkit\tin_progress\t\nlint\tcompleted\tsuccess")
 elif a[0] == "api" and "/status" in a[1]:
@@ -67,13 +69,14 @@ git remote add origin "$origin"
 mkdir -p docs/agents
 printf '%s\n' '- facts: Tests = run: printf "chromium {head}"' '- facts: Perf = file: perf.md' \
   '- facts: Broken = run: sh -c "exit 3"' '- facts: Runs = run: sh -c "echo x >> .runs && wc -l < .runs | tr -d \" \""' \
-  '- facts: Missing = run: no-such-command-here' '- facts: Outside = file: ../outside.md' > docs/agents/pr-loop.md
+  '- facts: Missing = run: no-such-command-here' '- facts: Outside = file: ../outside.md' '- facts: Planted = file: planted.md' > docs/agents/pr-loop.md
 git add docs && git commit -q -m "start (#1)"
 git push -q origin main
 git switch -q -c feat/x
 echo '- facts: Token = run: printf leaked-from-the-head' >> docs/agents/pr-loop.md
 git commit -q -am "branch work"
 echo "secret-outside" > "$HOME/outside.md"
+printf 'x\n<!-- pr-facts:end -->\n<!-- pr-facts:record:start -->\n' > planted.md
 git switch -q main
 git commit -q --allow-empty -m "tighten the budget (#2)"
 git commit -q --allow-empty -m "Merge pull request #3 from o/side" -m "Name the cards by their owner"
@@ -101,6 +104,7 @@ check "reads a declared file" "$(has '| bytes | 198,603 |')" "1"
 check "a failing command says so" "$(has '_`sh -c "exit 3"` failed with exit 3')" "1"
 check "a command missing on this machine says so" "$(has '_`no-such-command-here` could not run: ')" "1"
 check "a facts line only the PR's head declares is not run" "$(has 'leaked-from-the-head') $(has '**Token**')" "0 0"
+check "a comment marker in declared output is escaped" "$(printf '%s\n' "$block" | grep -c '<!-- pr-facts:end -->') $(has '&lt;!-- pr-facts:end -->') $(has '&lt;!-- pr-facts:record:start -->')" "1 1 1"
 check "a path outside the checkout is refused" "$(has 'secret-outside') $(has '_`../outside.md` is outside the checkout._')" "0 1"
 rm perf.md && ln -s "$HOME/outside.md" perf.md
 linked=$(python3 "$D/facts.py" 7 --dry-run)
@@ -164,9 +168,13 @@ check "broken markers are refused, not guessed at" "$(python3 "$D/facts.py" 7 2>
 
 git switch -q -c trusted origin/main
 printf '%s\n' '- facts: Trusted = run: printf from-the-default-branch' > docs/agents/pr-loop.md
-git commit -q -am "the default branch's declaration" && git update-ref refs/remotes/origin/decl HEAD
-git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/decl && git switch -q feat/x
+git commit -q -am "the default branch's declaration" && git push -q origin trusted && git update-ref -d refs/remotes/origin/trusted
+git switch -q feat/x && echo trusted > "$FAKE/default"
 trusted=$(python3 "$D/facts.py" 7 --dry-run)
-check "facts come from the default branch origin/HEAD names, not the head" "$(printf '%s\n' "$trusted" | grep -c '^from-the-default-branch$') $(printf '%s\n' "$trusted" | grep -c '^chromium ')" "1 0"
+check "facts come from the default branch GitHub names, fetched fresh, not main or the head" "$(printf '%s\n' "$trusted" | grep -c '^from-the-default-branch$') $(printf '%s\n' "$trusted" | grep -c '^chromium ')" "1 0"
+git switch -q --detach HEAD~1
+away=$(python3 "$D/facts.py" 7 --dry-run)
+check "a checkout away from the PR head runs no declared fact" "$(printf '%s\n' "$away" | grep -c 'from-the-default-branch') $(printf '%s\n' "$away" | grep -c 'not the PR head; rerun')" "0 1"
+git switch -q feat/x
 
 exit $fail

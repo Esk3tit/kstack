@@ -185,9 +185,10 @@ case "${1:-}" in
       current=$(body_hash "$body_file")
     fi
     # Every PR answers to the same passes; spec also reads the PR body.
-    required="standards 0;spec 1;codexloop 0"
+    required="standards spec codexloop"
     # Each record carries its log's place in branch_keys: rows of one log keep their write order within
-    # a second, but two logs' rows in one second have no order, so a disagreement there is not certified.
+    # a second, but two logs' rows in one second have no order, so logs whose last rows there disagree
+    # leave the pass in conflict.
     records=$(branch_keys | awk '{print NR "\t" $0}' | while IFS=$'\t' read -r i k; do
       f="$HOME/.local/share/recap/$k/reviews.tsv"
       if [ -f "$f" ]; then tail -n +2 "$f" | awk -v i="$i" '{print $0 "\t" i}'; fi
@@ -199,19 +200,20 @@ case "${1:-}" in
         if (!(p in lasthead)) every[++e] = p
         lasthead[p] = $5; lastverdict[p] = $6
         if ($5 == head) {
-          if ((p in when) && when[p] == $1 && src[p] != $8 && (verdict[p] != $6 || body[p] != $7)) tie[p] = 1
-          else if (!(p in when) || when[p] != $1) tie[p] = 0
-          verdict[p] = $6; body[p] = $7; when[p] = $1; src[p] = $8
+          if (when[p] != $1) { when[p] = $1; logs[p] = "" }
+          if (index(logs[p] " ", " " $8 " ") == 0) logs[p] = logs[p] " " $8
+          lastrow[p, $8] = $6 SUBSEP $7; verdict[p] = $6; body[p] = $7
         }
       }
       END {
-        n = split(required, lines, ";")
+        n = split(required, names, " ")
         printf "Required passes on %s (PR body %s):\n", short, (cur == "" ? "not checked" : cur)
         for (i = 1; i <= n; i++) {
-          split(lines[i], f, " "); p = f[1]; reads = f[2]
+          p = names[i]; reads = (p == "spec"); conflict = 0
+          k = split(logs[p], at, " "); for (j = 2; j <= k; j++) if (lastrow[p, at[j]] != lastrow[p, at[1]]) conflict = 1
           if (!(p in verdict))
             state = (p in lasthead) ? "MISSING: last ran on " substr(lasthead[p], 1, 8) " (" lastverdict[p] ")" : "MISSING: never recorded"
-          else if (tie[p]) state = "CONFLICT: two logs recorded different verdicts in the same second (" when[p] ")"
+          else if (conflict) state = "CONFLICT: two logs recorded different verdicts in the same second (" when[p] ")"
           else if (verdict[p] == "not-reviewed") state = "NOT REVIEWED on this head (recorded " when[p] ")"
           else if (verdict[p] != "clean") state = "NOT CLEAN: " verdict[p] " on this head"
           else if (reads && cur == "") state = "clean (PR body not checked)"

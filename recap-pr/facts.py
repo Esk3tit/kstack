@@ -6,11 +6,14 @@
 Run it in the PR's checkout. The block holds the head's check runs and commit statuses with their
 results, the PRs a base merge brought in since the branch point, each section the repo declares in
 docs/agents/pr-loop.md, and, between <!-- pr-facts:record:start/end -->, the review passes recorded
-on the head (log.sh --check) and the time it was written. Sections are read from the default branch's
-declaration only, never the PR's, because their commands run on this machine with its credentials:
+on the head (log.sh --check) and the time it was written. Sections are read from the declaration on the
+default branch GitHub names, fetched fresh, never the PR's, because their commands run on this machine with
+its credentials; they run only when the checkout is at the PR head, and a comment marker in their output
+is escaped so it cannot end or hide part of the block:
 
-    - facts: <title> = run: <command and arguments>   (run without a shell, its stdout as Markdown;
-      {pr}, {head}, {base} filled in; it still runs the checkout's code, as the PR's tests do)
+    - facts: <title> = run: <command and arguments>   (run without a shell and within FACTS_COMMAND_SECONDS,
+      default 600, its stdout as Markdown; {pr}, {head}, {base} filled in; it still runs the checkout's
+      code, as the PR's tests do)
     - facts: <title> = file: <path from the repo root>   (refused if it resolves outside the checkout)
 
 It reads the live body, replaces only its own block (inserting it before the bots' summaries the first
@@ -137,20 +140,20 @@ def brought_in_section(base, head):
     return lines
 
 
-def declaration():
-    """The default branch's declaration: a PR can't add or change the commands facts.py runs."""
-    candidates = [run(["git", "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"], check=False).stdout.strip(),
-                  "origin/main", "origin/master"]
-    for default in filter(None, candidates):
-        if run(["git", "rev-parse", "--verify", "--quiet", f"{default}^{{commit}}"], check=False).returncode == 0:
-            shown = run(["git", "show", f"{default}:{DECLARATION}"], check=False)
-            return shown.stdout if shown.returncode == 0 else ""
-    return ""
+def declaration(slug):
+    """The declaration on the default branch GitHub names, fetched fresh: a PR can't add or change its commands."""
+    default = run(["gh", "api", f"repos/{slug}", "--jq", ".default_branch"]).stdout.strip()
+    git("fetch", "--quiet", "origin", default)
+    shown = run(["git", "show", f"origin/{default}:{DECLARATION}"], check=False)
+    return shown.stdout if shown.returncode == 0 else ""
 
 
-def declared_sections(pr, head, base, top):
+def declared_sections(pr, slug, head, base, top):
+    at = git("rev-parse", "HEAD")
+    if at != head:
+        return ["", f"_Declared facts skipped: the checkout is at `{at[:8]}`, not the PR head; rerun facts.py there._"]
     lines = []
-    for raw in declaration().splitlines():
+    for raw in declaration(slug).splitlines():
         match = FACT_LINE.match(raw)
         if not match:
             continue
@@ -159,7 +162,10 @@ def declared_sections(pr, head, base, top):
             try:
                 argv = [arg.replace("{pr}", str(pr)).replace("{head}", head).replace("{base}", base)
                         for arg in shlex.split(source)]
-                result = subprocess.run(argv, cwd=top, capture_output=True, text=True)
+                result = subprocess.run(argv, cwd=top, capture_output=True, text=True,
+                                        timeout=float(os.environ.get("FACTS_COMMAND_SECONDS", "600")))
+            except subprocess.TimeoutExpired as problem:
+                text = f"_`{source}` timed out after {problem.timeout:g} s._"
             except (ValueError, OSError) as problem:
                 text = f"_`{source}` could not run: {cell(str(problem))}_"
             else:
@@ -172,7 +178,7 @@ def declared_sections(pr, head, base, top):
                 text = f"_`{source}` is outside the checkout._"
             else:
                 text = path.read_text().strip() if path.is_file() else f"_`{source}` does not exist._"
-        lines += ["", f"**{title}** (`{source}`):", "", text or "_empty_"]
+        lines += ["", f"**{title}** (`{source}`):", "", text.replace("<!--", "&lt;!--") or "_empty_"]
     return lines
 
 
@@ -182,7 +188,7 @@ def build_block(pr, slug, head, base, top):
              "rerun it to refresh them rather than editing this block.", ""]
     lines += checks_section(slug, head) + [""]
     lines += brought_in_section(base, head)
-    lines += declared_sections(pr, head, base, top)
+    lines += declared_sections(pr, slug, head, base, top)
     # The review record changes as passes land; log.sh leaves it out of the body hash.
     lines += ["", record(pr, head), END]
     return "\n".join(lines)
