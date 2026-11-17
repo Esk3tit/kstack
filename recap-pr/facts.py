@@ -163,7 +163,10 @@ def run_declared(argv, top):
     try:
         out, err = proc.communicate(timeout=limit)
     except subprocess.TimeoutExpired:
-        os.killpg(proc.pid, signal.SIGKILL)
+        try:
+            os.killpg(proc.pid, signal.SIGKILL)
+        except (ProcessLookupError, PermissionError):
+            pass  # The group is gone, or holds only an exited process (macOS answers EPERM then).
         proc.wait()
         # A child that left the group may still hold the pipes, so they are closed rather than read.
         proc.stdout.close()

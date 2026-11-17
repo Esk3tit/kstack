@@ -106,7 +106,7 @@ check "counts commits naming no PR" "$(has '- 1 commit naming no PR')" "1"
 check "runs a declared command with the head filled in" "$(has "chromium $head")" "1"
 check "reads a declared file" "$(has '| bytes | 198,603 |')" "1"
 check "a failing command says so" "$(has '_`sh -c "exit 3"` failed with exit 3')" "1"
-check "a timed-out command's descendants are stopped with it" "$(FACTS_COMMAND_SECONDS=0.2 python3 - "$D/facts.py" "$HOME/descendant-ran" <<'PY'
+check "a timed-out command's descendants are stopped with it" "$(FACTS_COMMAND_SECONDS=0.2 PYTHONDONTWRITEBYTECODE=1 python3 - "$D/facts.py" "$HOME/descendant-ran" <<'PY'
 import importlib.util, os, subprocess, sys, time
 spec = importlib.util.spec_from_file_location("facts", sys.argv[1]); m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
 try:
@@ -117,6 +117,18 @@ except subprocess.TimeoutExpired:
     print("left running" if os.path.exists(sys.argv[2]) else "stopped")
 PY
 )" "stopped"
+check "a command whose leftover child holds its output still reports a timeout" "$(FACTS_COMMAND_SECONDS=0.2 PYTHONDONTWRITEBYTECODE=1 python3 - "$D/facts.py" <<'PY'
+import importlib.util, subprocess, sys
+spec = importlib.util.spec_from_file_location("facts", sys.argv[1]); m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
+try:
+    m.run_declared(["sh", "-c", 'python3 -c "import os, time; os.setsid(); time.sleep(1)" & exit 0'], ".")
+    print("no timeout")
+except subprocess.TimeoutExpired:
+    print("timed out")
+except OSError as problem:
+    print(f"{type(problem).__name__}: {problem}")
+PY
+)" "timed out"
 check "a command missing on this machine says so" "$(has '_`no-such-command-here` could not run: ')" "1"
 check "a facts line only the PR's head declares is not run" "$(has 'leaked-from-the-head') $(has '**Token**')" "0 0"
 check "a comment marker in declared output is escaped" "$(count "$block" '<!-- pr-facts:end -->') $(has '&lt;!-- pr-facts:end -->') $(has '&lt;!-- pr-facts:record:start -->')" "1 1 1"
