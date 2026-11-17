@@ -257,7 +257,7 @@ def fresh_record(pr, head, facts=None):
 
 
 def write(slug, pr, head, make_block, first=None):
-    """Write the block into the live body and read it back; returns (attempts, author-text baseline, body written)."""
+    """Write the block into the live body and read it back; returns (attempts, author-text baseline)."""
     changed = ("the description's own text changed while facts.py was writing (a bot may have restored an "
                "older copy, or someone edited it): compare it with the last edit, restore it if needed, and rerun")
     for attempt in range(1, WRITE_ATTEMPTS + 1):
@@ -278,7 +278,7 @@ def write(slug, pr, head, make_block, first=None):
         if own_text(back) != first:
             fail(changed)
         if own_block(back) == block:
-            return attempt, first, updated
+            return attempt, first
         time.sleep(float(os.environ.get("FACTS_RETRY_SECONDS", "5")))
     fail(f"the body kept losing the facts block after {WRITE_ATTEMPTS} writes; a bot is rewriting it, so rerun once it settles")
 
@@ -297,14 +297,14 @@ def main(argv):
     if run(["git", "cat-file", "-e", f"{head}^{{commit}}"], check=False).returncode != 0:
         git("fetch", "--quiet", "origin", head)
     if "--record-only" in argv:
-        attempts, _, _ = write(slug, pr, head, fresh_record(pr, head))
+        attempts, _ = write(slug, pr, head, fresh_record(pr, head))
         print(f"review record refreshed on PR #{pr} for {head[:8]}" + (f" after {attempts} writes" if attempts > 1 else ""))
         return
     block = build_block(pr, slug, head, base, top)
     if "--dry-run" in argv:
         print(block)
         return
-    attempts, first, _ = write(slug, pr, head, lambda live: block)
+    attempts, first = write(slug, pr, head, lambda live: block)
     # The record read the description before these facts landed: write the same facts again with a fresh
     # record and the same author-text baseline, so a bot's older copy can't slip in.
     write(slug, pr, head, fresh_record(pr, head, block), first)
