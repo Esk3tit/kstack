@@ -140,12 +140,17 @@ def brought_in_section(base, head):
     return lines
 
 
+def fetch_tracking(branch):
+    """Fetch a branch into its tracking ref and name that ref."""
+    # An explicit refspec updates the tracking ref even in a clone that fetches only its own branch.
+    git("fetch", "--quiet", "origin", f"+refs/heads/{branch}:refs/remotes/origin/{branch}")
+    return f"origin/{branch}"
+
+
 def declaration(slug):
     """The declaration on the default branch GitHub names, fetched fresh: a PR can't add or change its commands."""
     default = run(["gh", "api", f"repos/{slug}", "--jq", ".default_branch"]).stdout.strip()
-    # An explicit refspec updates the tracking ref even in a clone that fetches only its own branch.
-    git("fetch", "--quiet", "origin", f"+refs/heads/{default}:refs/remotes/origin/{default}")
-    shown = run(["git", "show", f"origin/{default}:{DECLARATION}"], check=False)
+    shown = run(["git", "show", f"{fetch_tracking(default)}:{DECLARATION}"], check=False)
     return shown.stdout if shown.returncode == 0 else ""
 
 
@@ -294,7 +299,7 @@ def main(argv):
     head, base = view["headRefOid"], view["baseRefName"]
     slug = "/".join(view["url"].split("/")[3:5])
     top = git("rev-parse", "--show-toplevel")
-    git("fetch", "--quiet", "origin", f"+refs/heads/{base}:refs/remotes/origin/{base}")
+    fetch_tracking(base)
     if run(["git", "cat-file", "-e", f"{head}^{{commit}}"], check=False).returncode != 0:
         git("fetch", "--quiet", "origin", head)
     if "--record-only" in argv:

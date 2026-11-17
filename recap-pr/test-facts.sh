@@ -19,9 +19,10 @@ read = lambda name: open(os.path.join(fake, name)).read()
 if a[:2] == ["pr", "view"]:
     fields = a[a.index("--json") + 1]
     if "-q" in a:
-        if fields == "headRefOid,body":
-            print(read("head").strip())
-        print(read("head").strip() if fields == "headRefOid" else read("body"))
+        if fields != "headRefOid,body":
+            sys.exit(f"stand-in gh only answers log.sh's one-request read: {a}")
+        print(read("head").strip())
+        print(read("body"))
     elif "body" in fields.split(","):
         swap = os.path.join(fake, "swap_on_read")
         if os.path.exists(swap):
