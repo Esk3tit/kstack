@@ -9,7 +9,7 @@
  
  The issue tracker should have been provided to you. If not, tell the user to run `/setup-matt-pocock-skills`.
  
-@@ -24,13 +24,15 @@
+@@ -24,16 +24,18 @@
  
  ### 2. Identify the spec source
  
@@ -21,11 +21,15 @@
  3. A spec file under `docs/`, `specs/`, or `.scratch/` matching the branch name or feature.
  4. If nothing is found, ask the user where the spec is. If they say there isn't one, the **Spec** sub-agent will skip and report "no spec available".
  
-+When the branch's open PR has `HEAD` as its head (`gh pr view --json headRefOid`), its description is checked too: save the live body to a file (`gh pr view <n> --json body -q .body > <file>`) just before spawning the sub-agents, and give the Spec sub-agent that file.
++When the branch's open PR has `HEAD` as its head (`gh pr view --json headRefOid`), its description is checked too: save the live body to a file, the one the caller names if any (`gh pr view <n> --json body -q .body > <file>`), just before spawning the sub-agents, and give the Spec sub-agent that file.
 +
  ### 3. Identify the standards sources
  
- Search the repo for every file that documents how code should be written. When `CODING_STANDARDS.md` or `CONTRIBUTING.md` exists, it must be on the list.
+-Search the repo for every file that documents how code should be written. When `CODING_STANDARDS.md` or `CONTRIBUTING.md` exists, it must be on the list.
++Skip this step when the caller names Spec alone. Otherwise, search the repo for every file that documents how code should be written. When `CODING_STANDARDS.md` or `CONTRIBUTING.md` exists, it must be on the list.
+ 
+ On top of whatever the repo documents, the Standards axis always carries the **smell baseline** below: a fixed set of Fowler code smells (_Refactoring_, ch.3) that applies even when a repo documents nothing. Two rules bind it:
+ 
 @@ -55,10 +57,16 @@
  - **Middle Man**: a class or function that mostly just delegates onward. → cut it, call the real target direct.
  - **Refused Bequest**: a subclass or implementer that ignores or overrides most of what it inherits. → drop the inheritance, use composition.
@@ -34,7 +38,7 @@
 +### 4. Spawn the sub-agents in parallel
  
 -Issue both sub-agent calls together, in the foreground, and aggregate the reports they return.
-+Issue both sub-agent calls together, in the foreground, and aggregate the reports they return. When the caller names one axis (a Spec re-check after a PR description edit), spawn only that sub-agent and report its axis alone.
++Issue the sub-agent calls together, in the foreground, and aggregate the reports they return. When the caller names one axis (a Spec re-check after a PR description edit), spawn only that sub-agent and report its axis alone.
  
 +Each prompt carries:
 +
@@ -50,7 +54,7 @@
  - The diff command and commit list.
  - The path or fetched contents of the spec.
 -- The brief: "Report: (a) requirements the spec asked for that are missing or partial; (b) behaviour in the diff that wasn't asked for (scope creep); (c) requirements that look implemented but where the implementation looks wrong. Quote the spec line for each finding. Under 400 words."
-+- The brief: "Report: (a) requirements the spec asked for that are missing or partial; (b) behaviour in the diff that wasn't asked for (scope creep); (c) requirements that look implemented but where the implementation looks wrong; (d) when you have the PR body file, every figure and coverage claim in it that its source (the facts block, a saved measurement, a test run, the diff) does not bear out, quoted with what the source shows. Keep 'no measurable difference' (measured, within noise) apart from 'unchanged' (the same code path), and 'observed' (seen in a run or capture) apart from 'inferred' (reasoned from the code). Quote the spec line for each finding, or for (d) the body line and its source. Under 400 words."
++- The brief: "Report: (a) requirements the spec asked for that are missing or partial; (b) behaviour in the diff that wasn't asked for (scope creep); (c) requirements that look implemented but where the implementation looks wrong; (d) when you have the PR body file, every figure and coverage claim in it that its source (the facts block, a saved measurement, a test run, the diff) does not bear out, quoted with what the source shows. Keep 'no measurable difference' (measured, within noise) apart from 'unchanged' (the same code path), and 'observed' (seen in a run or capture) apart from 'inferred' (reasoned from the code). Quote the spec line for each finding, or for (d) the body line and its source. Under 400 words, not counting (d)."
  
  If the spec is missing, skip the Spec sub-agent and note this in the final report.
  

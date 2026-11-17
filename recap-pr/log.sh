@@ -214,13 +214,13 @@ case "${1:-}" in
         p = $4
         if (!(p in lasthead)) every[++e] = p
         lasthead[p] = $5; lastverdict[p] = $6
-        if ($5 == head) { verdict[p] = $6; body[p] = $7; if (!(p in seen)) { seen[p] = 1; ran[++r] = p } }
+        if ($5 == head) { verdict[p] = $6; body[p] = $7; when[p] = $1; if (!(p in seen)) { seen[p] = 1; ran[++r] = p } }
       }
       END {
         n = split(declared, lines, ";")
         if (n == 0) {
           printf "No required passes declared (%s).\n", where
-          s = ""; for (i = 1; i <= r; i++) s = s (i > 1 ? ", " : "") ran[i] " " verdict[ran[i]]
+          s = ""; for (i = 1; i <= r; i++) s = s (i > 1 ? ", " : "") ran[i] " " verdict[ran[i]] (verdict[ran[i]] == "not-reviewed" ? " (recorded " when[ran[i]] ")" : "")
           printf "Recorded on %s: %s\n", short, (s == "" ? "none" : s)
           s = ""; for (i = 1; i <= e; i++) s = s (i > 1 ? ", " : "") every[i] " " lastverdict[every[i]] " on " substr(lasthead[every[i]], 1, 8)
           printf "Latest per pass: %s\n", (s == "" ? "none" : s)
@@ -231,7 +231,7 @@ case "${1:-}" in
           split(lines[i], f, " "); p = f[1]; reads = f[2]
           if (!(p in verdict))
             state = (p in lasthead) ? "MISSING: last ran on " substr(lasthead[p], 1, 8) " (" lastverdict[p] ")" : "MISSING: never recorded"
-          else if (verdict[p] == "not-reviewed") state = "NOT REVIEWED on this head"
+          else if (verdict[p] == "not-reviewed") state = "NOT REVIEWED on this head (recorded " when[p] ")"
           else if (verdict[p] != "clean") state = "NOT CLEAN: " verdict[p] " on this head"
           else if (reads && cur == "") state = "clean (PR body not checked)"
           else if (reads && body[p] == "-") state = "STALE BODY: it read no PR body"

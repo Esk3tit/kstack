@@ -20,8 +20,7 @@ branch or its history.
 
 This file is the runtime playbook. Follow the steps in order. Stop and emit the matching
 `NOMISTAKES_FRONTEND_STATUS` the moment a gate fails — do not push past a blocked gate. To post a
-before/after or design-choice gallery, take its captures as step 5's **Each capture proves its
-subject** says, then go straight to **A standalone gallery** in step 8.
+before/after or design-choice gallery, go straight to **A standalone gallery** in step 8.
 
 ## 0. Resolve the harness + project config (gate)
 
