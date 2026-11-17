@@ -294,7 +294,7 @@ def main(argv):
     head, base = view["headRefOid"], view["baseRefName"]
     slug = "/".join(view["url"].split("/")[3:5])
     top = git("rev-parse", "--show-toplevel")
-    git("fetch", "--quiet", "origin", base)
+    git("fetch", "--quiet", "origin", f"+refs/heads/{base}:refs/remotes/origin/{base}")
     if run(["git", "cat-file", "-e", f"{head}^{{commit}}"], check=False).returncode != 0:
         git("fetch", "--quiet", "origin", head)
     if "--record-only" in argv:

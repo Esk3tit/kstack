@@ -139,7 +139,7 @@ check "a bad verdict is refused" "$("$L" --pass fable "$H3" approved 2>/dev/null
 check "an unknown head is refused" "$("$L" --check deadbeef 2>/dev/null; echo $?)" "2"
 
 mkdir -p "$HOME/bin"
-printf '#!/usr/bin/env bash\ncase "$*" in *headRefOid*) echo %s ;; *body*) cat %s ;; esac\n' "$H3" "$body" > "$HOME/bin/gh"
+printf '#!/usr/bin/env bash\ncase "$*" in *headRefOid,body*) echo %s; cat %s ;; *) exit 9 ;; esac\n' "$H3" "$body" > "$HOME/bin/gh"
 chmod +x "$HOME/bin/gh"
 "$L" --pass spec "$H3" clean "$body"
 check "a PR number reads its live head and body" "$(PATH="$HOME/bin:$PATH" verdict "$H3" 7)" "pass"

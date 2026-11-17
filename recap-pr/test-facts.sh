@@ -19,6 +19,8 @@ read = lambda name: open(os.path.join(fake, name)).read()
 if a[:2] == ["pr", "view"]:
     fields = a[a.index("--json") + 1]
     if "-q" in a:
+        if fields == "headRefOid,body":
+            print(read("head").strip())
         print(read("head").strip() if fields == "headRefOid" else read("body"))
     elif "body" in fields.split(","):
         swap = os.path.join(fake, "swap_on_read")
@@ -180,9 +182,9 @@ git switch -q -c trusted origin/main
 printf '%s\n' '- facts: Trusted = run: printf from-the-default-branch' > docs/agents/pr-loop.md
 git commit -q -am "the default branch's declaration" && git push -q origin trusted && git update-ref -d refs/remotes/origin/trusted
 git switch -q feat/x && echo trusted > "$FAKE/default"
-git config remote.origin.fetch +refs/heads/feat/x:refs/remotes/origin/feat/x
+git config remote.origin.fetch +refs/heads/feat/x:refs/remotes/origin/feat/x && git update-ref -d refs/remotes/origin/main
 trusted=$(python3 "$D/facts.py" 7 --dry-run)
-check "facts come from the default branch GitHub names, fetched fresh even by a one-branch clone, not main or the head" "$(count "$trusted" '^from-the-default-branch$') $(count "$trusted" '^chromium ')" "1 0"
+check "a one-branch clone fetches the base and the default branch GitHub names, and facts come from the latter, not main or the head" "$(count "$trusted" '^from-the-default-branch$') $(count "$trusted" '^chromium ')" "1 0"
 git switch -q --detach HEAD~1
 away=$(python3 "$D/facts.py" 7 --dry-run)
 check "a checkout away from the PR head runs no declared fact" "$(count "$away" 'from-the-default-branch') $(count "$away" 'not the PR head; rerun')" "0 1"
