@@ -8,13 +8,15 @@ results, the PRs a base merge brought in since the branch point, each section th
 docs/agents/pr-loop.md, and, between <!-- pr-facts:record:start/end -->, the review passes recorded
 on the head (log.sh --check) and the time it was written. Sections are read from the declaration on the
 default branch GitHub names, fetched fresh, never the PR's, because their commands run on this machine with
-its credentials; they run only when the checkout is at the PR head. A comment marker in any outside text
-(check names, PR titles, command output) is escaped so it cannot end or hide part of the block:
+its credentials; they run only when the checkout is at the PR head:
 
     - facts: <title> = run: <command and arguments>   (run without a shell and within FACTS_COMMAND_SECONDS,
       default 600, its stdout as Markdown; {pr}, {head}, {base} filled in; it still runs the checkout's
       code, as the PR's tests do)
     - facts: <title> = file: <path from the repo root>   (refused if it resolves outside the checkout)
+
+A comment marker in any outside text (check names, PR titles, command output) is escaped, so it cannot end
+or hide part of the block.
 
 It reads the live body, replaces only its own block (inserting it before the bots' summaries the first
 time), writes, and reads the body back; a bot that rewrites the body from an older copy is outrun by
