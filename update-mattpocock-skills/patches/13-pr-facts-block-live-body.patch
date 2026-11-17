@@ -21,7 +21,7 @@
  - **Before:** <screenshot/output/failing test run>
    **After:** <screenshot/output/passing test run>
  
-+## On the head
++## Facts
 +
 +<!-- pr-facts:start -->
 +<!-- pr-facts:end -->
@@ -42,9 +42,9 @@
  
  Execution-based evidence is A-tier. Test results, console output. Show the exact test that now fails and passes, using pseudocode.
  
-+### On the head
++### Facts
 +
-+Once the PR exists, `python3 ~/.claude/skills/recap-pr/facts.py <pr>` fills the block between the markers from its sources: the head's checks, the review passes recorded on it, the PRs a base merge brought in, and any facts the repo declares. Rerun it to refresh the block rather than editing it. Elsewhere in the body, point to the block for its figures rather than retyping them.
++Once the PR exists, `python3 ~/.claude/skills/recap-pr/facts.py <pr>` fills the block between the markers from its sources: the head's checks, the review passes recorded on it, the PRs a base merge brought in, and any facts the default branch's `docs/agents/pr-loop.md` declares. Rerun it to refresh the block rather than editing it. Elsewhere in the body, point to the block for its figures rather than retyping them.
 +
  ### Merge Danger
  

@@ -3,6 +3,7 @@
 set -euo pipefail
 D="$(cd "$(dirname "$0")" && pwd)"
 export HOME=$(mktemp -d)
+export GIT_AUTHOR_NAME=Test GIT_AUTHOR_EMAIL=test@example.com GIT_COMMITTER_NAME=Test GIT_COMMITTER_EMAIL=test@example.com
 trap 'rm -rf "$HOME"' EXIT
 export FAKE="$HOME/fake" FACTS_RETRY_SECONDS=0 PATH="$HOME/bin:$PATH"
 mkdir -p "$FAKE" "$HOME/bin"
@@ -63,13 +64,16 @@ origin="$HOME/origin.git"; repo="$HOME/repo"
 git init -q --bare "$origin"
 git init -q -b main "$repo" && cd "$repo"
 git remote add origin "$origin"
-git commit -q --allow-empty -m "start (#1)"
+mkdir -p docs/agents
+printf '%s\n' '- facts: Tests = run: printf "chromium {head}"' '- facts: Perf = file: perf.md' \
+  '- facts: Broken = run: sh -c "exit 3"' '- facts: Runs = run: sh -c "echo x >> .runs && wc -l < .runs | tr -d \" \""' \
+  '- facts: Missing = run: no-such-command-here' '- facts: Outside = file: ../outside.md' > docs/agents/pr-loop.md
+git add docs && git commit -q -m "start (#1)"
 git push -q origin main
 git switch -q -c feat/x
-mkdir -p docs/agents
-printf '%s\n' '- pass: standards' '- pass: spec, reads the PR body' '- facts: Tests = run: printf "chromium {head}"' '- facts: Perf = file: perf.md' \
-  '- facts: Broken = run: exit 3' '- facts: Runs = run: echo x >> .runs && wc -l < .runs | tr -d " "' > docs/agents/pr-loop.md
-git add docs && git commit -q -m "branch work"
+echo '- facts: Token = run: printf leaked-from-the-head' >> docs/agents/pr-loop.md
+git commit -q -am "branch work"
+echo "secret-outside" > "$HOME/outside.md"
 git switch -q main
 git commit -q --allow-empty -m "tighten the budget (#2)"
 git commit -q --allow-empty -m "Merge pull request #3 from o/side" -m "Name the cards by their owner"
@@ -80,6 +84,7 @@ head=$(git rev-parse HEAD)
 echo "$head" > "$FAKE/head"
 echo "| bytes | 198,603 |" > perf.md
 "$D/log.sh" --pass standards "$head" clean
+"$D/log.sh" --pass codexloop "$head" clean
 printf '## Summary\n\nDoes the thing.\n' > "$FAKE/body"
 "$D/log.sh" --pass spec "$head" clean "$FAKE/body"
 
@@ -93,7 +98,14 @@ check "lists the PRs a base merge brought in" "$(printf '%s\n' "$block" | grep -
 check "counts commits naming no PR" "$(has '- 1 commit naming no PR')" "1"
 check "runs a declared command with the head filled in" "$(has "chromium $head")" "1"
 check "reads a declared file" "$(has '| bytes | 198,603 |')" "1"
-check "a failing command says so" "$(has '_`exit 3` failed with exit 3')" "1"
+check "a failing command says so" "$(has '_`sh -c "exit 3"` failed with exit 3')" "1"
+check "a command missing on this machine says so" "$(has '_`no-such-command-here` could not run: ')" "1"
+check "a facts line only the PR's head declares is not run" "$(has 'leaked-from-the-head') $(has '**Token**')" "0 0"
+check "a path outside the checkout is refused" "$(has 'secret-outside') $(has '_`../outside.md` is outside the checkout._')" "0 1"
+rm perf.md && ln -s "$HOME/outside.md" perf.md
+linked=$(python3 "$D/facts.py" 7 --dry-run)
+check "a file that links outside the checkout is refused" "$(printf '%s\n' "$linked" | grep -c 'secret-outside') $(printf '%s\n' "$linked" | grep -cF '_`perf.md` is outside the checkout._')" "0 1"
+rm perf.md && echo "| bytes | 198,603 |" > perf.md
 
 printf '## Summary\n\nDoes the thing.\n\n<!-- Macroscope'"'"'s pull request summary starts here -->\nmacroscope\n<!-- Macroscope'"'"'s pull request summary ends here -->\n' > "$FAKE/body"
 python3 "$D/facts.py" 7 >/dev/null
@@ -115,6 +127,10 @@ printf '## Summary\n\nDoes the thing.\n' > "$FAKE/stale"
 echo 1 > "$FAKE/clobbers"
 check "a record-only refresh outruns a bot that drops the block" "$(python3 "$D/facts.py" 7 --record-only)" "review record refreshed on PR #7 for ${head:0:8} after 2 writes"
 check "and puts the same facts back" "$(sed -n '/pr-facts:start/,/pr-facts:record:start/p' "$FAKE/body")" "$facts_before"
+sed 's/201,000/205,000/' "$FAKE/body" > "$FAKE/stale"; echo 1 > "$FAKE/swap_on_read"
+python3 "$D/facts.py" 7 --record-only >/dev/null
+check "a record-only refresh describes the facts it keeps, when another writer changed them meanwhile" "$(sed -n '/pr-facts:record:start/,/pr-facts:record:end/p' "$FAKE/body" | grep -c 'STALE BODY') $("$D/log.sh" --check "$head" 7 | tail -1)" "1 Not clean on ${head:0:8}: spec"
+rm -f "$FAKE/swap_on_read"
 python3 "$D/facts.py" 7 >/dev/null
 check "a full refresh reruns the measured facts, so Spec goes round again" "$("$D/log.sh" --check "$head" 7 | tail -1)" "Not clean on ${head:0:8}: spec"
 check "and the record it writes says so" "$(sed -n '/pr-facts:record:start/,/pr-facts:record:end/p' "$FAKE/body" | grep -c 'STALE BODY')" "1"
@@ -146,10 +162,11 @@ check "a record-only refresh needs a block to refresh" "$(python3 "$D/facts.py" 
 printf 'text\n<!-- pr-facts:end -->\n<!-- pr-facts:start -->\n' > "$FAKE/body"
 check "broken markers are refused, not guessed at" "$(python3 "$D/facts.py" 7 2>&1 >/dev/null | grep -c 'markers are broken')" "1"
 
-git update-ref refs/remotes/origin/decl "$head" && git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/decl
-git switch -q -c feat/early "$(git rev-list --max-parents=0 HEAD)"
-git commit -q --allow-empty -m "work begun before the declaration"
-git rev-parse HEAD > "$FAKE/head"
-check "a branch cut before the declaration gets the default branch's facts" "$(python3 "$D/facts.py" 7 --dry-run | grep -c "^chromium $(cat "$FAKE/head")")" "1"
+git switch -q -c trusted origin/main
+printf '%s\n' '- facts: Trusted = run: printf from-the-default-branch' > docs/agents/pr-loop.md
+git commit -q -am "the default branch's declaration" && git update-ref refs/remotes/origin/decl HEAD
+git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/decl && git switch -q feat/x
+trusted=$(python3 "$D/facts.py" 7 --dry-run)
+check "facts come from the default branch origin/HEAD names, not the head" "$(printf '%s\n' "$trusted" | grep -c '^from-the-default-branch$') $(printf '%s\n' "$trusted" | grep -c '^chromium ')" "1 0"
 
 exit $fail

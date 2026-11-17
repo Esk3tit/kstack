@@ -3,6 +3,7 @@
 set -euo pipefail
 L="$(cd "$(dirname "$0")" && pwd)/log.sh"
 export HOME=$(mktemp -d)
+export GIT_AUTHOR_NAME=Test GIT_AUTHOR_EMAIL=test@example.com GIT_COMMITTER_NAME=Test GIT_COMMITTER_EMAIL=test@example.com
 repo=$(mktemp -d)
 trap 'rm -rf "$HOME" "$repo"' EXIT
 cd "$repo" && git init -q && git commit -q --allow-empty -m init
@@ -81,19 +82,18 @@ check "split chain with a stray retraction, other log order" "$(RECAP_KEY=SR2 RE
 check "non-UTC RECAP_TS refused" "$(RECAP_TS=2026-01-01T00:00:00-07:00 "$L" user you yes x w none e accepted 2>/dev/null; echo $?)" "2"
 
 git switch -q -c feat/passes
-undeclared=$(git rev-parse HEAD)
-mkdir -p docs/agents
-printf '%s\n' '# PR loop' '' '## Required passes' '' '- pass: standards' '- pass: spec, reads the PR body' \
-  '- pass: fable' '- pass: codexloop' > docs/agents/pr-loop.md
-git add docs && git commit -q -m "declare the passes"
+H0=$(git rev-parse HEAD)
+git commit -q --allow-empty -m "the change"
 H1=$(git rev-parse HEAD)
 body="$HOME/body.md"
 printf '## Summary\n\nDoes the thing.\n' > "$body"
-clean_on() { for p in standards fable codexloop; do "$L" --pass "$p" "$1" clean; done; "$L" --pass spec "$1" clean "$body"; }
+clean_on() { for p in standards codexloop; do "$L" --pass "$p" "$1" clean; done; "$L" --pass spec "$1" clean "$body"; }
 verdict() { "$L" --check "$@" > "$HOME/check.out" 2>&1 && echo pass || echo "fail: $(tail -1 "$HOME/check.out")"; }
 line() { grep "^  $1 " "$HOME/check.out" | sed -E 's/^  [a-z-]+ +//'; }
+check "with nothing recorded, every required pass is missing" "$(verdict "$H1")" "fail: Not clean on ${H1:0:8}: standards spec codexloop"
 clean_on "$H1"
-check "all four clean on the head and body" "$(verdict "$H1" "$body")" "pass"
+check "all three clean on the head and body" "$(verdict "$H1" "$body")" "pass"
+check "the first line names the head and the body it checked" "$(head -1 "$HOME/check.out")" "Required passes on ${H1:0:8} (PR body $("$L" --body-hash "$body")):"
 printf '## Summary\n\nDoes the thing.  \r\n\n\n<!-- pr-facts:record:start -->\nspec clean\n<!-- pr-facts:record:end -->\n<!-- CURSOR_SUMMARY -->\nbugbot\n<!-- /CURSOR_SUMMARY -->\n' > "$HOME/bots.md"
 check "bot summaries, the review record, blank lines and spacing leave the body unchanged" "$(verdict "$H1" "$HOME/bots.md")" "pass"
 printf '## Summary\n\nDoes the thing.\n<!-- pr-facts:start -->\nchecks 9/9\n<!-- pr-facts:end -->\n' > "$HOME/facts.md"
@@ -105,68 +105,35 @@ check "a body edit after Spec" "$(verdict "$H1" "$HOME/edited.md")" "fail: Not c
 check "a body edit names why" "$(line spec)" "STALE BODY: the PR body changed after it read it"
 check "without a body the head alone is checked" "$(verdict "$H1")" "pass"
 
-git switch -q -c base "$undeclared" && git commit -q --allow-empty -m "main moved" && git switch -q feat/passes
+git switch -q -c base "$H0" && git commit -q --allow-empty -m "main moved" && git switch -q feat/passes
 git merge -q --no-edit base
 H2=$(git rev-parse HEAD)
-check "a base merge after review" "$(verdict "$H2" "$body")" "fail: Not clean on ${H2:0:8}: standards spec fable codexloop"
-check "a pass from an older head says where it ran" "$(line fable)" "MISSING: last ran on ${H1:0:8} (clean)"
+check "a base merge after review" "$(verdict "$H2" "$body")" "fail: Not clean on ${H2:0:8}: standards spec codexloop"
+check "a pass from an older head says where it ran" "$(line codexloop)" "MISSING: last ran on ${H1:0:8} (clean)"
 
+clean_on "$H2"
+"$L" --pass fable "$H2" fixed
 git commit -q --allow-empty -m "fix from Fable"
 H3=$(git rev-parse HEAD)
-"$L" --pass fable "$H2" fixed
-for p in standards codexloop; do "$L" --pass "$p" "$H3" clean; done
-"$L" --pass spec "$H3" clean "$body"
-check "a fix after Fable" "$(verdict "$H3" "$body")" "fail: Not clean on ${H3:0:8}: fable"
-check "the fixing pass is named with its verdict" "$(line fable)" "MISSING: last ran on ${H2:0:8} (fixed)"
-"$L" --pass fable "$H3" clean
-check "all four clean after the fix" "$(verdict "$H3" "$body")" "pass"
+check "a fix after Fable sends every required pass round again" "$(verdict "$H3" "$body")" "fail: Not clean on ${H3:0:8}: standards spec codexloop"
+check "a pass outside the set is listed with the head it last read" "$(line fable)" "not required; last read ${H2:0:8} (fixed)"
+clean_on "$H3"
+check "all three clean after the fix, Fable not rerun" "$(verdict "$H3" "$body")" "pass"
 "$L" --pass standards "$H3" fixed
 check "a later fixed verdict on the same head reopens the pass" "$(verdict "$H3" "$body")" "fail: Not clean on ${H3:0:8}: standards"
-"$L" --pass spec "$H2" clean
 "$L" --pass spec "$H3" clean
 "$L" --pass standards "$H3" clean
 check "a body-reading pass that read no body" "$(verdict "$H3" "$body" >/dev/null; line spec)" "STALE BODY: it read no PR body"
-check "with no default branch to read, an undeclared head is refused" "$("$L" --check "$undeclared" 2>&1 >/dev/null; echo $?)" "log.sh: no docs/agents/pr-loop.md at ${undeclared:0:8} and no default branch to read one from; run: git remote set-head origin -a
-2"
-git update-ref refs/remotes/origin/main "$undeclared"
-check "no declaration lists what ran" "$(verdict "$undeclared" "$body")" "pass"
-check "no declaration says where it looked" "$(head -1 "$HOME/check.out")" "No required passes declared (docs/agents/pr-loop.md at ${undeclared:0:8} or on origin/main)."
-check "and lists each pass's latest record, wherever it ran" "$(sed -n 3p "$HOME/check.out")" "Latest per pass: standards clean on ${H3:0:8}, fable clean on ${H3:0:8}, codexloop clean on ${H3:0:8}, spec clean on ${H3:0:8}"
-"$L" --pass fable "$undeclared" not-reviewed
-check "an undeclared repo's not-reviewed record says when it was made" "$("$L" --check "$undeclared" | sed -n 2p)" "Recorded on ${undeclared:0:8}: fable not-reviewed (recorded $(tail -1 "$(dirname "$("$L" --path)")/reviews.tsv" | cut -f1))"
-git update-ref refs/remotes/origin/main "$H1"
-check "a branch cut before the declaration answers to origin/main's, with no origin/HEAD" "$(verdict "$undeclared" "$body"; head -1 "$HOME/check.out")" "fail: Not clean on ${undeclared:0:8}: standards spec codexloop fable
-Required passes on ${undeclared:0:8} (docs/agents/pr-loop.md on origin/main, PR body $("$L" --body-hash "$body")):"
-git update-ref refs/remotes/origin/trunk "$H1" && git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/trunk && git update-ref -d refs/remotes/origin/main
-check "origin/HEAD names the default branch when set" "$("$L" --check "$undeclared" 2>&1 | head -1 | grep -c 'pr-loop.md on origin/trunk,')" "1"
-git update-ref refs/remotes/origin/main "$H1" && git symbolic-ref refs/remotes/origin/HEAD refs/remotes/origin/gone
-check "an origin/HEAD naming a deleted branch falls through to origin/main" "$("$L" --check "$undeclared" 2>&1 | head -1 | grep -c 'pr-loop.md on origin/main,')" "1"
-git symbolic-ref --delete refs/remotes/origin/HEAD && git update-ref -d refs/remotes/origin/trunk && git update-ref -d refs/remotes/origin/main
 "$L" --pass spec "$H3" clean "$body"
-"$L" --pass fable "$H3" not-reviewed
+"$L" --pass codexloop "$H3" not-reviewed
 check "a pass recorded not-reviewed on the head exits 3" "$("$L" --check "$H3" "$body" >/dev/null 2>&1; echo $?)" "3"
-check "and names the pass and when it was recorded" "$(verdict "$H3" "$body"; line fable)" "fail: Not reviewed on ${H3:0:8}: fable
+check "and names the pass and when it was recorded" "$(verdict "$H3" "$body"; line codexloop)" "fail: Not reviewed on ${H3:0:8}: codexloop
 NOT REVIEWED on this head (recorded $(tail -1 "$(dirname "$("$L" --path)")/reviews.tsv" | cut -f1))"
 "$L" --pass standards "$H3" fixed
 check "another pass still open makes it exit 1" "$("$L" --check "$H3" "$body" >/dev/null 2>&1; echo $?)" "1"
 "$L" --pass standards "$H3" clean
-"$L" --pass fable "$H3" clean
+"$L" --pass codexloop "$H3" clean
 check "a bad verdict is refused" "$("$L" --pass fable "$H3" approved 2>/dev/null; echo $?)" "2"
-git switch -q -c feat/malformed
-printf '%s\n' '- pass: standards' '- pass: fable-5.2' > docs/agents/pr-loop.md
-git commit -q -am "a pass line the check cannot read"
-check "an unreadable pass line is refused, not dropped" "$("$L" --check "$(git rev-parse HEAD)" 2>&1 >/dev/null; echo $?)" "log.sh: unreadable pass line in docs/agents/pr-loop.md: - pass: fable-5.2
-2"
-printf '%s\n' '- pass: standards' '  - pass: fable' > docs/agents/pr-loop.md
-git commit -q -am "an indented pass line"
-check "an indented pass line is refused, not dropped" "$("$L" --check "$(git rev-parse HEAD)" >/dev/null 2>&1; echo $?)" "2"
-printf '%s\n' '- pass: standards' '- pass: spec, reads the PR bodyt' > docs/agents/pr-loop.md
-git commit -q -am "a body suffix with a stray letter"
-check "a malformed body suffix is refused" "$("$L" --check "$(git rev-parse HEAD)" >/dev/null 2>&1; echo $?)" "2"
-printf -- '- pass: standards\n- pass: spec, reads the PR body\t\n' > docs/agents/pr-loop.md
-git commit -q -am "a body-reading pass with a trailing tab"
-check "a trailing tab is read as space" "$("$L" --check "$(git rev-parse HEAD)" 2>&1 | grep -c '^  spec ')" "1"
-git switch -q feat/passes
 check "an unknown head is refused" "$("$L" --check deadbeef 2>/dev/null; echo $?)" "2"
 
 mkdir -p "$HOME/bin"
@@ -221,5 +188,17 @@ finding "F2.1 on feat/other: unrelated finding" "another branch's" "accepted, te
 finding "F3.1 on feat/other: another branch's rejection" "not ours" rejected
 finding "F2.1 on feat/other: a regression on feat/passes: same ID" "another branch's, naming ours" "accepted, tests green"
 check "rejected findings keep their IDs across logs, and a reopened one leaves" "$("$L" --rejected)" "- F2.1 on feat/passes: title says undimmed (wording only)"
+
+git switch -q -c feat/tie && git commit -q --allow-empty -m tie && Ht=$(git rev-parse HEAD)
+"$L" --bind TIE1 >/dev/null && "$L" --bind TIE2 >/dev/null
+RECAP_TS=2026-01-02T00:00:00Z "$L" --pass standards "$Ht" clean
+"$L" --bind TIE1 >/dev/null
+RECAP_TS=2026-01-02T00:00:00Z "$L" --pass standards "$Ht" fixed
+check "two logs' different verdicts in one second are not certified" "$(verdict "$Ht" >/dev/null; line standards)" "CONFLICT: two logs recorded different verdicts in the same second (2026-01-02T00:00:00Z)"
+RECAP_TS=2026-01-02T00:00:01Z "$L" --pass standards "$Ht" fixed
+check "a later record settles the tie" "$(verdict "$Ht" >/dev/null; line standards)" "NOT CLEAN: fixed on this head"
+RECAP_TS=2026-01-02T00:00:02Z "$L" --pass standards "$Ht" clean
+RECAP_TS=2026-01-02T00:00:02Z "$L" --pass standards "$Ht" fixed
+check "one log's rows in one second keep their write order" "$(verdict "$Ht" >/dev/null; line standards)" "NOT CLEAN: fixed on this head"
 
 exit $fail

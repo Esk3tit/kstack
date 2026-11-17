@@ -8,15 +8,15 @@
 #                    a dispatched round has no round or dropped row
 #   log.sh --rejected  print this branch's /codexloop findings whose latest row rejects them, one "- " line each
 #   log.sh --pass <pass> <head> <clean|fixed|not-reviewed> [<PR body file it read>]  record a review pass
-#   log.sh --check <head> [<PR number | body file>]  exit 1, naming each, unless every required pass is clean
-#                    there (or when a PR number's head is another commit); exit 3 when the only passes left are recorded
-#                    not-reviewed on it; exit 2 when it cannot run
+#   log.sh --check <head> [<PR number | body file>]  check the passes every PR needs (standards, spec against
+#                    the PR body, codexloop): exit 1, naming each, unless all are clean there (or when a PR number's
+#                    head is another commit); exit 3 when the only ones left are recorded not-reviewed on it; exit 2
+#                    when it cannot run. Other passes, such as fable, are listed with the head they last read.
 #   log.sh --body-hash <file>  print the hash --pass and --check keep for a PR body
 set -euo pipefail
 
 HEADER=$'ts\trepo\tphase\tsource\tasked\tdecision\twhy\tprod_delta\tevidence\tresult'
 PASS_HEADER=$'ts\trepo\tbranch\tpass\thead\tverdict\tbody'
-DECLARATION=docs/agents/pr-loop.md
 
 die() { echo "log.sh: $*" >&2; exit 2; }
 
@@ -96,15 +96,6 @@ branch_rows() {
     f="$HOME/.local/share/recap/$k/decisions.tsv"
     if [ -f "$f" ]; then tail -n +2 "$f"; fi
   done | sort -s -t$'\t' -k1,1
-}
-
-# The remote's default branch: origin/HEAD when it names a branch that exists, else origin/main, else origin/master.
-default_branch() {
-  local b
-  for b in "$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null)" origin/main origin/master; do
-    if [ -n "$b" ] && git rev-parse --verify --quiet "$b^{commit}" >/dev/null; then echo "$b"; return; fi
-  done
-  return 1
 }
 
 commit_of() { git rev-parse --verify --quiet "$1^{commit}" || die "not a commit in this repo: $1"; }
@@ -193,56 +184,46 @@ case "${1:-}" in
       fi
       current=$(body_hash "$body_file")
     fi
-    # A branch cut before its repo declared passes still answers to the default branch's declaration.
-    where="$DECLARATION at $short"
-    if ! declaration=$(git show "$head:$DECLARATION" 2>/dev/null); then
-      default=$(default_branch) \
-        || die "no $DECLARATION at $short and no default branch to read one from; run: git remote set-head origin -a"
-      where="$DECLARATION at $short or on $default"
-      if declaration=$(git show "$default:$DECLARATION" 2>/dev/null); then where="$DECLARATION on $default"; else declaration=""; fi
-    fi
-    declared=$(printf '%s\n' "$declaration" | awk '
-      /^[ \t]*- pass:/ && !/^- pass: [a-z0-9-]+(, reads the PR body)?[ \t]*$/ { bad = $0; exit }
-      /^- pass:/ { sub(/,$/, "", $3); out = out (out == "" ? "" : ";") $3 " " ($4 == "reads") }
-      END { if (bad != "") { print bad; exit 3 } printf "%s", out }') \
-      || die "unreadable pass line in $DECLARATION: $declared"
-    records=$(branch_keys | while read -r k; do
+    # Every PR answers to the same passes; spec also reads the PR body.
+    required="standards 0;spec 1;codexloop 0"
+    # Each record carries its log's place in branch_keys: rows of one log keep their write order within
+    # a second, but two logs' rows in one second have no order, so a disagreement there is not certified.
+    records=$(branch_keys | awk '{print NR "\t" $0}' | while IFS=$'\t' read -r i k; do
       f="$HOME/.local/share/recap/$k/reviews.tsv"
-      if [ -f "$f" ]; then tail -n +2 "$f"; fi
+      if [ -f "$f" ]; then tail -n +2 "$f" | awk -v i="$i" '{print $0 "\t" i}'; fi
     done | sort -s -t$'\t' -k1,1)
     printf '%s\n' "$records" | awk -F'\t' -v repo="$repo" -v head="$head" -v short="$short" -v cur="$current" \
-      -v declared="$declared" -v where="$where" '
+      -v required="$required" '
       $2 == repo && NF >= 7 {
         p = $4
         if (!(p in lasthead)) every[++e] = p
         lasthead[p] = $5; lastverdict[p] = $6
-        if ($5 == head) { verdict[p] = $6; body[p] = $7; when[p] = $1; if (!(p in seen)) { seen[p] = 1; ran[++r] = p } }
+        if ($5 == head) {
+          if ((p in when) && when[p] == $1 && src[p] != $8 && (verdict[p] != $6 || body[p] != $7)) tie[p] = 1
+          else if (!(p in when) || when[p] != $1) tie[p] = 0
+          verdict[p] = $6; body[p] = $7; when[p] = $1; src[p] = $8
+        }
       }
       END {
-        n = split(declared, lines, ";")
-        if (n == 0) {
-          printf "No required passes declared (%s).\n", where
-          s = ""; for (i = 1; i <= r; i++) s = s (i > 1 ? ", " : "") ran[i] " " verdict[ran[i]] (verdict[ran[i]] == "not-reviewed" ? " (recorded " when[ran[i]] ")" : "")
-          printf "Recorded on %s: %s\n", short, (s == "" ? "none" : s)
-          s = ""; for (i = 1; i <= e; i++) s = s (i > 1 ? ", " : "") every[i] " " lastverdict[every[i]] " on " substr(lasthead[every[i]], 1, 8)
-          printf "Latest per pass: %s\n", (s == "" ? "none" : s)
-          exit 0
-        }
-        printf "Required passes on %s (%s, PR body %s):\n", short, where, (cur == "" ? "not checked" : cur)
+        n = split(required, lines, ";")
+        printf "Required passes on %s (PR body %s):\n", short, (cur == "" ? "not checked" : cur)
         for (i = 1; i <= n; i++) {
           split(lines[i], f, " "); p = f[1]; reads = f[2]
           if (!(p in verdict))
             state = (p in lasthead) ? "MISSING: last ran on " substr(lasthead[p], 1, 8) " (" lastverdict[p] ")" : "MISSING: never recorded"
+          else if (tie[p]) state = "CONFLICT: two logs recorded different verdicts in the same second (" when[p] ")"
           else if (verdict[p] == "not-reviewed") state = "NOT REVIEWED on this head (recorded " when[p] ")"
           else if (verdict[p] != "clean") state = "NOT CLEAN: " verdict[p] " on this head"
           else if (reads && cur == "") state = "clean (PR body not checked)"
           else if (reads && body[p] == "-") state = "STALE BODY: it read no PR body"
           else if (reads && body[p] != cur) state = "STALE BODY: the PR body changed after it read it"
           else state = "clean"
-          printf "  %-10s %s\n", p, state
+          printf "  %-10s %s\n", p, state; req[p] = 1
           if (state ~ /^NOT REVIEWED/) unreviewed = unreviewed " " p
           else if (state !~ /^clean/) bad = bad " " p
         }
+        for (i = 1; i <= e; i++) if (!(every[i] in req))
+          printf "  %-10s not required; last read %s (%s)\n", every[i], substr(lasthead[every[i]], 1, 8), lastverdict[every[i]]
         if (bad != "") { printf "Not clean on %s:%s%s\n", short, bad, unreviewed; exit 1 }
         if (unreviewed != "") { printf "Not reviewed on %s:%s\n", short, unreviewed; exit 3 }
         printf "Every required pass is clean on %s%s.\n", short, (cur == "" ? "" : " and its PR body")

@@ -56,7 +56,7 @@ People who work on the code see differences too. Write those with a `dev: ` pref
 - a new build rule: `dev: the build refuses a server module imported from client code; master built it`;
 - a test path no longer exercised: `dev: the Safari folder-stack case no longer runs on PRs; master ran it on each one`;
 - a new coding rule: `dev: reviewers enforce colours from tokens only; master let raw hex through`;
-- a changed agent instruction: `dev: /pr-loop runs Fable on every head it hands back in a repo that requires it; master ran at most one Fable pass`.
+- a changed agent instruction: `dev: /pr-loop reruns Standards, Spec and Codex on every head it hands back; master reran only Codex after a bot fix`.
 
 ```
 ts	repo	phase	source	asked	decision	why	prod_delta	evidence	result
@@ -68,7 +68,7 @@ ts	repo	phase	source	asked	decision	why	prod_delta	evidence	result
 
 ## Review passes
 
-A **review pass** is one run of a reviewer a repo can require before merge (`~/.claude/skills/pr-loop/PASSES.md`). Record each one as it lands:
+A **review pass** is one run of a reviewer `/pr-loop` runs before merge: `standards`, `spec`, `codexloop`, and `fable` when a round warrants it. Record each one as it lands:
 
 ```bash
 ~/.claude/skills/recap-pr/log.sh --pass <pass> <head> <verdict> [<PR body file it read>]
@@ -76,4 +76,4 @@ A **review pass** is one run of a reviewer a repo can require before merge (`~/.
 
 The verdict is `clean` when the pass ran on that head and its findings changed nothing (none, each rejected with a logged reason, or each left `open` as a question for the user), `fixed` when they changed the head or the PR body, and `not-reviewed` when it did not run or did not finish. Give the body file for a pass that read the PR description: the row keeps a hash of the body's own text, leaving out blank lines, the review bots' summaries (the blocks `body_hash` in `log.sh` lists) and the review record inside `facts.py`'s block. A bot rewriting its own summary, or a refreshed record, never stales a pass; a changed check result or figure in the facts block does, and so does a bot writing back an older copy of the author's text. Each row in `reviews.tsv` holds `ts repo branch pass head verdict body`.
 
-`log.sh --check <head> [<PR number | body file>]` prints one line per pass the declaration requires (the head's `docs/agents/pr-loop.md`, or the default branch's when the head has none), and exits 1, naming each, unless every one is `clean` on that exact head and, when given the PR or a body file, a pass that reads the body is clean on the current body; it exits 3 when the only passes left are recorded `not-reviewed` there, and exits 2 when it cannot run, for example on a `- pass:` line it cannot read, a failed `gh` call, or a head with no declaration and no default branch (origin/HEAD, origin/main, origin/master) to read one from. A PR number reads the live body and confirms the PR's head is the one given; another head exits 1, naming both. With no declaration it lists what ran on the head and each pass's latest record, and exits 0.
+`log.sh --check <head> [<PR number | body file>]` prints one line per pass every PR needs (`standards`, `spec`, `codexloop`) and exits 1, naming each, unless every one is `clean` on that exact head and, when given the PR or a body file, Spec is clean on the current body; it exits 3 when the only passes left are recorded `not-reviewed` there, and exits 2 when it cannot run (a bad argument, a failed `gh` call). Two logs that record different verdicts for one pass in the same second leave it open as a `CONFLICT`. A PR number reads the live body and confirms the PR's head is the one given; another head exits 1, naming both. Any other pass, such as `fable`, is listed with the head it last read and never gates.

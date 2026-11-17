@@ -8,6 +8,6 @@ Read this before delegating implementation, evaluation or verification. Put thes
 - One owner for shared services and database tests. Children coordinate with that owner instead of independently resetting or testing the same database.
 - The return contract: changed paths, revision or patch, collected/executed checks, retained resources and unresolved findings. Account for how isolated edits reach the parent before calling them fixed.
 
-A child follows its own authorized brief. A completed turn can still have live jobs; carry those identities into close-out.
+Note each child's job identities as it starts: a completed turn can still have live jobs, and close-out accounts for them.
 
 A wt-records cloud machine's threads see this Mac's wt-records memory only through `~/.local/share/research/agent-cloud-2026-11-05/pool/pool-memory-sync.sh`: push it before launching threads there (`pool-memory-sync.sh push wt-N`), and pull it back when they finish, before pausing the machine (`pool-memory-sync.sh pull wt-N`), merging any `<name>.from-wt-N.md` note it leaves into its original and deleting the copy. A lesson every agent needs goes into the repo's docs instead, where every machine and thread reads it.

@@ -6,10 +6,12 @@
 Run it in the PR's checkout. The block holds the head's check runs and commit statuses with their
 results, the PRs a base merge brought in since the branch point, each section the repo declares in
 docs/agents/pr-loop.md, and, between <!-- pr-facts:record:start/end -->, the review passes recorded
-on the head (log.sh --check) and the time it was written. The declared sections:
+on the head (log.sh --check) and the time it was written. Sections are read from the default branch's
+declaration only, never the PR's, because their commands run on this machine with its credentials:
 
-    - facts: <title> = run: <shell command>   (its stdout, as Markdown; {pr}, {head}, {base} filled in)
-    - facts: <title> = file: <path from the repo root>
+    - facts: <title> = run: <command and arguments>   (run without a shell, its stdout as Markdown;
+      {pr}, {head}, {base} filled in; it still runs the checkout's code, as the PR's tests do)
+    - facts: <title> = file: <path from the repo root>   (refused if it resolves outside the checkout)
 
 It reads the live body, replaces only its own block (inserting it before the bots' summaries the first
 time), writes, and reads the body back; a bot that rewrites the body from an older copy is outrun by
@@ -23,6 +25,7 @@ import datetime
 import json
 import os
 import re
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -134,11 +137,8 @@ def brought_in_section(base, head):
     return lines
 
 
-def declaration(head):
-    """The head's declaration, or the default branch's when the head predates it, as log.sh --check reads it."""
-    shown = run(["git", "show", f"{head}:{DECLARATION}"], check=False)
-    if shown.returncode == 0:
-        return shown.stdout
+def declaration():
+    """The default branch's declaration: a PR can't add or change the commands facts.py runs."""
     candidates = [run(["git", "symbolic-ref", "--quiet", "--short", "refs/remotes/origin/HEAD"], check=False).stdout.strip(),
                   "origin/main", "origin/master"]
     for default in filter(None, candidates):
@@ -150,20 +150,28 @@ def declaration(head):
 
 def declared_sections(pr, head, base, top):
     lines = []
-    for raw in declaration(head).splitlines():
+    for raw in declaration().splitlines():
         match = FACT_LINE.match(raw)
         if not match:
             continue
         title, kind, source = match["title"], match["kind"], match["source"]
         if kind == "run":
-            command = source.replace("{pr}", str(pr)).replace("{head}", head).replace("{base}", base)
-            result = subprocess.run(command, shell=True, cwd=top, capture_output=True, text=True)
-            error = cell(result.stderr.strip()[-300:])
-            text = result.stdout.strip() if result.returncode == 0 else (
-                f"_`{source}` failed with exit {result.returncode}{': ' + error if error else ''}_")
+            try:
+                argv = [arg.replace("{pr}", str(pr)).replace("{head}", head).replace("{base}", base)
+                        for arg in shlex.split(source)]
+                result = subprocess.run(argv, cwd=top, capture_output=True, text=True)
+            except (ValueError, OSError) as problem:
+                text = f"_`{source}` could not run: {cell(str(problem))}_"
+            else:
+                error = cell(result.stderr.strip()[-300:])
+                text = result.stdout.strip() if result.returncode == 0 else (
+                    f"_`{source}` failed with exit {result.returncode}{': ' + error if error else ''}_")
         else:
-            path = Path(top, source)
-            text = path.read_text().strip() if path.is_file() else f"_`{source}` does not exist._"
+            path = Path(top, source).resolve()
+            if not path.is_relative_to(Path(top).resolve()):
+                text = f"_`{source}` is outside the checkout._"
+            else:
+                text = path.read_text().strip() if path.is_file() else f"_`{source}` does not exist._"
         lines += ["", f"**{title}** (`{source}`):", "", text or "_empty_"]
     return lines
 
@@ -273,8 +281,9 @@ def main(argv):
     if run(["git", "cat-file", "-e", f"{head}^{{commit}}"], check=False).returncode != 0:
         git("fetch", "--quiet", "origin", head)
     if "--record-only" in argv:
-        new_record = record(pr, head)
-        attempts, _, _ = write(slug, pr, head, lambda live: with_record(own_block(live), new_record))
+        # The record reads the body write() keeps; its own text is guarded and the record region is not
+        # hashed, so the body it publishes, retries included, hashes the same.
+        attempts, _, _ = write(slug, pr, head, lambda live: with_record(own_block(live), record(pr, head, live)))
         print(f"review record refreshed on PR #{pr} for {head[:8]}" + (f" after {attempts} writes" if attempts > 1 else ""))
         return
     block = build_block(pr, slug, head, base, top)

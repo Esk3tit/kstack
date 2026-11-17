@@ -94,7 +94,7 @@ patch -p1 -d ~/.agents/skills/<skill> < ~/.claude/skills/update-mattpocock-skill
 
 `patches/13-pr-facts-block-live-body.patch`, added 2026-11-16. Apply after patch 04; its context lines come from it.
 
-- **What it does:** the template carries an "On the head" section holding the markers `recap-pr/facts.py` fills from its sources, and the body cites those figures rather than retyping them. Any edit to a PR description starts from the live body, keeps every other section (bots' included), and is read back. The behavior section lists developer- and agent-facing changes (`dev:` rows) apart. `/pr-loop` and `/recap-pr` depend on this patch.
+- **What it does:** the template carries a "Facts" section holding the markers `recap-pr/facts.py` fills from its sources, and the body cites those figures rather than retyping them. Any edit to a PR description starts from the live body, keeps every other section (bots' included), and is read back. The behavior section lists developer- and agent-facing changes (`dev:` rows) apart. `/pr-loop` and `/recap-pr` depend on this patch.
 - **Why:** hand-typed check counts, test totals, byte figures and lists of PRs a base merge brought in drifted in every PR of the tech-tree work, and one edit deleted Macroscope's summary.
 
 ## 14 · retro · start from the session summary
