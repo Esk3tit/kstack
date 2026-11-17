@@ -184,21 +184,20 @@ case "${1:-}" in
       fi
       current=$(body_hash "$body_file")
     fi
-    # Every PR answers to the same passes; spec also reads the PR body.
-    required="standards spec codexloop"
-    # Each record carries its log's place in branch_keys: rows of one log keep their write order within
-    # a second, but two logs' rows in one second have no order, so logs whose last rows there disagree
-    # leave the pass in conflict.
+    required="standards spec codexloop" reads_body=spec
+    # Rows carry their log's place in branch_keys: one log's rows keep write order within a second,
+    # two logs' do not, so logs whose last rows in that second disagree leave the pass in conflict.
     records=$(branch_keys | awk '{print NR "\t" $0}' | while IFS=$'\t' read -r i k; do
       f="$HOME/.local/share/recap/$k/reviews.tsv"
       if [ -f "$f" ]; then tail -n +2 "$f" | awk -v i="$i" '{print $0 "\t" i}'; fi
     done | sort -s -t$'\t' -k1,1)
     printf '%s\n' "$records" | awk -F'\t' -v repo="$repo" -v head="$head" -v short="$short" -v cur="$current" \
-      -v required="$required" '
+      -v required="$required" -v reads_body="$reads_body" '
       $2 == repo && NF >= 7 {
         p = $4
         if (!(p in lasthead)) every[++e] = p
         lasthead[p] = $5; lastverdict[p] = $6
+        if ($6 != "not-reviewed") { readhead[p] = $5; readverdict[p] = $6 }
         if ($5 == head) {
           if (when[p] != $1) { when[p] = $1; logs[p] = "" }
           if (index(logs[p] " ", " " $8 " ") == 0) logs[p] = logs[p] " " $8
@@ -209,7 +208,7 @@ case "${1:-}" in
         n = split(required, names, " ")
         printf "Required passes on %s (PR body %s):\n", short, (cur == "" ? "not checked" : cur)
         for (i = 1; i <= n; i++) {
-          p = names[i]; reads = (p == "spec"); conflict = 0
+          p = names[i]; reads = (p == reads_body); conflict = 0
           k = split(logs[p], at, " "); for (j = 2; j <= k; j++) if (lastrow[p, at[j]] != lastrow[p, at[1]]) conflict = 1
           if (!(p in verdict))
             state = (p in lasthead) ? "MISSING: last ran on " substr(lasthead[p], 1, 8) " (" lastverdict[p] ")" : "MISSING: never recorded"
@@ -224,8 +223,11 @@ case "${1:-}" in
           if (state ~ /^NOT REVIEWED/) unreviewed = unreviewed " " p
           else if (state !~ /^clean/) bad = bad " " p
         }
-        for (i = 1; i <= e; i++) if (!(every[i] in req))
-          printf "  %-10s not required; last read %s (%s)\n", every[i], substr(lasthead[every[i]], 1, 8), lastverdict[every[i]]
+        for (i = 1; i <= e; i++) if (!((p = every[i]) in req)) {
+          s = (p in readhead) ? "last read " substr(readhead[p], 1, 8) " (" readverdict[p] ")" : "never read a head"
+          if (lastverdict[p] == "not-reviewed") s = s "; not-reviewed on " substr(lasthead[p], 1, 8)
+          printf "  %-10s not required; %s\n", p, s
+        }
         if (bad != "") { printf "Not clean on %s:%s%s\n", short, bad, unreviewed; exit 1 }
         if (unreviewed != "") { printf "Not reviewed on %s:%s\n", short, unreviewed; exit 3 }
         printf "Every required pass is clean on %s%s.\n", short, (cur == "" ? "" : " and its PR body")

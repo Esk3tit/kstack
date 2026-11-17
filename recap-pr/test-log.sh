@@ -117,6 +117,8 @@ git commit -q --allow-empty -m "fix from Fable"
 H3=$(git rev-parse HEAD)
 check "a fix after Fable sends every required pass round again" "$(verdict "$H3" "$body")" "fail: Not clean on ${H3:0:8}: standards spec codexloop"
 check "a pass outside the set is listed with the head it last read" "$(line fable)" "not required; last read ${H2:0:8} (fixed)"
+"$L" --pass fable "$H3" not-reviewed
+check "a later record that read nothing keeps the head it last read" "$(verdict "$H3" "$body" >/dev/null; line fable)" "not required; last read ${H2:0:8} (fixed); not-reviewed on ${H3:0:8}"
 clean_on "$H3"
 check "all three clean after the fix, Fable not rerun" "$(verdict "$H3" "$body")" "pass"
 "$L" --pass standards "$H3" fixed
@@ -190,26 +192,27 @@ finding "F2.1 on feat/other: a regression on feat/passes: same ID" "another bran
 check "rejected findings keep their IDs across logs, and a reopened one leaves" "$("$L" --rejected)" "- F2.1 on feat/passes: title says undimmed (wording only)"
 
 git switch -q -c feat/tie && git commit -q --allow-empty -m tie && Ht=$(git rev-parse HEAD)
+at() { RECAP_TS="2026-01-02T00:00:0$1Z" "$L" --pass standards "$Ht" "$2"; }
 "$L" --bind TIE1 >/dev/null && "$L" --bind TIE2 >/dev/null
-RECAP_TS=2026-01-02T00:00:00Z "$L" --pass standards "$Ht" clean
+at 0 clean
 "$L" --bind TIE1 >/dev/null
-RECAP_TS=2026-01-02T00:00:00Z "$L" --pass standards "$Ht" fixed
+at 0 fixed
 check "two logs' different verdicts in one second are not certified" "$(verdict "$Ht" >/dev/null; line standards)" "CONFLICT: two logs recorded different verdicts in the same second (2026-01-02T00:00:00Z)"
-RECAP_TS=2026-01-02T00:00:01Z "$L" --pass standards "$Ht" fixed
+at 1 fixed
 check "a later record settles the tie" "$(verdict "$Ht" >/dev/null; line standards)" "NOT CLEAN: fixed on this head"
-RECAP_TS=2026-01-02T00:00:02Z "$L" --pass standards "$Ht" clean
-RECAP_TS=2026-01-02T00:00:02Z "$L" --pass standards "$Ht" fixed
+at 2 clean
+at 2 fixed
 check "one log's rows in one second keep their write order" "$(verdict "$Ht" >/dev/null; line standards)" "NOT CLEAN: fixed on this head"
 "$L" --bind TIE2 >/dev/null
-RECAP_TS=2026-01-02T00:00:03Z "$L" --pass standards "$Ht" fixed
-RECAP_TS=2026-01-02T00:00:03Z "$L" --pass standards "$Ht" clean
+at 3 fixed
+at 3 clean
 "$L" --bind TIE1 >/dev/null
-RECAP_TS=2026-01-02T00:00:03Z "$L" --pass standards "$Ht" fixed
+at 3 fixed
 check "logs whose last rows in one second disagree conflict, whatever came before" "$(verdict "$Ht" >/dev/null; line standards)" "CONFLICT: two logs recorded different verdicts in the same second (2026-01-02T00:00:03Z)"
-RECAP_TS=2026-01-02T00:00:04Z "$L" --pass standards "$Ht" clean
+at 4 clean
 "$L" --bind TIE2 >/dev/null
-RECAP_TS=2026-01-02T00:00:04Z "$L" --pass standards "$Ht" fixed
-RECAP_TS=2026-01-02T00:00:04Z "$L" --pass standards "$Ht" clean
+at 4 fixed
+at 4 clean
 check "logs whose last rows agree are certified" "$(verdict "$Ht" >/dev/null; line standards)" "clean"
 
 exit $fail

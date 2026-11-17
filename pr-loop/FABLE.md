@@ -1,8 +1,8 @@
 # Running a Fable pass
 
-Read this when a cycle's call is to run Fable (SKILL.md, **Review cycles**), or the user approves its read of a design pause (step 2).
+Read this when the call for a cycle or a design pause (step 2) is to run Fable (SKILL.md, **Review cycles**).
 
-Run it read-only, briefed with the diff since the head it last read and the whole PR's, the settled decisions (`log.sh --pins`) and the spec's agreed prototype, and what to look for: judgement calls, taste, simpler shapes of the problem and the code, edge cases, an adversarial read. For a design pause, brief it on the cluster the pause names instead, and carry its proposal to the user unapplied.
+Run it read-only, briefed with the diff since the last head it reviewed and the whole PR's, the settled decisions (`log.sh --pins`) and the spec's agreed prototype, and what to look for: judgement calls, taste, simpler shapes of the problem and the code, edge cases, an adversarial read. For a design pause, brief it on the cluster the pause names instead, and carry its proposal to the user unapplied.
 
 - **In Claude Code** it is a subagent with `model: fable`.
 - **In Codex** it is `/Users/<you>/.codex/bin/claude-read claude-fable-5-2 "<brief>" [<extra dirs to read>]` (a copy of kstack `codex/bin/`), pointing the brief at files to Read; Codex allows only that read-only wrapper outside the sandbox, as a plain command.
