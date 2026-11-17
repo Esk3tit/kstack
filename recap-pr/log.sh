@@ -9,7 +9,8 @@
 #   log.sh --rejected  print this branch's /codexloop findings whose latest row rejects them, one "- " line each
 #   log.sh --pass <pass> <head> <clean|fixed|not-reviewed> [<PR body file it read>]  record a review pass
 #   log.sh --check <head> [<PR number | body file>]  exit 1, naming each, unless every required pass is clean
-#                    there; exit 3 when the only passes left are recorded not-reviewed on it; exit 2 when it cannot run
+#                    there (or when a PR number's head is another commit); exit 3 when the only passes left are recorded
+#                    not-reviewed on it; exit 2 when it cannot run
 #   log.sh --body-hash <file>  print the hash --pass and --check keep for a PR body
 set -euo pipefail
 

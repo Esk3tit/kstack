@@ -91,7 +91,7 @@ All user-authored, and the same files serve Claude Code and Codex. Reviews come 
 ## 3. Custom skills (mine)
 
 - **`cleanup/`**: inventory session resources, shut down authorized leftovers, preserve worktree artifacts and produce an archive verdict.
-- **`pr-loop/`**: the shared finishing workflow; `commands/pr-loop.md` is its alias. `PASSES.md` holds the rules for repos that declare required review passes. `HANDOFF.md` is the common child-brief contract, plus the dispatcher's cloud-memory sync.
+- **`pr-loop/`**: the shared finishing workflow; `commands/pr-loop.md` is its alias. `PASSES.md` holds the rules for repos that declare required review passes, and `MERGED.md` the steps after a merge. `HANDOFF.md` is the common child-brief contract, plus the dispatcher's cloud-memory sync.
 - **`update-mattpocock-skills/`** — the only supported way to update the mattpocock skills (`npx skills check -g` applies updates and wipes local edits). `PATCHES.md` lists each local patch in plain words; the skill reads upstream history for breaking changes, judges each patch against the new version (reapply, rewrite or drop), asks which to apply, then rebuilds the patch set. `/pr-loop` and the decision log depend on patches 03 (`/implement` logs decisions), 04 (`/pr` gains "Behavior changes vs master"), 12 (`/code-review` runs one axis and Spec reads the PR body) and 13 (`/pr` carries the facts block and edits the live body); on a new machine, first link the shared `learning/` module from a permanent kstack clone as shown below, then install the mattpocock skills and apply `patches/` in number order.
 
   Patches **08–10** add project learning to Matt's existing `grilling`, `implement`, and

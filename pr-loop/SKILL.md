@@ -29,7 +29,7 @@ When only CI can judge the change (a failure seen only on CI's runners, a suite 
 
 Wherever this run calls `/codexloop`, a `PAUSED` exit (its design pause) stops the run on that branch. With a Fable pass approved, brief it on the cluster as step 5 does and carry its proposal to the user unapplied. Hand back the branch, and its PR if one is open, with the design question as the open item and `Merge-ready: no: design pause`.
 
-Done when every branch has converged, or has a pass recorded `not-reviewed`, and its head is on the remote; or has stopped on a design pause or a check that could not run.
+Done when every branch has converged, or has only passes this run recorded `not-reviewed` left, and its head is on the remote; or has stopped on a design pause or a check that could not run.
 
 ## 3. Open the PRs
 
@@ -75,7 +75,7 @@ Done when each final-pass reviewer is done (**The final pass**, "It's done") and
 
 1. Follow `~/.claude/skills/recap-pr/SKILL.md`.
 2. Once CI has finished on each final head, or passed its deadline (**Waits** in `/address-pr-comments`), or at once after a FAIL from step 4, refresh its PR's facts block from its repo: `facts.py <pr>`.
-3. Run `log.sh --check <head> <pr>` in its repo. While it exits 1, or 3 naming a pass this run has not recorded `not-reviewed` on this head, run the passes it names, skipping any this run recorded `not-reviewed` on this head, and check again: a changed fact or the recap's edit reruns Spec, so Spec reads the finished description last. A pass that changes the head sends it back through steps 4 to 8, then step 9 starts again from 1 on the new head; so does a PR whose head has moved past the one checked. A stale body the run did not cause means a bot or person changed the description: compare it with `spec-body-<head>.md`, restore any lost edit as `/pr`'s **Editing the body** says, then rerun Spec. A `gh` error (exit 2) is retried once; any error then hands back `Merge-ready: no: check could not run: <its message>`.
+3. Run `log.sh --check <head> <pr>` in its repo. While it exits 1, or 3 naming a pass this run has not recorded `not-reviewed` on this head, run the passes it names, skipping any this run recorded `not-reviewed` on this head, and check again: a changed fact or the recap's edit reruns Spec, so Spec reads the finished description last. A pass that changes the head sends it back through steps 4 to 8, then step 9 starts again from 1 on the new head; so does a PR whose head is not the one checked (moved on, or missing a push). A stale body the run did not cause means a bot or person changed the description: compare it with `spec-body-<head>.md`, restore any lost edit as `/pr`'s **Editing the body** says, then rerun Spec. A `gh` error (exit 2) is retried once; any error then hands back `Merge-ready: no: check could not run: <its message>`.
 4. Refresh only the block's review record (`facts.py <pr> --record-only`), keeping the facts Spec read, and run the check a last time: its output is the one handed back. Exit 3 (only `not-reviewed` passes left) hands back `Merge-ready: no: <passes> not reviewed`; any other failure of the check goes back to 3. A `facts.py` failure at 2 or 4 goes back to 2, which rebuilds a missing block; a second one in this step hands back `Merge-ready: no: facts block not written: <its message>`.
 5. Hand back this block for each PR, every line filled from the final head:
 
@@ -95,11 +95,7 @@ Done when `recap.html` exists beside the log, every PR body's "Behavior changes 
 
 ## When the user says merged
 
-1. Use the cleanup skill to retire this run's resources, deleting its merged branches, and stop any PR watch the run started.
-2. Close what the PRs finished: each ticket whose whole scope the merged PRs delivered and the merge did not close itself, and a parent once every child is closed and nothing on its checklist is left, ticking what the merge delivered. A ticket with work left stays open, with a comment saying what remains.
-3. Check production runs the merge, following the deploy check the repo documents (`docs/deploy.md` or similar): report the deployed commit and, where the merge carries migrations, whether they applied. With no documented check, say so rather than guess.
-
-Done when the cleanup inventory is empty or names a reason for each kept resource, the finished issues are closed, and the deploy state is reported.
+Follow [MERGED.md](MERGED.md): retire the run's resources, close what the PRs finished, and report the deploy.
 
 ## Runtime handoff and close-out
 

@@ -316,7 +316,7 @@ Then post it with every path written out; like a run's post, it also puts that m
 node <your absolute home>/.claude/skills/no-mistakes-frontend/harness/post-evidence.mjs --pr <N> --repo <owner/name> --marker design-q3 --run-dir <folder> --results <folder>/results.json
 ```
 
-Cite only the captures it posted. Once the owner has chosen, remove that marker's block from the description.
+Its block's ✅ means each picture shows what it names, not a verified change. Cite only the captures it posted. Once the owner has chosen, remove that marker's block from the description as `/pr`'s **Editing the body** says.
 
 **Never commit media to the PR branch.**
 
