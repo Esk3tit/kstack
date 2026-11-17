@@ -296,8 +296,8 @@ re-run the post. The verdict is never lost.
 
 **A standalone gallery** (a before/after or a design choice for the owner, outside a verification
 run) goes through the same poster under its own `--marker`, one per question, so it never replaces a
-run's gallery or block. Its captures prove their subject as step 5 says and keep step 9's
-confidentiality. Put them in a scratch folder with a small `results.json`, each case passing when
+run's gallery or block. Its captures come from the app step 0 resolves or a prototype's own page,
+prove their subject as step 5 says, and keep step 9's confidentiality. Put them in a scratch folder with a small `results.json`, each case passing when
 its picture shows what it names:
 
 ```json
