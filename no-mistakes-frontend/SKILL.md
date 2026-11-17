@@ -313,7 +313,7 @@ its picture shows what it names:
 Then post it with every path written out; like a run's post, it also puts that marker's verdict block at the top of the PR description, which a pass that reads the description then reads too:
 
 ```bash
-node /Users/<you>/.claude/skills/no-mistakes-frontend/harness/post-evidence.mjs --pr <N> --repo <owner/name> --marker design-q3 --run-dir <folder> --results <folder>/results.json
+node <your absolute home>/.claude/skills/no-mistakes-frontend/harness/post-evidence.mjs --pr <N> --repo <owner/name> --marker design-q3 --run-dir <folder> --results <folder>/results.json
 ```
 
 Cite only the captures it posted. Once the owner has chosen, remove that marker's block from the description.
