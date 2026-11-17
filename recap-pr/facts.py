@@ -300,6 +300,9 @@ def write(slug, pr, head, make_block, first=None):
             fail(changed)
         block = make_block(live)
         updated = splice(live, block)
+        # GitHub has no conditional write, so a body that changed while the block was built is read again.
+        if live_body(pr, head) != live:
+            continue
         with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as payload:
             json.dump({"body": updated}, payload)
         try:
@@ -312,7 +315,7 @@ def write(slug, pr, head, make_block, first=None):
         if own_block(back) == block:
             return attempt, first
         time.sleep(float(os.environ.get("FACTS_RETRY_SECONDS", "5")))
-    fail(f"the body kept losing the facts block after {WRITE_ATTEMPTS} writes; a bot is rewriting it, so rerun once it settles")
+    fail(f"the body kept changing or losing the facts block over {WRITE_ATTEMPTS} attempts; a bot is rewriting it, so rerun once it settles")
 
 
 def main(argv):

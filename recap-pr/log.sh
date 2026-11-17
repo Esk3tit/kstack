@@ -172,12 +172,12 @@ case "${1:-}" in
     short=${head:0:8}
     current=""
     if [ "$#" -eq 3 ]; then
-      body_file=$(mktemp)
-      trap 'rm -f "$body_file" "$body_file.pr"' EXIT
+      body_file=$(mktemp) pr_file=$(mktemp)
+      trap 'rm -f "$body_file" "$pr_file"' EXIT
       if [[ "$3" =~ ^[0-9]+$ ]]; then
         # One request, so the body read belongs to the head it confirms.
-        gh pr view "$3" --json headRefOid,body -q '.headRefOid + "\n" + .body' > "$body_file.pr" || die "could not read PR #$3"
-        pr_head=$(head -1 "$body_file.pr"); tail -n +2 "$body_file.pr" > "$body_file"; rm -f "$body_file.pr"
+        gh pr view "$3" --json headRefOid,body -q '.headRefOid + "\n" + .body' > "$pr_file" || die "could not read PR #$3"
+        pr_head=$(head -1 "$pr_file"); tail -n +2 "$pr_file" > "$body_file"
         [ "$pr_head" = "$head" ] || { echo "PR #$3's head is ${pr_head:0:8}, not $short: check the head it will merge."; exit 1; }
       else
         [ -f "$3" ] || die "no body file: $3"

@@ -36,7 +36,14 @@ if a[:2] == ["pr", "view"]:
             open(move, "w").write(str(n))
             if n == 0:
                 open(os.path.join(fake, "head"), "w").write("f" * 40 + "\n")
-        print(json.dumps({"body": read("body"), "headRefOid": read("head").strip()}))
+        out = json.dumps({"body": read("body"), "headRefOid": read("head").strip()})
+        later = os.path.join(fake, "edit_after_read")
+        if os.path.exists(later):
+            n = int(read("edit_after_read")) - 1
+            open(later, "w").write(str(n))
+            if n == 0:
+                open(os.path.join(fake, "body"), "a").write("\nA person's edit.\n")
+        print(out)
     else:
         print(json.dumps({"headRefOid": read("head").strip(), "baseRefName": "main", "url": "https://github.com/o/r/pull/7"}))
 elif a[0] == "api" and "PATCH" in a:
@@ -198,6 +205,9 @@ check "a push during the last write fails rather than leaving the old head's fac
 echo "$head" > "$FAKE/head"; echo 1 > "$FAKE/move_head_on_patch"
 check "and so does one during a record-only write" "$(python3 "$D/facts.py" 7 --record-only 2>&1 >/dev/null | grep -c "head moved to ffffffff")" "1"
 rm -f "$FAKE/move_head_on_patch"; echo "$head" > "$FAKE/head"
+echo 1 > "$FAKE/edit_after_read"
+check "an edit made while the block is built stops the write instead of being overwritten" "$(python3 "$D/facts.py" 7 >/dev/null 2>&1; echo $?) $(grep -c "A person's edit" "$FAKE/body")" "1 1"
+rm -f "$FAKE/edit_after_read"; sed -i.bak "/A person's edit/d" "$FAKE/body" && rm -f "$FAKE/body.bak"
 printf '## Summary\n\nDoes an older thing.\n' > "$FAKE/stale"
 echo 1 > "$FAKE/clobbers"
 check "a stale copy of the author's text is refused, not written back" "$(python3 "$D/facts.py" 7 2>&1 >/dev/null | grep -c "own text changed")" "1"
