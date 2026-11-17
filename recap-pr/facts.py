@@ -29,6 +29,7 @@ import json
 import os
 import re
 import shlex
+import signal
 import subprocess
 import sys
 import tempfile
@@ -154,6 +155,23 @@ def declaration(slug):
     return shown.stdout if shown.returncode == 0 else ""
 
 
+def run_declared(argv, top):
+    """Run a declared command in its own process group; past FACTS_COMMAND_SECONDS, stop the whole group."""
+    limit = float(os.environ.get("FACTS_COMMAND_SECONDS", "600"))
+    proc = subprocess.Popen(argv, cwd=top, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                            start_new_session=True)
+    try:
+        out, err = proc.communicate(timeout=limit)
+    except subprocess.TimeoutExpired:
+        os.killpg(proc.pid, signal.SIGKILL)
+        proc.wait()
+        # A child that left the group may still hold the pipes, so they are closed rather than read.
+        proc.stdout.close()
+        proc.stderr.close()
+        raise
+    return subprocess.CompletedProcess(argv, proc.returncode, out, err)
+
+
 def declared_sections(pr, slug, head, base, top):
     at = git("rev-parse", "HEAD")
     if at != head:
@@ -168,8 +186,7 @@ def declared_sections(pr, slug, head, base, top):
             try:
                 argv = [arg.replace("{pr}", str(pr)).replace("{head}", head).replace("{base}", base)
                         for arg in shlex.split(source)]
-                result = subprocess.run(argv, cwd=top, capture_output=True, text=True,
-                                        timeout=float(os.environ.get("FACTS_COMMAND_SECONDS", "600")))
+                result = run_declared(argv, top)
             except subprocess.TimeoutExpired as problem:
                 text = f"_`{source}` timed out after {problem.timeout:g} s._"
             except (ValueError, OSError) as problem:
