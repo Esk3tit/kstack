@@ -8,8 +8,8 @@ results, the PRs a base merge brought in since the branch point, each section th
 docs/agents/pr-loop.md, and, between <!-- pr-facts:record:start/end -->, the review passes recorded
 on the head (log.sh --check) and the time it was written. Sections are read from the declaration on the
 default branch GitHub names, fetched fresh, never the PR's, because their commands run on this machine with
-its credentials; they run only when the checkout is at the PR head, and a comment marker in their output
-is escaped so it cannot end or hide part of the block:
+its credentials; they run only when the checkout is at the PR head. A comment marker in any outside text
+(check names, PR titles, command output) is escaped so it cannot end or hide part of the block:
 
     - facts: <title> = run: <command and arguments>   (run without a shell and within FACTS_COMMAND_SECONDS,
       default 600, its stdout as Markdown; {pr}, {head}, {base} filled in; it still runs the checkout's
@@ -72,6 +72,11 @@ def gh_json(*args):
 
 def pr_view(pr, fields):
     return gh_json("pr", "view", str(pr), "--json", fields)
+
+
+def inert(lines):
+    """Outside text with any comment opener escaped, so a check name or output can't end or hide part of the block."""
+    return [line.replace("<!--", "&lt;!--") for line in lines]
 
 
 def cell(text):
@@ -204,7 +209,7 @@ def declared_sections(pr, slug, head, base, top):
                 text = f"_`{source}` is outside the checkout._"
             else:
                 text = path.read_text().strip() if path.is_file() else f"_`{source}` does not exist._"
-        lines += ["", f"**{title}** (`{source}`):", "", text.replace("<!--", "&lt;!--") or "_empty_"]
+        lines += ["", f"**{title}** (`{source}`):", "", text or "_empty_"]
     return lines
 
 
@@ -212,9 +217,8 @@ def build_block(pr, slug, head, base, top):
     lines = [START,
              f"**Facts on `{head[:8]}`**, written by `facts.py` from their sources; "
              "rerun it to refresh them rather than editing this block.", ""]
-    lines += checks_section(slug, head) + [""]
-    lines += brought_in_section(base, head)
-    lines += declared_sections(pr, slug, head, base, top)
+    lines += inert(checks_section(slug, head) + [""] + brought_in_section(base, head)
+                   + declared_sections(pr, slug, head, base, top))
     # The review record changes as passes land; log.sh leaves it out of the body hash.
     lines += ["", record(pr, head), END]
     return "\n".join(lines)
@@ -222,7 +226,7 @@ def build_block(pr, slug, head, base, top):
 
 def record(pr, head, body=None):
     now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%MZ")
-    return "\n".join([RECORD_START] + passes_section(pr, head, body) + ["", f"_Written at {now}._", RECORD_END])
+    return "\n".join([RECORD_START] + inert(passes_section(pr, head, body)) + ["", f"_Written at {now}._", RECORD_END])
 
 
 def with_record(block, new_record):

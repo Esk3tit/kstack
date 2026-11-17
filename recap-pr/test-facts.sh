@@ -57,7 +57,9 @@ elif a[0] == "api" and "PATCH" in a:
 elif a[:2] == ["api", "repos/o/r"]:
     print(read("default").strip() if os.path.exists(os.path.join(fake, "default")) else "main")
 elif a[0] == "api" and a[1].endswith("/check-runs"):
-    print("build\tcompleted\tsuccess\ne2e | webkit\tin_progress\t\nlint\tcompleted\tsuccess")
+    extra = os.path.join(fake, "extra_check")
+    print("build\tcompleted\tsuccess\ne2e | webkit\tin_progress\t\nlint\tcompleted\tsuccess"
+          + ("\n" + read("extra_check").strip() if os.path.exists(extra) else ""))
 elif a[0] == "api" and "/status" in a[1]:
     print("CodeRabbit\tsuccess" + ("\nrailway deploy\tfailure" if "--paginate" in a else ""))
 else:
@@ -132,6 +134,9 @@ PY
 check "a command missing on this machine says so" "$(has '_`no-such-command-here` could not run: ')" "1"
 check "a facts line only the PR's head declares is not run" "$(has 'leaked-from-the-head') $(has '**Token**')" "0 0"
 check "a comment marker in declared output is escaped" "$(count "$block" '<!-- pr-facts:end -->') $(has '&lt;!-- pr-facts:end -->') $(has '&lt;!-- pr-facts:record:start -->')" "1 1 1"
+printf 'evil <!-- pr-facts:end -->\tcompleted\tsuccess\n' > "$FAKE/extra_check"
+named=$(python3 "$D/facts.py" 7 --dry-run); rm "$FAKE/extra_check"
+check "a comment marker in a check name is escaped" "$(count "$named" '<!-- pr-facts:end -->') $(count "$named" 'evil &lt;!-- pr-facts:end -->')" "1 1"
 check "a path outside the checkout is refused" "$(has 'secret-outside') $(has '_`../outside.md` is outside the checkout._')" "0 1"
 rm perf.md && ln -s "$HOME/outside.md" perf.md
 linked=$(python3 "$D/facts.py" 7 --dry-run)
