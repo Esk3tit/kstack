@@ -222,16 +222,21 @@ def own_text(body):
         os.unlink(f.name)
 
 
+def live_body(pr, head):
+    """The PR's live body, read with its head so a push mid-write fails rather than leaving another head's facts."""
+    view = pr_view(pr, "headRefOid,body")
+    if view["headRefOid"] != head:
+        fail(f"the PR's head moved to {view['headRefOid'][:8]} while facts.py ran for {head[:8]}: rerun it for the new head")
+    return view.get("body") or ""
+
+
 def write(slug, pr, head, make_block, first=None):
     """Write the block into the live body and read it back; returns (attempts, author-text baseline, body written)."""
     changed = ("the description's own text changed while facts.py was writing (a bot may have restored an "
                "older copy, or someone edited it): compare it with the last edit, restore it if needed, and rerun")
     block = None
     for attempt in range(1, WRITE_ATTEMPTS + 1):
-        moved = pr_view(pr, "headRefOid")["headRefOid"]
-        if moved != head:
-            fail(f"the PR's head moved to {moved[:8]} while facts.py ran for {head[:8]}: rerun it for the new head")
-        live = pr_view(pr, "body").get("body") or ""
+        live = live_body(pr, head)
         text = own_text(live)
         first = first or text
         if text != first:
@@ -245,7 +250,7 @@ def write(slug, pr, head, make_block, first=None):
             run(["gh", "api", "-X", "PATCH", f"repos/{slug}/pulls/{pr}", "--input", payload.name])
         finally:
             os.unlink(payload.name)
-        back = pr_view(pr, "body").get("body") or ""
+        back = live_body(pr, head)
         if own_text(back) != first:
             fail(changed)
         if own_block(back) == block:

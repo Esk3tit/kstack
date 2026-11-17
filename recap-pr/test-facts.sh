@@ -19,7 +19,7 @@ if a[:2] == ["pr", "view"]:
     fields = a[a.index("--json") + 1]
     if "-q" in a:
         print(read("head").strip() if fields == "headRefOid" else read("body"))
-    elif fields == "body":
+    elif "body" in fields.split(","):
         swap = os.path.join(fake, "swap_on_read")
         if os.path.exists(swap):
             n = int(read("swap_on_read")) - 1
@@ -32,11 +32,17 @@ if a[:2] == ["pr", "view"]:
             open(move, "w").write(str(n))
             if n == 0:
                 open(os.path.join(fake, "head"), "w").write("f" * 40 + "\n")
-        print(json.dumps({"body": read("body")}))
+        print(json.dumps({"body": read("body"), "headRefOid": read("head").strip()}))
     else:
         print(json.dumps({"headRefOid": read("head").strip(), "baseRefName": "main", "url": "https://github.com/o/r/pull/7"}))
 elif a[0] == "api" and "PATCH" in a:
     body = json.load(open(a[a.index("--input") + 1]))["body"]
+    move = os.path.join(fake, "move_head_on_patch")
+    if os.path.exists(move):
+        n = int(read("move_head_on_patch")) - 1
+        open(move, "w").write(str(n))
+        if n == 0:
+            open(os.path.join(fake, "head"), "w").write("f" * 40 + "\n")
     clobbers = os.path.join(fake, "clobbers")
     left = int(read("clobbers")) if os.path.exists(clobbers) else 0
     if left > 0:
@@ -126,6 +132,11 @@ rm -f "$FAKE/swap_on_read"
 echo 2 > "$FAKE/move_head_on_read"
 check "a push between the two writes stops facts.py before it records the old head" "$(python3 "$D/facts.py" 7 2>&1 >/dev/null | grep -c "head moved to ffffffff")" "1"
 rm -f "$FAKE/move_head_on_read"; echo "$head" > "$FAKE/head"
+echo 2 > "$FAKE/move_head_on_patch"
+check "a push during the last write fails rather than leaving the old head's facts" "$(python3 "$D/facts.py" 7 2>&1 >/dev/null | grep -c "head moved to ffffffff")" "1"
+echo "$head" > "$FAKE/head"; echo 1 > "$FAKE/move_head_on_patch"
+check "and so does one during a record-only write" "$(python3 "$D/facts.py" 7 --record-only 2>&1 >/dev/null | grep -c "head moved to ffffffff")" "1"
+rm -f "$FAKE/move_head_on_patch"; echo "$head" > "$FAKE/head"
 printf '## Summary\n\nDoes an older thing.\n' > "$FAKE/stale"
 echo 1 > "$FAKE/clobbers"
 check "a stale copy of the author's text is refused, not written back" "$(python3 "$D/facts.py" 7 2>&1 >/dev/null | grep -c "own text changed")" "1"
