@@ -20,8 +20,9 @@ or hide part of the block.
 
 It reads the live body, replaces only its own block (inserting it before the bots' summaries the first
 time), writes, and reads the body back; a bot that rewrites the body from an older copy is outrun by
-fetching and writing again, up to three times, and stops if the description's own text changed
-meanwhile rather than writing an older copy back. --dry-run prints the block and writes nothing.
+fetching and writing again, up to three times. It reads the body again just before each write and
+stops if the description's own text changed meanwhile, rather than write an older copy back; GitHub has
+no conditional write, so an edit landing in the moment between that read and the write can still be lost. --dry-run prints the block and writes nothing.
 --record-only rewrites only the review record, keeping every fact as it stands, so a pass that read
 the facts stays clean; a full write ends with one, so its record describes the description it left.
 """

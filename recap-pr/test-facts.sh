@@ -16,6 +16,18 @@ cat > "$HOME/bin/gh" <<'PY'
 import json, os, sys
 fake, a = os.environ["FAKE"], sys.argv[1:]
 read = lambda name: open(os.path.join(fake, name)).read()
+write = lambda name, text, mode="w": open(os.path.join(fake, name), mode).write(text)
+
+
+def countdown(name):
+    """True on the call that takes the file's count to zero; a test arms it by writing a count."""
+    if not os.path.exists(os.path.join(fake, name)):
+        return False
+    n = int(read(name)) - 1
+    write(name, str(n))
+    return n == 0
+
+
 if a[:2] == ["pr", "view"]:
     fields = a[a.index("--json") + 1]
     if "-q" in a:
@@ -24,36 +36,20 @@ if a[:2] == ["pr", "view"]:
         print(read("head").strip())
         print(read("body"))
     elif "body" in fields.split(","):
-        swap = os.path.join(fake, "swap_on_read")
-        if os.path.exists(swap):
-            n = int(read("swap_on_read")) - 1
-            open(swap, "w").write(str(n))
-            if n == 0:
-                open(os.path.join(fake, "body"), "w").write(read("stale"))
-        move = os.path.join(fake, "move_head_on_read")
-        if os.path.exists(move):
-            n = int(read("move_head_on_read")) - 1
-            open(move, "w").write(str(n))
-            if n == 0:
-                open(os.path.join(fake, "head"), "w").write("f" * 40 + "\n")
+        if countdown("swap_on_read"):
+            write("body", read("stale"))
+        if countdown("move_head_on_read"):
+            write("head", "f" * 40 + "\n")
         out = json.dumps({"body": read("body"), "headRefOid": read("head").strip()})
-        later = os.path.join(fake, "edit_after_read")
-        if os.path.exists(later):
-            n = int(read("edit_after_read")) - 1
-            open(later, "w").write(str(n))
-            if n == 0:
-                open(os.path.join(fake, "body"), "a").write("\nA person's edit.\n")
+        if countdown("edit_after_read"):
+            write("body", "\nA person's edit.\n", "a")
         print(out)
     else:
         print(json.dumps({"headRefOid": read("head").strip(), "baseRefName": "main", "url": "https://github.com/o/r/pull/7"}))
 elif a[0] == "api" and "PATCH" in a:
     body = json.load(open(a[a.index("--input") + 1]))["body"]
-    move = os.path.join(fake, "move_head_on_patch")
-    if os.path.exists(move):
-        n = int(read("move_head_on_patch")) - 1
-        open(move, "w").write(str(n))
-        if n == 0:
-            open(os.path.join(fake, "head"), "w").write("f" * 40 + "\n")
+    if countdown("move_head_on_patch"):
+        write("head", "f" * 40 + "\n")
     clobbers = os.path.join(fake, "clobbers")
     left = int(read("clobbers")) if os.path.exists(clobbers) else 0
     if left > 0:
