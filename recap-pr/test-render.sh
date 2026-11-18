@@ -78,11 +78,13 @@ class Shown(html.parser.HTMLParser):
         classes = (attrs.get("class") or "").split()
         parent_classes = self.open[-1].classes if self.open else []
         self.open.append(Open(tag, classes, "hidden" in attrs))
-        in_section = any(o.tag == "section" for o in self.open)
+        heading = tag in ("h1", "h2")
+        fold_line = tag == "summary" and "fold" in parent_classes
+        section_item = any(o.tag == "section" for o in self.open) and (tag == "button" or (tag == "p" and "text" in classes))
         if self.capture is not None:
             if "note" in classes:
                 self.capture.append(" · ")
-        elif tag in ("h1", "h2") or (tag == "summary" and "fold" in parent_classes) or (in_section and (tag == "button" or (tag == "p" and "text" in classes))):
+        elif heading or fold_line or section_item:
             self.capture, self.capture_depth = [], len(self.open)
             self.capture_hidden = any(o.hidden for o in self.open)
 
