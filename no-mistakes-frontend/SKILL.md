@@ -5,7 +5,8 @@ description: >-
   drive the expected flow, assert behavior (with API ground-truth), check the look, and post
   screenshot + clip evidence and a test-case checklist to the PR so you can judge production-readiness,
   review code, and merge. Report-only, ephemeral. Use for "verify the UI", "does this screen
-  work", "is this production ready", "dogfood this flow".
+  work", "is this production ready", "dogfood this flow", or to post any screenshot gallery to a
+  PR outside a verification run (a before/after, a design choice, a sibling or cross-engine comparison).
 user-invocable: true
 ---
 
@@ -18,7 +19,8 @@ produce evidence; the human reviews code and merges. **Ephemeral:** nothing land
 branch or its history.
 
 This file is the runtime playbook. Follow the steps in order. Stop and emit the matching
-`NOMISTAKES_FRONTEND_STATUS` the moment a gate fails — do not push past a blocked gate.
+`NOMISTAKES_FRONTEND_STATUS` the moment a gate fails — do not push past a blocked gate. To post a
+screenshot gallery outside a verification run, run step 0, then go to **A standalone gallery** in step 8.
 
 ## 0. Resolve the harness + project config (gate)
 
@@ -159,6 +161,15 @@ For each case: drive the flow, assert behavior, capture evidence → PASS/FAIL +
   from a throwaway worktree (`git worktree add <tmp> origin/<base>`, then its `devCommand` on another
   port). For a **bug fix**, reproduce the bug on base first, then show it gone on the PR head. No
   runnable base target → name that in `gaps`.
+- **Each capture proves its subject.** Before a shot, assert the subject is on screen in its stated
+  state: `get box <selector>` gives a non-empty box inside the viewport, and the theme, viewport and
+  focus the claim names hold (`eval` on `document.activeElement` for focus). A shot whose assertion
+  fails is not evidence. A capture script that opens its own browser session closes it in the same
+  shell, on failure too (`trap 'agent-browser --session <name> close' EXIT`). On a memory-limited
+  Linux cloud machine, a browser killed for memory (exit 137, or an OOM in the kernel log or the
+  scope's memory events) is a result: stop after the first kill and cover that case through CI or a
+  smaller page instead of running the same command again. The case is unverified on that page
+  (coverage gap, `reason=memory-kill`); `gaps` names it and where it was covered instead.
 - **Inspect every capture before posting** — every screenshot, and frames across each whole clip.
   Leave one out of `results.json` if it shows setup noise, a secret, or not the claim.
 
@@ -207,6 +218,7 @@ On a failing script, first **classify**:
 - (a) **product bug** → record FAIL + repro, never patch;
 - (b) **driver/selector bug** → escalate locator tier / re-recon;
 - (c) **environment/auth** (app unreachable, session expired) → re-auth / re-poll **once**, else BLOCKED.
+- (d) **browser memory kill** on a memory-limited Linux cloud machine → a result, not a retry (step 5).
 
 **Concrete bounds:** cap = **2 driver retries per test case**; total-run soft cap ≈ **10 minutes**.
 On exceeding a cap, classify the unresolved case:
@@ -281,6 +293,30 @@ Posting is all-or-nothing: the poster reads back the gallery to prove every capt
 any failure removes the new gallery and leaves the PR as it was. `pr_post=spliced` = posted;
 `pr_post=failed` / `pr_post=no-pr` → `summary.md` (local media paths) in the run dir, stderr says why;
 re-run the post. The verdict is never lost.
+
+**A standalone gallery** (any screenshot gallery outside a verification run: a before/after, a design
+choice for the owner, a sibling or cross-engine comparison) goes through the same poster under its own `--marker`, one per question, so it never replaces a
+run's gallery or block. Its captures come from the app step 0 resolves or a prototype's own page,
+prove their subject as step 5 says, and keep step 9's confidentiality. Put them in a scratch folder with a small `results.json`, each case passing when
+its picture shows what it names, and an `intentSource` saying the pictures are not a verification, since
+the block prints it beside its ✅ and **Verified at**:
+
+```json
+{"revision": "c5ef2589", "intentSource": "Design question 3, pictures only, not a verification: where a lone picture sits",
+ "cases": [{"name": "Agreed prototype: low and left", "pass": true, "observed": "built on c5ef2589",
+            "evidence": ["prototype-1280.png", "prototype-390.png"]},
+           {"name": "Proposal: centred", "pass": true, "observed": "mocked on c5ef2589",
+            "evidence": ["centred-1280.png"]}],
+ "findings": []}
+```
+
+Then post it with every path written out; like a run's post, it also puts that marker's verdict block at the top of the PR description, which a pass that reads the description then reads too:
+
+```bash
+node <your absolute home>/.claude/skills/no-mistakes-frontend/harness/post-evidence.mjs --pr <N> --repo <owner/name> --marker design-q3 --run-dir <folder> --results <folder>/results.json
+```
+
+Cite only the captures it posted. Once the owner has chosen, remove that marker's block from the description as `/pr`'s **Editing the body** says.
 
 **Never commit media to the PR branch.**
 

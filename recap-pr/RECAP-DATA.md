@@ -29,7 +29,7 @@ So a divergence or owner call goes in those places only while it's open, and eve
 
 | field | holds |
 |---|---|
-| `surface` | where people meet it: a page, an API, a prompt, the pipeline |
+| `surface` | where people meet it: a page, an API, a prompt, the pipeline; `Developers and agents` for a `dev:` row (LEDGER.md) |
 | `text` | the decision in plain words, for a reader who hasn't seen the code. Only `**bold**` and `` `code` `` are formatted |
 | `why` | the reason, or `null` |
 | `who` | the log's `source` values behind it: `you`, `me`, `codex`, `claude`, `fable`, `review`, `bot:<name>` |

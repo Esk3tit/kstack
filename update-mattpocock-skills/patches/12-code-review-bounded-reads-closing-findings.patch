@@ -1,0 +1,67 @@
+--- a/SKILL.md
++++ b/SKILL.md
+@@ -8,7 +8,7 @@
+ - **Standards**: does the code conform to this repo's documented coding standards?
+ - **Spec**: does the code faithfully implement the originating issue / spec?
+ 
+-Both axes run as **parallel sub-agents** so they don't pollute each other's context, then this skill aggregates their findings. Start every sub-agent with a fresh context window.
++Both axes run as **parallel sub-agents** (or the one the caller names) so they don't pollute each other's context, then this skill aggregates their findings. Start every sub-agent with a fresh context window.
+ 
+ The issue tracker should have been provided to you. If not, tell the user to run `/setup-matt-pocock-skills`.
+ 
+@@ -24,16 +24,18 @@
+ 
+ ### 2. Identify the spec source
+ 
+-Look for the originating spec, in this order:
++Skip this step when the caller names Standards alone. Otherwise, look for the originating spec, in this order:
+ 
+ 1. Issue references in the commit messages (`#123`, `Closes #45`, GitLab `!67`, etc.), fetched via the workflow in the tracker doc.
+ 2. A path the user passed as an argument.
+ 3. A spec file under `docs/`, `specs/`, or `.scratch/` matching the branch name or feature.
+ 4. If nothing is found, ask the user where the spec is. If they say there isn't one, the **Spec** sub-agent will skip and report "no spec available".
+ 
++When the branch's open PR has `HEAD` as its head (`gh pr view --json headRefOid`), its description is checked too: save the live body to a file, the one the caller names if any (`gh pr view <n> --json body -q .body > <file>`), just before spawning the sub-agents, and give the Spec sub-agent that file.
++
+ ### 3. Identify the standards sources
+ 
+-Search the repo for every file that documents how code should be written. When `CODING_STANDARDS.md` or `CONTRIBUTING.md` exists, it must be on the list.
++Skip this step when the caller names Spec alone. Otherwise, search the repo for every file that documents how code should be written. When `CODING_STANDARDS.md` or `CONTRIBUTING.md` exists, it must be on the list.
+ 
+ On top of whatever the repo documents, the Standards axis always carries the **smell baseline** below: a fixed set of Fowler code smells (_Refactoring_, ch.3) that applies even when a repo documents nothing. Two rules bind it:
+ 
+@@ -55,10 +57,16 @@
+ - **Middle Man**: a class or function that mostly just delegates onward. → cut it, call the real target direct.
+ - **Refused Bequest**: a subclass or implementer that ignores or overrides most of what it inherits. → drop the inheritance, use composition.
+ 
+-### 4. Spawn both sub-agents in parallel
++### 4. Spawn the sub-agents in parallel
+ 
+-Issue both sub-agent calls together, in the foreground, and aggregate the reports they return.
++Issue the sub-agent calls together, in the foreground, and aggregate the reports they return. When the caller names one axis (a Spec re-check after a PR description edit), spawn only that sub-agent and report its axis alone.
+ 
++Each prompt carries:
++
++- **Each source's size and its bounded route.** List every file the sub-agent reads (standards sources, the spec, the PR body file, saved reports) with its size in bytes (`wc -c`), and each changed file's diff size (`git diff <fixed-point>...HEAD -- <path> | wc -c`). Where context-mode runs (it refuses a whole Read over 16 KB and cuts any output over 4 KB to a few matching lines), a file over 4 KB is read in slices of at most 3 KB, sized by bytes, since one long line can carry a whole rule section: check a range with `sed -n 'a,bp' <file> | wc -c` before reading it with Read's `offset` and `limit`, or use `ctx_execute` with `file=` set to it, printing at most 3 KB at a time. An output that ends in a `ctx_search` pointer was cut: read that range again in smaller parts. A diff over 4 KB is saved to a file first (`git diff <fixed-point>...HEAD -- <path> > <file>`) and read the same way. The sub-agent still accounts for every rule in every source.
++- **Findings that close.** A wording finding names the concrete misreading the current words invite. A rename finding names the whole family it renames: the type, its factory, every use.
++- **The agreed prototype stands.** Where the spec carries an agreed prototype (a picture, mock or layout the user approved), each prompt gets its pictures, and a taste finding that would move the change away from it is reported as a question for the user, naming both pictures: the prototype as built and the proposal. The prototype stays built until they choose.
++
+ **Standards sub-agent prompt** should include:
+ 
+ - The full diff command and commit list.
+@@ -69,13 +77,13 @@
+ 
+ - The diff command and commit list.
+ - The path or fetched contents of the spec.
+-- The brief: "Report: (a) requirements the spec asked for that are missing or partial; (b) behaviour in the diff that wasn't asked for (scope creep); (c) requirements that look implemented but where the implementation looks wrong. Quote the spec line for each finding. Under 400 words."
++- The brief: "Report: (a) requirements the spec asked for that are missing or partial; (b) behaviour in the diff that wasn't asked for (scope creep); (c) requirements that look implemented but where the implementation looks wrong; (d) when you have the PR body file, every figure and coverage claim in it that its source (the facts block, a saved measurement, a test run, the diff) does not bear out, quoted with what the source shows. Keep 'no measurable difference' (measured, within noise) apart from 'unchanged' (the same code path), and 'observed' (seen in a run or capture) apart from 'inferred' (reasoned from the code). Quote the spec line for each finding, or for (d) the body line and its source. Under 400 words, not counting (d)."
+ 
+ If the spec is missing, skip the Spec sub-agent and note this in the final report.
+ 
+ ### 5. Aggregate
+ 
+-Present the two reports under `## Standards` and `## Spec` headings, verbatim or lightly cleaned. Do **not** merge or rerank findings, because the two axes are deliberately separate (see _Why two axes_).
++Present each report it ran under its `## Standards` or `## Spec` heading, verbatim or lightly cleaned. Do **not** merge or rerank findings, because the two axes are deliberately separate (see _Why two axes_). Mark each prototype question as the user's call; the caller posts its pictures.
+ 
+ End with a one-line summary: total findings per axis, and the worst issue _within each axis_ (if any). Don't pick a single winner across axes: that's the reranking the separation exists to prevent.
+ 

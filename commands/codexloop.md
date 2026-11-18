@@ -20,7 +20,7 @@ Pick by the harness you are running in. Both reviewers return the same JSON, `{v
 ```bash
 mktemp -d "/tmp/codexloop-$(basename "$(git rev-parse --show-toplevel)").XXXXXX"
 ```
-Use the printed path as `R` for the whole round. Shell variables do not survive between shell calls in either harness: write `COMPANION`, `R`, `SCOPE`, `BASE` and `MODEL` into each command as literals, and run step 2b's `FOCUS`/`PINS` lines in the same shell as the companion call in Claude Code, or as step 1's `printf` into `focus.txt` in Codex. A round can outlast the shell timeout: in Claude Code, launch it from a background shell and wait for that shell to exit; in Codex, run it in the foreground with a timeout of 30 minutes. `$SCOPE` is this round's target, resolved per preflight: `branch` or `working-tree` (an explicit `--scope` holds for every round).
+Use the printed path as `R` for the whole round. Shell variables do not survive between shell calls in either harness: write `COMPANION`, `R`, `SCOPE`, `BASE` and `MODEL` into each command as literals, and run step 2b's `FOCUS`/`PINS`/`REJECTED` lines in the same shell as the companion call in Claude Code, or as step 1's `printf` into `focus.txt` in Codex. A round runs for at most 30 minutes, which can outlast the shell timeout: in Claude Code, launch it from a background shell with that timeout and wait for that shell to exit; in Codex, run it in the foreground with that timeout. `$SCOPE` is this round's target, resolved per preflight: `branch` or `working-tree` (an explicit `--scope` holds for every round).
 
 ### In Claude Code: Codex, through the openai-codex plugin
 
@@ -70,7 +70,7 @@ fi
 
 **Outputs:** `STATUS=<CLEAN|MAX_ITERATIONS|PAUSED|FAIL> ITERATIONS=<N> FINDINGS_REMAINING=<N> [ERROR="..."]`
 
-## Round scope (`--until-converged`)
+## Round scope (`--until-converged`; round rows in every mode)
 
 The loop ends on two clean rounds at the final head, the second over the whole PR: each fix gets a look aimed at it, and unchanged code is not re-read after every one-line fix. A round is **clean** when it commits nothing: zero findings, or every finding rejected (a flip-flop is one more rejected finding, surfaced to the user). Under `--until-converged` a clean round never exits by itself; the rules below pick the next round or declare convergence. (A `--scope working-tree` run reviews the working tree every round and converges on two clean rounds in a row.)
 
@@ -79,19 +79,19 @@ A branch-scope round reviews one of two scopes:
 - **Whole PR:** the branch against its merge-base with `origin/<base>`. Its focus text also says what the change is for (its ticket, or a summary of the branch), so the reviewer can tell when the code doesn't do it.
 - **Fixes:** only the commits since the last reviewed head. In Claude Code, the review call passes `--base <last reviewed head>` in place of `origin/<base>`; in Codex, the round's diff is `git diff <last reviewed head> HEAD`. The focus text adds, for each finding those commits fix, `Fixed since the last round: <title> (<file>:<line>), <the fix in one line>.`, then: `Check that each fix resolves its finding and breaks nothing the change reaches; read whole files, callers and tests, and report a defect wherever the change reaches. If the change needs the whole PR reviewed again, put WHOLE_PR in your summary.`
 
-**Round rows.** Once a round is finished (its findings triaged, any accepted fix committed), log one decision-log row: `phase codexloop`, `source me`, `asked yes`, `prod_delta none`, result `accepted`, decision `round <n> (<whole-PR or fixes>) on <branch>: <k> findings, <a> accepted, <clean or fixed>` (plus `, reviewer asks whole-PR next` when its summary said `WHOLE_PR`), evidence `head <sha the review ran on, before this round's fixes>, merge-base <sha>`.
+**Round rows.** In every mode, a round logs two decision-log rows, each with `phase codexloop`, `source me`, `asked yes`, a `why` naming what the round is for (the first round, fixes to review, a whole-PR pass), `prod_delta none` and result `accepted`: a dispatch row as it starts, and a round row once it is finished (its findings triaged, any accepted fix committed). The dispatch row's decision is `round <n> dispatched on <branch>`, its evidence `head <sha>, <whole-PR, fixes or working-tree>`. The round row's decision is `round <n> (<whole-PR, fixes or working-tree>) on <branch>: <k> findings, <a> accepted, <clean or fixed>` (plus `, reviewer asks whole-PR next` when its summary said `WHOLE_PR`), its evidence `head <sha the review ran on, before this round's fixes>, merge-base <sha>`. A round that ends without a review (the reviewer failed, or its run was lost) logs `round <n> dropped on <branch>` in place of a round row, with the reason as `why`.
 
-- The last round row on the branch holds the **last reviewed head**, and survives a compacted context. Sibling repos and branches sharing a ticket can share one log, so read only this repo's and this branch's rows: `awk -F'\t' -v repo="$(basename -s .git "$(git remote get-url origin 2>/dev/null || git rev-parse --show-toplevel)")" -v on=" on $(git branch --show-current): " '$2 == repo && $3 == "codexloop" && $6 ~ /^round / && index($6, on)' "$(~/.claude/skills/recap-pr/log.sh --path)" | tail -2` (the last line is the last round row, the one above it the round before; `repo` is computed as `log.sh` stamps it). A round row without a branch counts for nothing.
-- A round with finding rows but no round row never finished: run it again.
+- `~/.claude/skills/recap-pr/log.sh --rounds` prints the branch's last two round rows, oldest first, then `next round <n>`: the last round row holds the **last reviewed head**, and survives a compacted context. Rounds are numbered per branch across every run, so a new round takes that `<n>`. It reads only this repo's and this branch's rows, since sibling repos and branches sharing a ticket can share one log; a round row without a branch counts for nothing.
+- It exits 1, naming the round, while a dispatched round has neither a round row nor a dropped row: that round is still pending or untriaged. Wait for its review until the round limit in **Reviewer**; then triage it and log its round row, or cancel its job when it is still known (`/codex:cancel` in Claude Code, `task_cancel` in T3) and log it dropped. A round whose job this turn cannot reach is logged dropped at once.
 - A run starts with a whole-PR round unless the branch already has a round row; then it picks up from that row.
 
 Take the next round's scope from the first rule that applies:
 
 1. The branch took in base changes since the last reviewed head (`git merge-base origin/<base> HEAD` differs from the logged one, or `git merge-base --is-ancestor <last reviewed head> HEAD` fails) → whole PR, since a fixes diff would carry the base's changes.
 2. HEAD has commits since the last reviewed head → fixes, unless the last round row says `reviewer asks whole-PR next` or `git diff <last reviewed head> HEAD` is empty (an empty commit, or a fix and its revert), which take a whole-PR round instead.
-3. The last round row says `clean` at this head. When that row is a whole-PR round and the round row before it is also `clean` at this head, the loop has converged: exit `STATUS=CLEAN` (on a re-run, `ITERATIONS=0`, and step 4 pushes only what the remote lacks). Otherwise → whole PR.
+3. The last round row says `clean` at this head. When that row is a whole-PR round and the round row before it is also `clean` at this head, the loop has converged: record the pass (`~/.claude/skills/recap-pr/log.sh --pass codexloop <head> clean`) and exit `STATUS=CLEAN` (on a re-run, `ITERATIONS=0`, and step 4 pushes only what the remote lacks). Otherwise → whole PR.
 
-Inside T3, each delegated round's brief names its scope (for fixes, the last reviewed head) and carries the same focus lines.
+Inside T3, each delegated round's brief names its scope (for fixes, the last reviewed head) and carries the same focus lines, and the round is dispatched under the same `--rounds` check and dispatch row, so rounds run one at a time.
 
 ### Design pause
 
@@ -124,13 +124,15 @@ Done when the round has started or the run has exited `PAUSED`.
    git fetch origin <base> --quiet
    ```
 
-   Under `--until-converged`, pick this iteration's round and run the **Design pause** check (Round scope) now.
+   Confirm `~/.claude/skills/recap-pr/log.sh --rounds` exits 0 (on exit 1, settle the round it names, **Round rows**) and take this round's number from its `next round`. Under `--until-converged`, pick this iteration's round scope, which may end the loop, and run the **Design pause** check (Round scope). Then log the round's dispatch row (**Round rows**).
 
    **b. Run the review call** from the Reviewer section with this focus text, plus, under `--until-converged`, the round's scope and focus lines from **Round scope**:
    ```bash
    FOCUS='Review for real defects: logical errors, bugs, broken edge cases, security/race conditions, incorrect error handling, and genuine repo-convention violations. Report nits only when they meaningfully improve quality (naming clarity, dead-code removal, misleading comments). Do NOT report: formatting/style churn, bikeshedding, defensive code for impossible states, premature abstractions, or extra tests for trivial behavior.'
    PINS=$(~/.claude/skills/recap-pr/log.sh --pins)  # the user's settled decisions; /pr-loop puts RECAP_PIN_KEYS='<keys>' in front
    [ -n "$PINS" ] && FOCUS="$FOCUS Settled decisions (do not re-open; report only defects within them): $PINS"
+   REJECTED=$(~/.claude/skills/recap-pr/log.sh --rejected)  # earlier rounds' rejected findings, by ID
+   [ -n "$REJECTED" ] && FOCUS="$FOCUS Rejected in earlier rounds (settled; reopen one only with new evidence, giving its ID and the evidence): $REJECTED"
    ```
    In Claude Code, if the companion exits non-zero **and** the JSON is missing/empty (or `$R/review.err` shows an auth/network failure), treat the reviewer as failed — `STATUS=FAIL ERROR="review failed: <reason>"`, never CLEAN. In Codex, `claude-review` reports those failures as `parseError`, handled in 2c.
 
@@ -150,17 +152,17 @@ Done when the round has started or the run has exited `PAUSED`.
      if(x.recommendation)console.log("  rec: "+x.recommendation.replace(/\s+/g," "));
    });' "<the round's R path>"
    ```
-   - **CLEAN detection:** `COUNT: 0` (empty `findings`) → print `STATUS=CLEAN ITERATIONS=<n>` and exit the loop. Under `--until-converged`: a clean round (Round scope).
+   - **CLEAN detection:** `COUNT: 0` (empty `findings`) → print `STATUS=CLEAN ITERATIONS=<n>` and exit the loop. Under `--until-converged`: a clean round (Round scope); log its round row before the next iteration.
    - **PARSE_ERROR with no result:** retry the review once, in a fresh `R`; if it still fails, `STATUS=FAIL ERROR="reviewer returned unparseable review"`. Never treat a parse failure as CLEAN.
    - Otherwise list the findings to the user (severity, `file:line`, issue) and proceed to 2d.
 
    **d. Apply fixes — push back, don't rubber-stamp:**
    - Do NOT agree with everything at face value. For each finding, decide: is this a real logical error / bug / edge case, OR a nit that meaningfully improves quality, OR is the reviewer inventing work?
-   - **Accept** real issues (logic, bugs, edge cases, security) AND nits that meaningfully improve quality (clearer naming, repo-convention alignment, dead-code removal, fixing misleading comments).
+   - **Accept** real issues (logic, bugs, edge cases, security) AND nits that meaningfully improve quality (clearer naming, repo-convention alignment, dead-code removal, fixing misleading comments). Accept a wording finding only when it names the concrete misreading the current words invite.
    - **Reject and skip** findings that are: formatting/styling churn, pure bikeshedding, defensive code for impossible states, bloated fallbacks, premature abstractions, "while you're here" refactors, unnecessary extra tests for trivial behavior, or anything that adds complexity/bloat without fixing a real problem. Note the rejection in the summary — don't fabricate a change to silence it.
-   - **Watch for flip-flopping across iterations.** If the reviewer now suggests reverting or contradicting a change it (or a prior iteration) requested, STOP. Do not apply it. Treat flip-flop as a signal the loop has converged — exit with `STATUS=CLEAN` and surface the contradiction to the user. Under `--until-converged`: reject it as one more finding and surface it (Round scope). Cross-check each new finding against this repo's `codexloop` rows in the decision log from this run's first round on.
+   - **Watch for flip-flopping across iterations.** If the reviewer now suggests reverting or contradicting a change it (or a prior iteration) requested, STOP. Do not apply it. Treat flip-flop as a signal the loop has converged — exit with `STATUS=CLEAN` and surface the contradiction to the user. Under `--until-converged`: reject it as one more finding and surface it (Round scope). Cross-check each new finding against every round's `codexloop` rows on this branch in the decision log.
    - **Apply the mechanism rule** in `~/.claude/skills/recap-pr/LEDGER.md` to every finding that adds a mechanism.
-   - **Log every finding**, accepted or rejected, as one decision-log row (`phase codexloop`, `source codex` or `claude`, `asked no`; format in LEDGER.md). The user audits these rows with `/recap-pr` before merge.
+   - **Log every finding**, accepted or rejected, as one decision-log row (`phase codexloop`, `source codex` or `claude`, `asked no`; format in LEDGER.md) whose decision starts `F<round>.<k> on <branch>: <title>`: its ID names the round that first raised it and its place in that round's list. A finding that repeats an earlier one keeps that one's ID; one that repeats a rejected ID without new evidence is rejected again under it, and one with new evidence is judged afresh under it. The user audits these rows with `/recap-pr` before merge.
    - For findings you accept, read the referenced file and apply the **smallest correct fix** (prefer Edit over Write). Do NOT blindly apply the reviewer's `recommendation` — verify against the actual code and reject if wrong or out of scope.
    - **Optional escalation (Claude Code):** for a genuinely hard finding that needs deep multi-file debugging (not a smallest-fix), you may subcontract that one fix to Codex via the plugin's rescue primitive — `node "$COMPANION" task --write "<tight fix prompt>"` (equivalent to `/codex:rescue`) — then review its diff before staging. Default remains: you apply the fix.
    - **Keep it clean.** Do not leave explanatory comments about the fix, the finding, or the iteration. No "// addressed in codexloop" markers, no narrating-what-the-code-does comments. Only add a comment if a genuinely non-obvious invariant requires it.
@@ -171,14 +173,16 @@ Done when the round has started or the run has exited `PAUSED`.
    - Conventional commit whose subject says what the fix changed, in the repo's own scope (`fix(api): keep the newest retry token instead of the first`), one commit per iteration.
    - If every finding this iteration was rejected (no real issues), exit with `STATUS=CLEAN` instead of committing — the loop has converged. Under `--until-converged`: a clean round (Round scope).
    - Keep commits local until the loop exits CLEAN (step 4). Under `--until-converged` on a draft PR opened so CI can judge the change, also push a commit whose next step needs CI's answer; review bots can bill for that push too.
+   - Then log the round row (**Round rows**) before the next iteration.
 
-3. **Exit conditions:**
+3. **Exit conditions:** an exit after a round's dispatch row first logs that round's row, or its dropped row (**Round rows**).
    - `STATUS=CLEAN` — the reviewer returned zero findings, or every remaining finding was a rejected nit/flip-flop. Under `--until-converged`: Round scope rule 3's convergence.
    - `STATUS=MAX_ITERATIONS` — hit cap with real findings remaining; print remaining findings for human review and DO NOT push.
    - `STATUS=PAUSED` — under `--until-converged`, the **Design pause** check stopped the run; DO NOT push.
    - `STATUS=FAIL ERROR="..."` — reviewer error (non-zero exit with no review output / auth failure / unparseable review), lint/test failure, or merge conflict; DO NOT push.
 
 4. **Post-loop push (only on `STATUS=CLEAN`):**
+   - Under `/pr-loop`, push only once `~/.claude/skills/recap-pr/log.sh --check HEAD` exits 0 or 3 (step 2e's draft-PR pushes for CI aside); on exit 1 exit `STATUS=CLEAN` unpushed and leave the push to its pass sequence, and on exit 2 exit `STATUS=FAIL ERROR="check could not run: <its message>"`.
    - Confirm current branch is not `master`/`main` (abort push if it is).
    - Confirm commits exist beyond the base: `git log origin/<base>..HEAD --oneline` is non-empty.
    - Push the current branch with upstream tracking: `git push -u origin HEAD`.

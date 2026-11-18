@@ -1,0 +1,57 @@
+--- a/SKILL.md
++++ b/SKILL.md
+@@ -1,6 +1,6 @@
+ ---
+ name: pr
+-description: "Use when writing a PR body."
++description: "Use when writing or editing a PR body."
+ metadata:
+   credits:
+     skill: show-me
+@@ -20,11 +20,20 @@
+ 
+ - <what users, customers or ops see differently, and why> | None
+ 
++**For developers and agents:**
++
++- <what only people working on the code see differently, and why> | None
++
+ ## Evidence
+ 
+ - **Before:** <screenshot/output/failing test run>
+   **After:** <screenshot/output/passing test run>
+ 
++## Facts
++
++<!-- pr-facts:start -->
++<!-- pr-facts:end -->
++
+ ## Merge Danger
+ 
+ **Door:** <one-way or two-way>
+@@ -161,7 +170,7 @@
+ 
+ ### Behavior changes vs master
+ 
+-Every difference from master someone outside the code will notice: placement, order, labels, collapse state, wording, payload shape, throughput, where data is stored. One line each, with the reason. Take them from the decision log's accepted rows whose `prod_delta` is not `none` and whose change is still in the diff (`~/.claude/skills/recap-pr/LEDGER.md`); write `None` when the change is invisible outside the code.
++Every difference from master someone will notice: first what users, customers or ops see (placement, order, labels, collapse state, wording, payload shape, throughput, where data is stored), then, under **For developers and agents**, what only people working on the code see (the `dev:` rows). One line each, with the reason. Take them from the decision log's accepted rows whose `prod_delta` is not `none` and whose change is still in the diff (`~/.claude/skills/recap-pr/LEDGER.md`); write `None` when nobody will notice a difference.
+ 
+ ### Evidence
+ 
+@@ -171,8 +180,16 @@
+ 
+ Execution-based evidence is A-tier. Test results, console output. Show the exact test that now fails and passes, using pseudocode.
+ 
++### Facts
++
++Once the PR exists, `python3 ~/.claude/skills/recap-pr/facts.py <pr>` fills the block between the markers from its sources: the head's checks, the review passes recorded on it, the PRs a base merge brought in, and any facts the default branch's `docs/agents/pr-loop.md` declares. Rerun it to refresh the block rather than editing it. Elsewhere in the body, point to the block for its figures rather than retyping them.
++
+ ### Merge Danger
+ 
+ Describe whether it's a one-way or two-way door. You can walk back through two-way doors, but not one-way doors. A PR that is cheap to roll back is lower risk. Changes that involve destructive actions or hard-to-reverse decisions are one-way doors.
+ 
+ The blast radius is the potential impact or scope of the changes introduced by this PR. Consider all possibilities. Examples are layout shift, breakages for consumers, mobile responsiveness, etc.
++
++## Editing the body
++
++Edit a PR description from its live text: fetch it (`gh pr view <n> --json body -q .body`) just before the edit, change only the section you mean to, and keep every other section as it is, bots' summaries and other tools' blocks included. Read it back after writing: a review bot can rewrite the body from an older copy just after a push, so reapply your change on the latest body when it is gone, up to three times, then report that a bot keeps reverting it.

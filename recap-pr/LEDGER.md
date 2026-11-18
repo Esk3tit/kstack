@@ -4,7 +4,7 @@ A ticket's work leaves a **decision log**: one TSV row per decision, so the revi
 
 ## Where it lives
 
-`~/.local/share/recap/<key>/decisions.tsv`. `<key>` is `$RECAP_KEY` when set, else the ticket in the branch name or commit subjects (`PRO-2725`; pattern `$RECAP_TICKET_RE`, default `pro-[0-9]+`), else `<repo>-<branch>`. A branch keeps the key of its first row, so a later commit naming a ticket does not move its log. `RECAP_KEY` routes single writes made on another branch's behalf (the `/recap-pr` backfill) and registers nothing; to move a branch's own logging, use `log.sh --bind <key>`, which points it at another log from then on; rows never move, so the branch's key file (`~/.local/share/recap/.branch-keys/<repo>--<branch, % as %25 and / as %2F>`) lists every key it has used, newest last, and `/recap-pr` reads them all. One log spans every repo a ticket touches; point a sibling branch that lacks the ticket at it with `log.sh --bind <key>`. It is local only and never committed.
+`~/.local/share/recap/<key>/decisions.tsv`. `<key>` is `$RECAP_KEY` when set, else the ticket in the branch name or commit subjects (`PRO-2725`; pattern `$RECAP_TICKET_RE`, default `pro-[0-9]+`), else `<repo>-<branch>`. A branch keeps the key of its first row, so a later commit naming a ticket does not move its log. `RECAP_KEY` routes single writes made on another branch's behalf (the `/recap-pr` backfill) and registers nothing; to move a branch's own logging, use `log.sh --bind <key>`, which points it at another log from then on; rows never move, so the branch's key file (`~/.local/share/recap/.branch-keys/<repo>--<branch, % as %25 and / as %2F>`) lists every key it has used, newest last, and `/recap-pr` reads them all. One log spans every repo a ticket touches; point a sibling branch that lacks the ticket at it with `log.sh --bind <key>`. Review passes go to `reviews.tsv` beside it (**Review passes**, below). Both are local only and never committed.
 
 ## Writing a row
 
@@ -12,7 +12,7 @@ A ticket's work leaves a **decision log**: one TSV row per decision, so the revi
 ~/.claude/skills/recap-pr/log.sh <phase> <source> <asked> <decision> <why> <prod_delta> <evidence> <result>
 ```
 
-After any change to `log.sh`, run `bash test-log.sh` beside it. The helper finds the log from the current repo's branch, writes the header on first use, stamps `ts` (or `$RECAP_TS` for a backfilled row, in UTC `YYYY-MM-DDTHH:MM:SSZ`; other formats are refused so rows sort as text) and `repo`, and flattens tabs and newlines. `log.sh --path` prints the log path; `log.sh --pins` prints the settled decisions.
+After any change to `log.sh`, run `bash test-log.sh` and `bash test-facts.sh` beside it. The helper finds the log from the current repo's branch, writes the header on first use, stamps `ts` (or `$RECAP_TS` for a backfilled row, in UTC `YYYY-MM-DDTHH:MM:SSZ`; other formats are refused so rows sort as text) and `repo`, and flattens tabs and newlines. `log.sh --path` prints the log path; `log.sh --pins` prints the settled decisions.
 
 | column | holds |
 |---|---|
@@ -21,7 +21,7 @@ After any change to `log.sh`, run `bash test-log.sh` beside it. The helper finds
 | `asked` | `yes` when the user or the ticket asked for it; `no` when an agent or reviewer chose it |
 | `decision` | what was chosen or done, one line |
 | `why` | the reason, in plain words |
-| `prod_delta` | what analysts, customers or ops will see differently from **master**, or `none` |
+| `prod_delta` | what analysts, customers or ops will see differently from **master**; `dev: …` when only developers or agents see it (below); or `none` |
 | `evidence` | commit SHA, `file:line`, PR comment URL, screenshot path |
 | `result` | `accepted`, `rejected`, `reverted` or `open`, plus the verification (`tests green`, `screenshot`) |
 
@@ -50,9 +50,30 @@ A **mechanism** is a semaphore or concurrency cap, cache, retry, batch, timeout,
 
 Compare with what master does today, never with the branch's previous commit. A fix that restores master behavior the branch had broken is `none (restores master)`, and the row that broke it should already carry the delta. Placement, ordering, labels, collapse state, wording, throughput and storage location all count as behavior.
 
+People who work on the code see differences too. Write those with a `dev: ` prefix, so they stay apart from runtime changes in the recap and the PR's behavior section:
+
+- a stricter CI limit: `dev: CI fails a PR whose JavaScript passes 180 KB; master allowed 200 KB`;
+- a new build rule: `dev: the build refuses a server module imported from client code; master built it`;
+- a test path no longer exercised: `dev: the Safari folder-stack case no longer runs on PRs; master ran it on each one`;
+- a new coding rule: `dev: reviewers enforce colours from tokens only; master let raw hex through`;
+- a changed agent instruction: `dev: /pr-loop reruns Standards, Spec and Codex on every head it hands back; master reran only Codex after a bot fix`.
+
 ```
 ts	repo	phase	source	asked	decision	why	prod_delta	evidence	result
 2026-10-16T18:02:11Z	AI-ARG	implement	me	no	put Show quotes above the alert text	evidence reads before the claim	analysts see quotes above the alert text; master shows them below	commit 1a2b3c4	reverted after the analyst flagged it
-2026-10-16T19:40:05Z	TPRM-API	codexloop	codex	no	cap cold-record fetches with a semaphore of 8	avoid bursts against S3	comparisons load slower on busy days	src/cont_mon/event_artifacts.py:41	rejected: no measured S3 pressure
+2026-10-16T19:40:05Z	TPRM-API	codexloop	codex	no	F2.1 on feat/cont-mon: cap cold-record fetches with a semaphore of 8	avoid bursts against S3	comparisons load slower on busy days	src/cont_mon/event_artifacts.py:41	rejected: no measured S3 pressure
 2026-10-16T20:15:30Z	TPRM-API	user	you	yes	newly linked documents are Added and sit in the main list	the new link is the change	linked quotes return to the main list, now labelled Added	PR #3164	accepted
+2026-10-17T09:12:44Z	TPRM-API	implement	me	no	run the migration check in CI	a broken migration reached staging	dev: CI fails a PR whose migrations do not apply to a fresh database; master did not check	commit 9f8e7d6	accepted, CI red on a broken fixture
 ```
+
+## Review passes
+
+A **review pass** is one run of a reviewer `/pr-loop` runs before merge: `standards`, `spec`, `codexloop`, and `fable` on a cycle that warrants it. Record each one as it lands:
+
+```bash
+~/.claude/skills/recap-pr/log.sh --pass <pass> <head> <verdict> [<PR body file it read>]
+```
+
+The verdict is `clean` when the pass ran on that head and its findings changed nothing (none, each rejected with a logged reason, or each left `open` as a question for the user), `fixed` when they changed the head or the PR body, and `not-reviewed` when it did not run or did not finish. Give the body file for a pass that read the PR description: the row keeps a hash of the body's own text, leaving out blank lines, the review bots' summaries (the blocks `body_hash` in `log.sh` lists) and the review record inside `facts.py`'s block. A bot rewriting its own summary, or a refreshed record, never stales a pass; a changed check result or figure in the facts block does, and so does a bot writing back an older copy of the author's text. Each row in `reviews.tsv` holds `ts repo branch pass head verdict body`.
+
+`log.sh --check <head> [<PR number | body file>]` prints one line per pass every PR needs (`standards`, `spec`, `codexloop`) and exits 1, naming each, unless every one is `clean` on that exact head and, when given the PR or a body file, Spec is clean on the current body; it exits 3 when the only passes left are recorded `not-reviewed` there, and exits 2 when it cannot run (a bad argument, a failed `gh` call). Two logs that record different verdicts for one pass in the same second leave it open as a `CONFLICT`. A PR number reads the live body and confirms the PR's head is the one given; another head exits 1, naming both. Any other pass, such as `fable`, is listed with the head it last read and never gates.

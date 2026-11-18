@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# Checks for log.sh: key resolution, binding, the header, and settled-decision pins. Run: bash test-log.sh
+# Checks for log.sh: keys, binding, the header, pins, review passes and the check, round order, rejected findings. Run: bash test-log.sh
 set -euo pipefail
 L="$(cd "$(dirname "$0")" && pwd)/log.sh"
 export HOME=$(mktemp -d)
+export GIT_AUTHOR_NAME=Test GIT_AUTHOR_EMAIL=test@example.com GIT_COMMITTER_NAME=Test GIT_COMMITTER_EMAIL=test@example.com
 repo=$(mktemp -d)
 trap 'rm -rf "$HOME" "$repo"' EXIT
 cd "$repo" && git init -q && git commit -q --allow-empty -m init
@@ -79,5 +80,139 @@ row SR1 $T C "accepted; supersedes: B"; correction SR1 $T x "accepted; retracts:
 check "split chain with a stray retraction, one log order" "$(RECAP_KEY=SR1 RECAP_PIN_KEYS='SR1 SR2' pins)" "- C (why)"
 check "split chain with a stray retraction, other log order" "$(RECAP_KEY=SR2 RECAP_PIN_KEYS='SR2 SR1' pins)" "- C (why)"
 check "non-UTC RECAP_TS refused" "$(RECAP_TS=2026-01-01T00:00:00-07:00 "$L" user you yes x w none e accepted 2>/dev/null; echo $?)" "2"
+
+git switch -q -c feat/passes
+H0=$(git rev-parse HEAD)
+git commit -q --allow-empty -m "the change"
+H1=$(git rev-parse HEAD)
+body="$HOME/body.md"
+printf '## Summary\n\nDoes the thing.\n' > "$body"
+clean_on() { for p in standards codexloop; do "$L" --pass "$p" "$1" clean; done; "$L" --pass spec "$1" clean "$body"; }
+verdict() { "$L" --check "$@" > "$HOME/check.out" 2>&1 && echo pass || echo "fail: $(tail -1 "$HOME/check.out")"; }
+line() { grep "^  $1 " "$HOME/check.out" | sed -E 's/^  [a-z-]+ +//'; }
+check "with nothing recorded, every required pass is missing" "$(verdict "$H1")" "fail: Not clean on ${H1:0:8}: standards spec codexloop"
+clean_on "$H1"
+check "all three clean on the head and body" "$(verdict "$H1" "$body")" "pass"
+check "the first line names the head and the body it checked" "$(head -1 "$HOME/check.out")" "Required passes on ${H1:0:8} (PR body $("$L" --body-hash "$body")):"
+printf '## Summary\n\nDoes the thing.  \r\n\n\n<!-- pr-facts:record:start -->\nspec clean\n<!-- pr-facts:record:end -->\n<!-- CURSOR_SUMMARY -->\nbugbot\n<!-- /CURSOR_SUMMARY -->\n' > "$HOME/bots.md"
+check "bot summaries, the review record, blank lines and spacing leave the body unchanged" "$(verdict "$H1" "$HOME/bots.md")" "pass"
+printf '## Summary\n\nDoes the thing.\n<!-- pr-facts:start -->\nchecks 9/9\n<!-- pr-facts:end -->\n' > "$HOME/facts.md"
+check "a fact Spec could check against changes the body" "$(verdict "$H1" "$HOME/facts.md")" "fail: Not clean on ${H1:0:8}: spec"
+printf '## Summary\n\nDoes the thing.\n<!-- pr-facts:record:start -->\nnever closed\n' > "$HOME/open.md"
+check "an unclosed block counts as text" "$(verdict "$H1" "$HOME/open.md")" "fail: Not clean on ${H1:0:8}: spec"
+printf '## Summary\n\nDoes the thing, twice as fast.\n' > "$HOME/edited.md"
+check "a body edit after Spec" "$(verdict "$H1" "$HOME/edited.md")" "fail: Not clean on ${H1:0:8}: spec"
+check "a body edit names why" "$(line spec)" "STALE BODY: the PR body changed after it read it"
+check "without a body the head alone is checked" "$(verdict "$H1")" "pass"
+
+git switch -q -c base "$H0" && git commit -q --allow-empty -m "main moved" && git switch -q feat/passes
+git merge -q --no-edit base
+H2=$(git rev-parse HEAD)
+check "a base merge after review" "$(verdict "$H2" "$body")" "fail: Not clean on ${H2:0:8}: standards spec codexloop"
+check "a pass from an older head says where it ran" "$(line codexloop)" "MISSING: last ran on ${H1:0:8} (clean)"
+
+clean_on "$H2"
+"$L" --pass fable "$H2" fixed
+git commit -q --allow-empty -m "fix from Fable"
+H3=$(git rev-parse HEAD)
+check "a fix after Fable sends every required pass round again" "$(verdict "$H3" "$body")" "fail: Not clean on ${H3:0:8}: standards spec codexloop"
+check "a pass outside the set is listed with the head it last read" "$(line fable)" "not required; last read ${H2:0:8} (fixed)"
+"$L" --pass fable "$H3" not-reviewed
+check "a later record that read nothing keeps the head it last read" "$(verdict "$H3" "$body" >/dev/null; line fable)" "not required; last read ${H2:0:8} (fixed); not-reviewed on ${H3:0:8}"
+clean_on "$H3"
+check "all three clean after the fix, Fable not rerun" "$(verdict "$H3" "$body")" "pass"
+"$L" --pass standards "$H3" fixed
+check "a later fixed verdict on the same head reopens the pass" "$(verdict "$H3" "$body")" "fail: Not clean on ${H3:0:8}: standards"
+"$L" --pass spec "$H3" clean
+"$L" --pass standards "$H3" clean
+check "a body-reading pass that read no body" "$(verdict "$H3" "$body" >/dev/null; line spec)" "STALE BODY: it read no PR body"
+"$L" --pass spec "$H3" clean "$body"
+"$L" --pass codexloop "$H3" not-reviewed
+check "a pass recorded not-reviewed on the head exits 3" "$("$L" --check "$H3" "$body" >/dev/null 2>&1; echo $?)" "3"
+check "and names the pass and when it was recorded" "$(verdict "$H3" "$body"; line codexloop)" "fail: Not reviewed on ${H3:0:8}: codexloop
+NOT REVIEWED on this head (recorded $(tail -1 "$(dirname "$("$L" --path)")/reviews.tsv" | cut -f1))"
+"$L" --pass standards "$H3" fixed
+check "another pass still open makes it exit 1" "$("$L" --check "$H3" "$body" >/dev/null 2>&1; echo $?)" "1"
+"$L" --pass standards "$H3" clean
+"$L" --pass codexloop "$H3" clean
+check "a bad verdict is refused" "$("$L" --pass fable "$H3" approved 2>/dev/null; echo $?)" "2"
+check "an unknown head is refused" "$("$L" --check deadbeef 2>/dev/null; echo $?)" "2"
+
+mkdir -p "$HOME/bin"
+printf '#!/usr/bin/env bash\ncase "$*" in *headRefOid,body*) echo %s; cat %s ;; *) exit 9 ;; esac\n' "$H3" "$body" > "$HOME/bin/gh"
+chmod +x "$HOME/bin/gh"
+"$L" --pass spec "$H3" clean "$body"
+check "a PR number reads its live head and body" "$(PATH="$HOME/bin:$PATH" verdict "$H3" 7)" "pass"
+check "a PR number with another head" "$(PATH="$HOME/bin:$PATH" verdict "$H2" 7)" "fail: PR #7's head is ${H3:0:8}, not ${H2:0:8}: check the head it will merge."
+
+round() { "$L" codexloop me yes "$1" scope none "head $2" accepted; }
+check "no rounds yet: the first is round 1" "$("$L" --rounds; echo $?)" "next round 1
+0"
+round "round 1 dispatched on feat/passes" "$H1, whole-PR"
+check "a dispatched round blocks the next" "$("$L" --rounds 2>/dev/null; echo $?)" "1"
+check "the block names the round" "$("$L" --rounds 2>&1 | cut -c1-34)" "round 1 on feat/passes (dispatched"
+"$L" --bind ROUNDS >/dev/null
+check "binding to another log keeps the pending round" "$("$L" --rounds 2>/dev/null; echo $?)" "1"
+round "round 1 (whole-PR) on feat/passes: 2 findings, 1 accepted, fixed" "$H1"
+check "a round row unblocks" "$("$L" --rounds | cut -f6)" "round 1 (whole-PR) on feat/passes: 2 findings, 1 accepted, fixed
+next round 2"
+round "round 2 dispatched on feat/passes" "$H3, fixes"
+round "round 2 dropped on feat/passes" "$H3"
+round "round 9 dispatched on feat/other" "$H3, whole-PR"
+check "a dropped round and another branch's round block nothing, and a dropped number is not reused" "$("$L" --rounds | cut -f6)" "round 1 (whole-PR) on feat/passes: 2 findings, 1 accepted, fixed
+next round 3"
+round "round 1 dispatched on feat/wt" "$H3, working-tree"
+round "round 1 (working-tree) on feat/wt: 0 findings, 0 accepted, clean" "$H3"
+check "a working-tree round row closes its dispatch" "$(git switch -q -c feat/wt; RECAP_KEY=ROUNDS "$L" --rounds >/dev/null 2>&1; echo $?; git switch -q feat/passes)" "0"
+round "round 3 dispatched on feat/passes" "$H3, fixes"
+round "round 3 (fixes) on feat/passes: 0 findings, 0 accepted, clean" "$H3"
+"$L" --bind ROUNDS2 >/dev/null
+RECAP_TS=2026-01-01T00:00:00Z round "round 4 dispatched on feat/passes" "$H3, fixes"
+"$L" --bind ROUNDS >/dev/null
+RECAP_TS=2026-01-01T00:00:00Z round "round 4 dropped on feat/passes" "$H3"
+check "a drop in another log in the same second still ends its round" "$("$L" --rounds >/dev/null 2>&1; echo $?)" "0"
+round "round 9 (whole-PR) on feat/other: rebased on feat/passes: 0 findings, 0 accepted, clean" "$H3"
+check "the last two round rows, oldest first, then the next number" "$("$L" --rounds | cut -f6 | tr '\n' '|')" "round 1 (whole-PR) on feat/passes: 2 findings, 1 accepted, fixed|round 3 (fixes) on feat/passes: 0 findings, 0 accepted, clean|next round 5|"
+round "round 5 (whole-PR) dispatched on feat/passes" "$H3"
+check "a dispatch row with a scope label still blocks the next round" "$("$L" --rounds 2>/dev/null; echo $?)" "1"
+round "round 5 dropped on feat/passes: reviewer timed out" "$H3"
+check "a dropped row with a reason ends its round" "$("$L" --rounds | tail -1)" "next round 6"
+round "round 6 dispatched on feat/passes-2" "$H3"
+check "a branch whose name only starts with this one's is another branch" "$("$L" --rounds >/dev/null 2>&1; echo $?)" "0"
+
+finding() { "$L" codexloop codex no "$1" "$2" none ev "$3"; }
+finding "F1.1 on feat/passes: retry token kept stale" "the old token is still valid" rejected
+finding "F1.2 on feat/passes: missing await" "real" "accepted, tests green"
+"$L" --bind FINDINGS >/dev/null
+finding "F2.1 on feat/passes: title says undimmed" "wording only" rejected
+finding "F1.1 on feat/passes: retry token kept stale" "new trace shows a 401" "accepted, tests green"
+finding "F2.1 on feat/other: unrelated finding" "another branch's" "accepted, tests green"
+finding "F3.1 on feat/other: another branch's rejection" "not ours" rejected
+finding "F2.1 on feat/other: a regression on feat/passes: same ID" "another branch's, naming ours" "accepted, tests green"
+check "rejected findings keep their IDs across logs, and a reopened one leaves" "$("$L" --rejected)" "- F2.1 on feat/passes: title says undimmed (wording only)"
+
+git switch -q -c feat/tie && git commit -q --allow-empty -m tie && H4=$(git rev-parse HEAD)
+standards_at() { RECAP_TS="2026-01-02T00:00:0$1Z" "$L" --pass standards "$H4" "$2"; }
+"$L" --bind TIE1 >/dev/null && "$L" --bind TIE2 >/dev/null
+standards_at 0 clean
+"$L" --bind TIE1 >/dev/null
+standards_at 0 fixed
+check "two logs' different verdicts in one second are not certified" "$(verdict "$H4" >/dev/null; line standards)" "CONFLICT: two logs recorded different results in the same second (2026-01-02T00:00:00Z)"
+standards_at 1 fixed
+check "a later record settles the tie" "$(verdict "$H4" >/dev/null; line standards)" "NOT CLEAN: fixed on this head"
+standards_at 2 clean
+standards_at 2 fixed
+check "one log's rows in one second keep their write order" "$(verdict "$H4" >/dev/null; line standards)" "NOT CLEAN: fixed on this head"
+"$L" --bind TIE2 >/dev/null
+standards_at 3 fixed
+standards_at 3 clean
+"$L" --bind TIE1 >/dev/null
+standards_at 3 fixed
+check "logs whose last rows in one second disagree conflict, whatever came before" "$(verdict "$H4" >/dev/null; line standards)" "CONFLICT: two logs recorded different results in the same second (2026-01-02T00:00:03Z)"
+standards_at 4 clean
+"$L" --bind TIE2 >/dev/null
+standards_at 4 fixed
+standards_at 4 clean
+check "logs whose last rows agree are certified" "$(verdict "$H4" >/dev/null; line standards)" "clean"
 
 exit $fail
