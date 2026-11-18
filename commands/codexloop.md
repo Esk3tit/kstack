@@ -33,7 +33,7 @@ fi
 [ -n "$COMPANION" ] && [ -f "$COMPANION" ] || { echo 'STATUS=FAIL ERROR="openai-codex plugin not found — install it (/plugin install codex@openai-codex) and run /codex:setup"'; exit 0; }
 ```
 - **Ready check:** `node "$COMPANION" setup --json` must show `.ready === true` and `.auth.loggedIn === true`; otherwise `STATUS=FAIL ERROR="Codex not ready — run /codex:setup"` (do not improvise an auth flow).
-- **Model:** the Codex model `CLAUDE.md` names for Codex work; always pass it, since the Codex config sets no default.
+- **Model:** the model `CLAUDE.md` names for Codex reviews; always pass it, whatever the Codex config's default.
 - **Review call** (the companion gathers the diff from git itself; it prints `{"result": ...}` with `--json` and exits non-zero on failure):
   ```bash
   node "$COMPANION" adversarial-review --scope "$SCOPE" ${BASE:+--base "origin/$BASE"} --model "$MODEL" --json "$FOCUS" \

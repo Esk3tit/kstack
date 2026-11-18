@@ -46,7 +46,7 @@ Done when every listed surface has a master/branch pair or a stated reason it ca
 
 ## 4. Second opinion
 
-Hand the log, the diffs and the parity pairs to a reviewer from a different model family from the one that did most of the work: Codex `gpt-6.1-sol` through the companion `task`, read-only, when Claude implemented; Claude Opus 5.5 when Codex did. From Codex, run it as the plain command `/Users/<you>/.codex/bin/claude-read claude-opus-5-5 "<brief>" [<extra dirs to read>]` (a copy of kstack `codex/bin/`, the only read-only Claude entry Codex allows outside the sandbox), pointing the brief at files to Read. It flags:
+Hand the log, the diffs and the parity pairs to a reviewer from a different model family from the one that did most of the work: Codex `gpt-6.2-astra` through the companion `task`, read-only, when Claude implemented; Claude Opus 5.5 when Codex did. From Codex, run it as the plain command `/Users/<you>/.codex/bin/claude-read claude-opus-5-5 "<brief>" [<extra dirs to read>]` (a copy of kstack `codex/bin/`, the only read-only Claude entry Codex allows outside the sandbox), pointing the brief at files to Read. It flags:
 
 - `prod_delta none` rows whose diff says otherwise;
 - accepted `asked no` rows that add a mechanism or widen scope;

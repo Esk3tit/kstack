@@ -23,7 +23,7 @@
     "path": "~/.local/share/recap/wt-records-610/decisions.tsv",
     "rows": 67
   },
-  "reviewed_by": "gpt-6.1-sol (Codex)",
+  "reviewed_by": "gpt-6.2-astra (Codex)",
   "parity": {
     "summary": "Every tree name at the default text size, on main's build and this branch, on the USA tree with the long-name fixture at 390, 1280 and 1600px: 18 of 18 identical in fit, break, height and lines. Page weight differs; see Divergences.",
     "pairs": [
@@ -348,7 +348,7 @@
     "decided_no_change": [
       {
         "surface": "Reviews",
-        "text": "Codex rounds 1–13 (`gpt-6.1-sol`): 1 finding in all (round 10, accepted). Converged at 760a0089.",
+        "text": "Codex rounds 1–13 (`gpt-6.2-astra`): 1 finding in all (round 10, accepted). Converged at 760a0089.",
         "why": null,
         "who": [
           "codex"
