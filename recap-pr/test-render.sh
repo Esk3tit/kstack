@@ -47,10 +47,11 @@ echo '{"title": "x", "prs": [], "sections": [' > "$tmp/broken.json"
 check "unreadable JSON is refused" "$(python3 "$D/render.py" "$tmp/broken.json" >/dev/null 2>&1 && echo 0 || echo 1)" "1"
 
 chrome=${CHROME:-}
-for c in "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" "/Applications/Chromium.app/Contents/MacOS/Chromium" google-chrome google-chrome-stable chromium chromium-browser; do
-  [ -n "$chrome" ] && break
-  if command -v "$c" >/dev/null 2>&1; then chrome=$c; fi
-done
+if [ -z "$chrome" ]; then
+  for c in "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" "/Applications/Chromium.app/Contents/MacOS/Chromium" google-chrome google-chrome-stable chromium chromium-browser; do
+    if command -v "$c" >/dev/null 2>&1; then chrome=$c; break; fi
+  done
+fi
 if [ -z "$chrome" ]; then
   echo "FAIL no Chrome or Chromium to draw the page with; set CHROME to one"
   exit 1
