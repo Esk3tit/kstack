@@ -238,9 +238,9 @@ echo 1 > "$FAKE/clobbers"
 check "a stale copy of the author's text is refused, not written back" "$(python3 "$D/facts.py" 7 2>&1 >/dev/null | grep -c "own text changed")" "1"
 rm "$FAKE/clobbers"
 printf '## Summary\n\nNo block yet.\n' > "$FAKE/body"
-check "a record-only refresh needs a block to refresh" "$(python3 "$D/facts.py" 7 --record-only 2>&1 >/dev/null | grep -c 'run facts.py <pr> first')" "1"
+check "a record-only refresh needs a block to refresh" "$(python3 "$D/facts.py" 7 --record-only 2>&1 >/dev/null | grep -c '^facts.py: .*run facts.py <pr> first')" "1"
 printf 'text\n<!-- pr-facts:end -->\n<!-- pr-facts:start -->\n' > "$FAKE/body"
-check "broken markers are refused, not guessed at" "$(python3 "$D/facts.py" 7 2>&1 >/dev/null | grep -c 'markers are broken')" "1"
+check "broken markers are refused, not guessed at" "$(python3 "$D/facts.py" 7 2>&1 >/dev/null | grep -c '^facts.py: the body.s facts markers are broken')" "1"
 
 git switch -q -c trusted origin/main
 printf '%s\n' '- facts: Trusted = run: printf from-the-default-branch' > docs/agents/pr-loop.md
