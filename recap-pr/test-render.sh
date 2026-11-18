@@ -57,8 +57,8 @@ if [ -z "$chrome" ]; then
   exit 1
 fi
 
-# Prints what the drawn page shows: its headline, each section heading with its items (each one a Show N more button
-# hides is printed in [brackets]) and then that button, and each fold's line, with ' · ' put before the fold's grey note.
+# Prints one part of what the drawn page shows: its headline; each section heading with its items (each one a Show N
+# more button hides in [brackets]) and then that button; or each fold's line, with ' · ' before its grey note.
 shown_py=$(cat <<'PY'
 import collections, html.parser, sys
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
@@ -115,11 +115,11 @@ drawn() {  # drawn <name> <python edit of d, S its sections>: the sample with no
     exit 1
   fi
 }
-shown() { python3 -c "$shown_py" "$2" < "$tmp/$1.dom"; }
+shown() { python3 -c "$shown_py" "$2" < "$tmp/$1.dom"; }  # shown <name> <headline|sections|folds>
 
-user_change='{"surface": "Nation tree", "text": "user change"}'
-dev_change='{"surface": "Developers and agents", "text": "agent change"}'
-dev_change_loose='{"surface": " developers and agents ", "text": "second agent change"}'
+user_change="{'surface': 'Nation tree', 'text': 'user change'}"
+dev_change="{'surface': 'Developers and agents', 'text': 'agent change'}"
+dev_change_loose="{'surface': ' developers and agents ', 'text': 'second agent change'}"
 drawn users-only "S['behavior_changes'] = [$user_change]"
 drawn dev-only "S['behavior_changes'] = [$dev_change, $dev_change_loose]"
 drawn mixed "S['behavior_changes'] = [$dev_change, $user_change, $dev_change_loose]"
@@ -134,7 +134,7 @@ drawn seven-each "S['behavior_changes'] = [dict($user_change, text='user %d' % i
 check "each heading shows six and hides the seventh behind its own Show 1 more button" "$(shown seven-each sections)" \
   "What users will see: user 0, user 1, user 2, user 3, user 4, user 5, [user 6], Show 1 more | What developers and agents will see: dev 0, dev 1, dev 2, dev 3, dev 4, dev 5, [dev 6], Show 1 more"
 
-fill_folds() {  # fill_folds <n>: no behaviour changes, n items in every fold's section, n parity pairs that differ and n log rows
+fill_folds() {  # fill_folds <n>: no behavior changes, n items in every fold's section, n parity pairs that differ and n log rows
   echo "S['behavior_changes'] = []
 S['attention'] = [{'surface': 'CI', 'text': 'a note'}] * $1
 S['not_asked_for'] = [{'surface': 'Tests', 'text': 'an addition', 'mechanism': True}] * $1
