@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Checks for render.py and recap.html: the data reaches the page intact, a value can't close the data block, bad input
-# writes nothing, and the page Chrome draws heads and counts each section right. Run: bash test-render.sh
+# writes nothing, and the page, drawn in Chrome, heads and counts each section right. Run: bash test-render.sh
 set -euo pipefail
 D="$(cd "$(dirname "$0")" && pwd)"
 tmp=$(mktemp -d)
@@ -10,26 +10,25 @@ fail=0
 check() { if [ "$2" = "$3" ]; then echo "ok   $1"; else echo "FAIL $1: got [$2], want [$3]"; fail=1; fi; }
 block() { python3 -c 'import json,re,sys; s=open(sys.argv[1]).read(); m=re.search(r"<script type=\"application/json\" id=\"recap-data\">(.*?)</script>", s, re.S); print(json.dumps(json.loads(m.group(1)), sort_keys=True))' "$1"; }
 same() { python3 -c 'import json,sys; print(json.dumps(json.load(open(sys.argv[1])), sort_keys=True))' "$1"; }
+edited() {  # edited <name> <python edit of d>: writes the sample, so edited, to $tmp/<name>.json
+  python3 -c "import json,sys; d=json.load(open(sys.argv[1])); $2; json.dump(d, open(sys.argv[2], 'w'))" "$tmp/recap.json" "$tmp/$1.json"
+}
+uri() { python3 -c 'import pathlib,sys; print(pathlib.Path(sys.argv[1]).resolve().as_uri())' "$1"; }
 
 cp "$D/sample-recap.json" "$tmp/recap.json"
 check "prints the page beside the data" "$(python3 "$D/render.py" "$tmp/recap.json")" "$tmp/recap.html"
 check "the sample reaches the page intact" "$(block "$tmp/recap.html")" "$(same "$tmp/recap.json")"
 check "one data block" "$(grep -c 'id="recap-data"' "$tmp/recap.html")" "1"
 mkdir -p "$tmp/elsewhere" && python3 "$D/render.py" "$tmp/recap.json" "$tmp/elsewhere/page.html" >/dev/null
-check "relative paths stay anchored to recap.json" "$(grep -o '<base href="[^"]*">' "$tmp/elsewhere/page.html")" "<base href=\"$(python3 -c 'import pathlib,sys; print(pathlib.Path(sys.argv[1]).resolve().as_uri())' "$tmp")/\">"
+check "relative paths stay anchored to recap.json" "$(grep -o '<base href="[^"]*">' "$tmp/elsewhere/page.html")" "<base href=\"$(uri "$tmp")/\">"
 
-python3 - "$tmp/recap.json" "$tmp/hostile.json" <<'PY'
-import json, sys
-data = json.load(open(sys.argv[1]))
-data["title"] = "</script><script>alert(1)</script><!-- &  "
-json.dump(data, open(sys.argv[2], "w"))
-PY
+edited hostile 'd["title"] = "</script><script>alert(1)</script><!-- &  "'
 python3 "$D/render.py" "$tmp/hostile.json" "$tmp/hostile.html" >/dev/null
 check "a value can't close the data block" "$(grep -c '</script><script>alert' "$tmp/hostile.html" || true)" "0"
 check "the escaped value reads back unchanged" "$(block "$tmp/hostile.html")" "$(same "$tmp/hostile.json")"
 
 refused() {  # refused <name> <python edit of d> <expected phrase>
-  python3 -c "import json,sys; d=json.load(open(sys.argv[1])); $2; json.dump(d, open(sys.argv[2], 'w'))" "$tmp/recap.json" "$tmp/$1.json"
+  edited "$1" "$2"
   check "refused: $1" "$(python3 "$D/render.py" "$tmp/$1.json" "$tmp/$1.html" 2>&1 >/dev/null | grep -c "$3")" "1"
   check "refused $1 writes no page" "$([ -e "$tmp/$1.html" ] && echo written || echo none)" "none"
 }
@@ -39,7 +38,7 @@ refused no-prs 'd["prs"] = []' 'prs is missing'
 refused unready-unknown 'del d["prs"][0]["merge_ready"]' 'prs\[0\].merge_ready must be'
 refused ready-not-a-phrase 'd["prs"][0]["merge_ready"] = True' 'prs\[0\].merge_ready must be'
 refused unknown-section 'd["sections"]["open_questions"] = []' 'sections.open_questions is not one'
-python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); d["prs"][0]["merge_ready"]="yes, after #616 merges"; json.dump(d, open(sys.argv[2], "w"))' "$tmp/recap.json" "$tmp/stacked.json"
+edited stacked 'd["prs"][0]["merge_ready"] = "yes, after #616 merges"'
 check "a stacked PR's readiness is accepted" "$(python3 "$D/render.py" "$tmp/stacked.json" "$tmp/stacked.html" >/dev/null 2>&1 && echo 0 || echo 1)" "0"
 refused no-reviewer 'd["reviewed_by"] = ""' 'reviewed_by'
 refused not-an-object 'd = [d]' 'not a JSON object'
@@ -94,20 +93,21 @@ print({"headline": page.headline,
        "folds": " | ".join(page.folds)}[sys.argv[1]])
 PY
 )
-drawn() {  # drawn <name> <python edit of d>: renders the edited sample, draws it in Chrome and keeps the DOM
-  python3 -c "import json,sys; d=json.load(open(sys.argv[1])); S=d['sections']; S['divergences']=[]; S['attention']=[]; $2; json.dump(d, open(sys.argv[2], 'w'))" "$tmp/recap.json" "$tmp/$1.json"
+# drawn <name> <python edit of d, with S its sections>: the sample with its divergences and attention items emptied,
+# so nothing needs the owner, then edited, rendered and drawn in Chrome; keeps the DOM as $tmp/<name>.dom
+drawn() {
+  edited "$1" "S = d['sections']; S['divergences'] = []; S['attention'] = []; $2"
   python3 "$D/render.py" "$tmp/$1.json" "$tmp/$1.html" >/dev/null
-  "$chrome" --headless --no-first-run --no-default-browser-check --user-data-dir="$tmp/chrome" --dump-dom \
-    "$(python3 -c 'import pathlib,sys; print(pathlib.Path(sys.argv[1]).resolve().as_uri())' "$tmp/$1.html")" 2>/dev/null > "$tmp/$1.dom"
+  "$chrome" --headless --no-first-run --no-default-browser-check --user-data-dir="$tmp/chrome" --dump-dom "$(uri "$tmp/$1.html")" 2>/dev/null > "$tmp/$1.dom"
 }
 shown() { python3 -c "$SHOWN" "$2" < "$tmp/$1.dom"; }
 
-USER='{"surface": "Nation tree", "text": "user change"}'
-DEV='{"surface": "Developers and agents", "text": "agent change"}'
-DEV2='{"surface": " developers and agents ", "text": "second agent change"}'
-drawn users-only "S['behavior_changes'] = [$USER]"
-drawn dev-only "S['behavior_changes'] = [$DEV, $DEV2]"
-drawn mixed "S['behavior_changes'] = [$DEV, $USER, $DEV2]"
+USER_CHANGE='{"surface": "Nation tree", "text": "user change"}'
+DEV_CHANGE='{"surface": "Developers and agents", "text": "agent change"}'
+DEV_CHANGE_CASED='{"surface": " developers and agents ", "text": "second agent change"}'
+drawn users-only "S['behavior_changes'] = [$USER_CHANGE]"
+drawn dev-only "S['behavior_changes'] = [$DEV_CHANGE, $DEV_CHANGE_CASED]"
+drawn mixed "S['behavior_changes'] = [$DEV_CHANGE, $USER_CHANGE, $DEV_CHANGE_CASED]"
 drawn unchanged "S['behavior_changes'] = []"
 check "user changes go under the users' heading" "$(shown users-only sections)" "What users will see: user change"
 check "dev-only changes get their own heading and no users' heading" "$(shown dev-only sections)" "What developers and agents will see: agent change, second agent change"

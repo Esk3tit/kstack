@@ -1,6 +1,6 @@
 # The recap's data
 
-Step 5 writes the recap as `recap.json` beside the log, and `render.py` puts it into `recap.html`, the page the user reads. [sample-recap.json](sample-recap.json) is a filled-in example of the shape, abridged: it cites only some of its log's rows, where a real recap places every row, and its screenshots aren't included. To preview the page on it, run `python3 render.py sample-recap.json /tmp/sample.html`. After changing `render.py` or `recap.html`, run `bash test-render.sh` beside them (it draws the page in Chrome, or in the browser `CHROME` names) and look at that preview.
+Step 5 writes the recap as `recap.json` beside the log, and `render.py` puts it into `recap.html`, the page the user reads. [sample-recap.json](sample-recap.json) is a filled-in example of the shape, abridged: it cites only some of its log's rows, where a real recap places every row, and its screenshots aren't included. To preview the page on it, run `python3 render.py sample-recap.json /tmp/sample.html`. After changing `render.py` or `recap.html`, run `bash test-render.sh` beside them and look at that preview.
 
 The page works out its headline from the data:
 
@@ -29,7 +29,7 @@ So a divergence or owner call goes in those places only while it's open, and eve
 
 | field | holds |
 |---|---|
-| `surface` | where people meet it: a page, an API, a prompt, the pipeline; `Developers and agents` for a `dev:` row (LEDGER.md), which the page lists under its own heading in `behavior_changes`, apart from what users will see |
+| `surface` | where people meet it: a page, an API, a prompt, the pipeline; `Developers and agents` for a `dev:` row (LEDGER.md); in `behavior_changes` the page lists these under their own heading, apart from what users will see |
 | `text` | the decision in plain words, for a reader who hasn't seen the code. Only `**bold**` and `` `code` `` are formatted |
 | `why` | the reason, or `null` |
 | `who` | the log's `source` values behind it: `you`, `me`, `codex`, `claude`, `fable`, `review`, `bot:<name>` |
