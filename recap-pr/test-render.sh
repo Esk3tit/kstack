@@ -57,7 +57,7 @@ if [ -z "$chrome" ]; then
 fi
 
 # Prints what the drawn page shows: its headline, each section heading with its items' text, and each fold's line.
-SHOWN_PY=$(cat <<'PY'
+shown_py=$(cat <<'PY'
 import html.parser, sys
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
 class Shown(html.parser.HTMLParser):
@@ -93,23 +93,21 @@ print({"headline": page.headline,
        "folds": " | ".join(page.folds)}[sys.argv[1]])
 PY
 )
-# drawn <name> <python edit of d, with S its sections>: the sample with its divergences and attention items emptied,
-# so nothing needs the owner, then edited, rendered and drawn in Chrome; keeps the DOM as $tmp/<name>.dom
-drawn() {
+drawn() {  # drawn <name> <python edit of d, S its sections>: the sample with nothing for the owner to decide, edited, drawn in Chrome as $tmp/<name>.dom
   edited "$1" "S = d['sections']; S['divergences'] = []; S['attention'] = []; $2"
   python3 "$D/render.py" "$tmp/$1.json" "$tmp/$1.html" >/dev/null
   if ! "$chrome" --headless --no-first-run --no-default-browser-check --user-data-dir="$tmp/chrome" --dump-dom "$(uri "$tmp/$1.html")" 2>/dev/null > "$tmp/$1.dom" || [ ! -s "$tmp/$1.dom" ]; then
     echo "FAIL $chrome could not draw $1.html"; fail=1
   fi
 }
-shown() { python3 -c "$SHOWN_PY" "$2" < "$tmp/$1.dom"; }
+shown() { python3 -c "$shown_py" "$2" < "$tmp/$1.dom"; }
 
-USER_CHANGE='{"surface": "Nation tree", "text": "user change"}'
-DEV_CHANGE='{"surface": "Developers and agents", "text": "agent change"}'
-DEV_CHANGE_LOOSE='{"surface": " developers and agents ", "text": "second agent change"}'
-drawn users-only "S['behavior_changes'] = [$USER_CHANGE]"
-drawn dev-only "S['behavior_changes'] = [$DEV_CHANGE, $DEV_CHANGE_LOOSE]"
-drawn mixed "S['behavior_changes'] = [$DEV_CHANGE, $USER_CHANGE, $DEV_CHANGE_LOOSE]"
+user_change='{"surface": "Nation tree", "text": "user change"}'
+dev_change='{"surface": "Developers and agents", "text": "agent change"}'
+dev_change_loose='{"surface": " developers and agents ", "text": "second agent change"}'
+drawn users-only "S['behavior_changes'] = [$user_change]"
+drawn dev-only "S['behavior_changes'] = [$dev_change, $dev_change_loose]"
+drawn mixed "S['behavior_changes'] = [$dev_change, $user_change, $dev_change_loose]"
 drawn unchanged "S['behavior_changes'] = []"
 check "user changes go under the users' heading" "$(shown users-only sections)" "What users will see: user change"
 check "dev-only changes get their own heading and no users' heading" "$(shown dev-only sections)" "What developers and agents will see: agent change, second agent change"
@@ -128,8 +126,8 @@ d['log']['rows'] = $1"
 }
 drawn one-each "$(fill_folds 1)"
 drawn two-each "$(fill_folds 2)"
-check "count lines agree with one" "$(shown one-each folds)" "1 note · read before merging | 1 addition nobody asked for · 1 mechanism | 1 suggestion turned down | 1 decision that changes nothing for users | Side-by-side check · 1 differs | Who decided what · you were asked about 1 of 4 | About this recap · from 1 log row"
-check "count lines agree with two" "$(shown two-each folds)" "2 notes · read before merging | 2 additions nobody asked for · 2 mechanisms | 2 suggestions turned down | 2 decisions that change nothing for users | Side-by-side check · 2 differ | Who decided what · you were asked about 2 of 8 | About this recap · from 2 log rows"
+check "count lines agree with one" "$(shown one-each folds)" "1 note · read before merging | 1 addition nobody asked for · 1 mechanism | 1 suggestion turned down | 1 decision that changes nothing | Side-by-side check · 1 differs | Who decided what · you were asked about 1 of 4 | About this recap · from 1 log row"
+check "count lines agree with two" "$(shown two-each folds)" "2 notes · read before merging | 2 additions nobody asked for · 2 mechanisms | 2 suggestions turned down | 2 decisions that change nothing | Side-by-side check · 2 differ | Who decided what · you were asked about 2 of 8 | About this recap · from 2 log rows"
 check "the headline counts one note" "$(shown one-each headline)" "Nothing to decide. Read one note before merging."
 check "the headline counts two notes" "$(shown two-each headline)" "Nothing to decide. Read two notes before merging."
 

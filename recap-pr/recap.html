@@ -497,7 +497,7 @@ dd{margin:0; min-width:0}
       out.appendChild(fold(plural(turned.length, 'suggestion', 'suggestions') + ' turned down', otherNote, itemList(turned, { showWhy: true })));
     }
     var settled = list(S.decided_no_change);
-    if (settled.length) out.appendChild(fold(plural(settled.length, 'decision that changes', 'decisions that change') + ' nothing for users', '', itemList(settled, { showWhy: true })));
+    if (settled.length) out.appendChild(fold(plural(settled.length, 'decision that changes', 'decisions that change') + ' nothing', '', itemList(settled, { showWhy: true })));
     var parity = data.parity && typeof data.parity === 'object' ? data.parity : null;
     if (parity && (list(parity.pairs).length || parity.summary)) out.appendChild(parityFold(parity, base));
     var everyone = [];
