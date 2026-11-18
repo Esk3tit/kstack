@@ -124,9 +124,6 @@ details.more > summary:hover{color:var(--ink)}
   background:var(--wash); border:1px solid var(--hair); border-radius:7px;
 }
 
-.linkish{background:none; border:0; padding:.5rem 0; margin-top:.9rem; cursor:pointer; text-decoration:underline; text-decoration-color:var(--hair); text-underline-offset:.2em}
-.linkish:hover{color:var(--ink)}
-
 .folds{margin-top:4.5rem; border-bottom:1px solid var(--hair)}
 details.fold{border-top:1px solid var(--hair)}
 details.fold > summary{
@@ -134,7 +131,8 @@ details.fold > summary{
   padding:.85rem 0; min-height:2.75rem; font-size:1.0625rem;
 }
 details.fold > summary::-webkit-details-marker{display:none}
-details.fold > summary .note{color:var(--muted); font-size:1rem; margin-left:.6rem}
+details.fold > summary > span{display:flex; flex-wrap:wrap; align-items:baseline; column-gap:.6rem}
+details.fold > summary .note{color:var(--muted); font-size:1rem}
 details.fold > summary::after{
   content:"›"; margin-left:auto; padding-left:.5rem; color:var(--muted);
   font-family:var(--sans); transition:transform .15s;
@@ -180,7 +178,7 @@ dd{margin:0; min-width:0}
   :root{--paper:#fff; --ink:#000; --muted:#444; --hair:#bbb; --wash:#f2f2f2; --edge:#777; --alarm:#8a1711; --call:#6b4500; --ok:#1f5a2a; color-scheme:light}
   body{font-size:11pt}
   main{max-width:none; padding:0}
-  .theme,.copy,.linkish,.answer:placeholder-shown,.opt[aria-pressed="false"]{display:none}
+  .theme,.copy,.answer:placeholder-shown,.opt[aria-pressed="false"]{display:none}
   .verdict{margin-top:1.5rem}
   .item,details.fold > summary{break-inside:avoid}
   details > summary::after{display:none !important}
@@ -378,16 +376,17 @@ dd{margin:0; min-width:0}
     main.appendChild(verdictHeader(data, prs, needCount, notReady, notes.length));
     if (needCount) main.appendChild(needs(data, undecided, calls, base));
     var behavior = list(S.behavior_changes);
-    if (behavior.length) main.appendChild(behaviorSection(behavior));
+    var forUsers = behavior.filter(function (b) { return !isDevOnly(b); });
+    var forDevs = behavior.filter(isDevOnly);
+    if (forUsers.length) main.appendChild(behaviorSection('What users will see', forUsers));
+    if (forDevs.length) main.appendChild(behaviorSection('What developers and agents will see', forDevs));
     main.appendChild(folds(data, notes, base));
 
     window.addEventListener('beforeprint', function () {
       Array.prototype.forEach.call(document.querySelectorAll('details:not([open])'), function (d) { d.open = true; d.setAttribute('data-print', ''); });
-      Array.prototype.forEach.call(document.querySelectorAll('li[hidden]'), function (l) { l.hidden = false; l.setAttribute('data-print', ''); });
     });
     window.addEventListener('afterprint', function () {
       Array.prototype.forEach.call(document.querySelectorAll('details[data-print]'), function (d) { d.open = false; d.removeAttribute('data-print'); });
-      Array.prototype.forEach.call(document.querySelectorAll('li[data-print]'), function (l) { l.hidden = true; l.removeAttribute('data-print'); });
     });
   }
 
@@ -454,24 +453,9 @@ dd{margin:0; min-width:0}
     return head;
   }
 
-  function behaviorSection(behavior) {
-    var sec = el('section', null, el('h2', { text: 'What users will see' }));
-    var LIMIT = 6, ul = el('ul');
-    behavior.forEach(function (b, i) {
-      var li = item(b);
-      if (i >= LIMIT) li.hidden = true;
-      ul.appendChild(li);
-    });
-    sec.appendChild(ul);
-    if (behavior.length > LIMIT) {
-      var moreBtn = el('button', { class: 'linkish quiet', type: 'button', text: 'Show ' + (behavior.length - LIMIT) + ' more' });
-      moreBtn.addEventListener('click', function () {
-        Array.prototype.forEach.call(ul.children, function (c) { c.hidden = false; });
-        moreBtn.remove();
-      });
-      sec.appendChild(moreBtn);
-    }
-    return sec;
+  function isDevOnly(it) { return str(it.surface) === 'Developers and agents'; }
+  function behaviorSection(heading, behavior) {
+    return el('section', null, el('h2', { text: heading }), itemList(behavior));
   }
 
   function folds(data, notes, base) {
@@ -492,7 +476,7 @@ dd{margin:0; min-width:0}
       out.appendChild(fold(plural(turned.length, 'suggestion', 'suggestions') + ' turned down', otherNote, itemList(turned, { showWhy: true })));
     }
     var settled = list(S.decided_no_change);
-    if (settled.length) out.appendChild(fold(plural(settled.length, 'decision', 'decisions') + ' that change nothing for users', '', itemList(settled, { showWhy: true })));
+    if (settled.length) out.appendChild(fold(plural(settled.length, 'decision that changes', 'decisions that change') + ' nothing', '', itemList(settled, { showWhy: true })));
     var parity = data.parity && typeof data.parity === 'object' ? data.parity : null;
     if (parity && (list(parity.pairs).length || parity.summary)) out.appendChild(parityFold(parity, base));
     var everyone = [];

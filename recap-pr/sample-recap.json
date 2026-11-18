@@ -142,6 +142,26 @@
             "kind": "screenshot"
           }
         ]
+      },
+      {
+        "surface": "Developers and agents",
+        "text": "**docs/e2e.md lists the new `tree-text-size.spec.ts` suite,** which checks that every tree name refits as the text size changes, in all three engines. Main's suite table had no row for it.",
+        "why": "Listing the text-size suite helps the next agent find it before writing another.",
+        "who": [
+          "me"
+        ],
+        "asked": "yes",
+        "result": "accepted",
+        "rows": [
+          3
+        ],
+        "evidence": [
+          {
+            "label": "docs/e2e.md",
+            "href": "https://github.com/Esk3tit/wt-records/blob/dbec4312/docs/e2e.md",
+            "kind": "file"
+          }
+        ]
       }
     ],
     "not_asked_for": [

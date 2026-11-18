@@ -256,8 +256,9 @@ Marketplaces: `superpowers-marketplace`, `superpowers-extended-cc-marketplace`, 
 ## 8. Tooling (CLIs)
 
 `codex`, `gh` >= 2.99 (+ `gh-axi`; `--attach` posts no-mistakes screenshots and clips), `lavish-axi` (npx),
-`agent-browser` (drives no-mistakes; `agent-browser install` for its Chrome) + `ffmpeg` (clips), `doppler` (secrets
-for all repos), `porter` (preview envs), `neonctl`/`neon` (Neon branches), `aws` (report gen), `psql`.
+`agent-browser` (drives no-mistakes; `agent-browser install` for its Chrome) + `ffmpeg` (clips), Google Chrome or
+Chromium (`recap-pr/test-render.sh` draws the recap page in it), `doppler` (secrets for all repos), `porter`
+(preview envs), `neonctl`/`neon` (Neon branches), `aws` (report gen), `psql`.
 
 ## 9. Hooks
 
