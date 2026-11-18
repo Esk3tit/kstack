@@ -57,8 +57,8 @@ if [ -z "$chrome" ]; then
   exit 1
 fi
 
-# Prints what the drawn page shows: its headline, each section heading with its items (any a Show N more button hides
-# in [brackets]) and then that button, and each fold's line, with ' · ' put before the fold's grey note.
+# Prints what the drawn page shows: its headline, each section heading with its items (each one a Show N more button
+# hides is printed in [brackets]) and then that button, and each fold's line, with ' · ' put before the fold's grey note.
 shown_py=$(cat <<'PY'
 import collections, html.parser, sys
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
@@ -109,7 +109,7 @@ drawn() {  # drawn <name> <python edit of d, S its sections>: the sample with no
     echo "FAIL $chrome could not draw $1.html${err:+: $err}"
     exit 1
   fi
-  page_error=$(sed -n 's|.*<h1>\(This recap couldn[^<]*\)</h1><p class="about-line">\([^<]*\)<.*|\1 \2|p' "$tmp/$1.dom")
+  page_error=$(python3 -c 'import html,re,sys; m=re.search(r"<h1>(This recap couldn.*?)</h1><p class=\"about-line\">(.*?)</p>", sys.stdin.read(), re.S); print(html.unescape(" ".join(m.groups())) if m else "")' < "$tmp/$1.dom")
   if [ -n "$page_error" ]; then
     echo "FAIL $1.html drew the page's own error: $page_error"
     exit 1
@@ -130,7 +130,7 @@ check "mixed changes split, users' first" "$(shown mixed sections)" "What users 
 check "a page with no changes still draws its headline" "$(shown unchanged headline)" "Nothing needs you. Safe to merge."
 check "no changes, no heading" "$(shown unchanged sections)" ""
 check "dev-only changes leave the headline safe to merge" "$(shown dev-only headline)" "Nothing needs you. Safe to merge."
-drawn seven-each "S['behavior_changes'] = [{'surface': 'Nation tree', 'text': 'user %d' % i} for i in range(7)] + [{'surface': 'Developers and agents', 'text': 'dev %d' % i} for i in range(7)]"
+drawn seven-each "S['behavior_changes'] = [dict($user_change, text='user %d' % i) for i in range(7)] + [dict($dev_change, text='dev %d' % i) for i in range(7)]"
 check "each heading shows six and hides the seventh behind its own Show 1 more button" "$(shown seven-each sections)" \
   "What users will see: user 0, user 1, user 2, user 3, user 4, user 5, [user 6], Show 1 more | What developers and agents will see: dev 0, dev 1, dev 2, dev 3, dev 4, dev 5, [dev 6], Show 1 more"
 
