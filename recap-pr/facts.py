@@ -35,6 +35,7 @@ import os
 import re
 import shlex
 import signal
+import stat
 import subprocess
 import sys
 import tempfile
@@ -217,14 +218,20 @@ def declared_sections(pr, slug, head, base, top):
                 if not path.is_relative_to(Path(top).resolve()):
                     text = f"_`{source}` is outside the checkout._"
                 else:
-                    text = path.read_text(errors="replace").strip()
+                    mode = path.stat().st_mode
+                    if stat.S_ISDIR(mode):
+                        text = f"_`{source}` is a folder, not a file._"
+                    elif not stat.S_ISREG(mode):
+                        text = f"_`{source}` is not a regular file._"
+                    else:
+                        text = path.read_text(errors="replace").strip()
             except FileNotFoundError:
                 text = f"_`{source}` does not exist._"
-            except IsADirectoryError:
-                text = f"_`{source}` is a folder, not a file._"
-            except (OSError, RuntimeError) as problem:
+            except RuntimeError:
+                text = f"_`{source}` could not be read: a symlink loop_"
+            except OSError as problem:
                 # The reason alone: the error's own text names the local path.
-                text = f"_`{source}` could not be read: {cell(getattr(problem, 'strerror', None) or type(problem).__name__)}_"
+                text = f"_`{source}` could not be read: {cell(problem.strerror or type(problem).__name__)}_"
         lines += ["", f"**{title}** (`{source}`):", "", text or "_empty_"]
     return lines
 

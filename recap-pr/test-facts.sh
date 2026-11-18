@@ -138,15 +138,16 @@ import importlib.util, sys
 spec = importlib.util.spec_from_file_location("facts", sys.argv[1]); m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
 print("finished", repr(m.run_declared(["cat"], ".").stdout))' "$D/facts.py" 2>&1 | tail -1)" "finished ''"
 check "an empty command and files that are not UTF-8 or can't be read are reported, without the local path, not raised" "$(PYTHONDONTWRITEBYTECODE=1 python3 - "$D/facts.py" "$HOME" <<'PY'
-import importlib.util, pathlib, sys
+import importlib.util, os, pathlib, sys
 spec = importlib.util.spec_from_file_location("facts", sys.argv[1]); m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
 pathlib.Path(sys.argv[2], "bytes.dat").write_bytes(b"ok \xff\xfe")
 locked = pathlib.Path(sys.argv[2], "locked.dat"); locked.write_text("secret"); locked.chmod(0)
 shut = pathlib.Path(sys.argv[2], "shut"); shut.mkdir(); (shut / "in.dat").write_text("secret"); shut.chmod(0)
 pathlib.Path(sys.argv[2], "loop.dat").symlink_to("loop.dat"); pathlib.Path(sys.argv[2], "folder").mkdir()
+os.mkfifo(pathlib.Path(sys.argv[2], "pipe.dat"))
 m.declaration = lambda slug: ("- facts: Empty = run:  \n- facts: Bytes = file: bytes.dat\n- facts: Locked = file: locked.dat\n"
                               "- facts: Shut = file: shut/in.dat\n- facts: Loop = file: loop.dat\n"
-                              "- facts: Folder = file: folder\n- facts: Gone = file: gone.dat")
+                              "- facts: Folder = file: folder\n- facts: Gone = file: gone.dat\n- facts: Pipe = file: pipe.dat")
 m.git = lambda *args, **kw: "a" * 40
 try:
     lines = m.declared_sections(7, "o/r", "a" * 40, "main", sys.argv[2])
@@ -156,9 +157,10 @@ print(sum("could not run: no command" in l for l in lines), sum(l.startswith("ok
       sum("`locked.dat` could not be read: Permission denied" in l for l in lines),
       sum("`shut/in.dat` could not be read: Permission denied" in l for l in lines),
       sum(l.startswith("_`loop.dat` could not be read") for l in lines), sum("`folder` is a folder" in l for l in lines),
-      sum("`gone.dat` does not exist" in l for l in lines), sum(sys.argv[2] in l for l in lines))
+      sum("`gone.dat` does not exist" in l for l in lines), sum("`pipe.dat` is not a regular file" in l for l in lines),
+      sum(sys.argv[2] in l for l in lines))
 PY
-)" "1 1 1 1 1 1 1 0"
+)" "1 1 1 1 1 1 1 1 0"
 check "a command missing on this machine says so" "$(has '_`no-such-command-here` could not run: ')" "1"
 check "a facts line only the PR's head declares is not run" "$(has 'leaked-from-the-head') $(has '**Token**')" "0 0"
 check "a comment marker in declared output is escaped" "$(count "$block" '<!-- pr-facts:end -->') $(has '&lt;!-- pr-facts:end -->') $(has '&lt;!-- pr-facts:record:start -->')" "1 1 1"
