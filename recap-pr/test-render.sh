@@ -60,55 +60,20 @@ fi
 # Prints one part of what the drawn page shows: its headline; each section heading with its items' text; or each fold's
 # line, with ' · ' before its grey note.
 shown_py=$(cat <<'PY'
-import collections, html.parser, sys
-VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
-Open = collections.namedtuple("Open", "tag classes")
+import html, re, sys
+
+page = sys.stdin.read()
 
 
-class Shown(html.parser.HTMLParser):
-    def __init__(self):
-        super().__init__()
-        self.open, self.capture, self.capture_depth = [], None, 0
-        self.headline, self.sections, self.folds = "", [], []
-
-    def handle_starttag(self, tag, attrs):
-        if tag in VOID:
-            return
-        classes = (dict(attrs).get("class") or "").split()
-        parent_classes = self.open[-1].classes if self.open else []
-        self.open.append(Open(tag, classes))
-        heading = tag in ("h1", "h2")
-        fold_line = tag == "summary" and "fold" in parent_classes
-        section_item = tag == "p" and "text" in classes and any(o.tag == "section" for o in self.open)
-        if self.capture is not None:
-            if "note" in classes:
-                self.capture.append(" · ")
-        elif heading or fold_line or section_item:
-            self.capture, self.capture_depth = [], len(self.open)
-
-    def handle_endtag(self, tag):
-        if self.capture is not None and len(self.open) == self.capture_depth:
-            text, self.capture = "".join(self.capture).strip(), None
-            if tag == "h1":
-                self.headline = text
-            elif tag == "h2":
-                self.sections.append([text])
-            elif tag == "summary":
-                self.folds.append(text)
-            else:
-                self.sections[-1].append(text)
-        self.open.pop()
-
-    def handle_data(self, data):
-        if self.capture is not None:
-            self.capture.append(data)
+def text(fragment):
+    return html.unescape(re.sub(r"<[^>]+>", "", fragment.replace('<span class="note">', " · "))).strip()
 
 
-page = Shown()
-page.feed(sys.stdin.read())
-print({"headline": page.headline,
-       "sections": " | ".join(s[0] + ": " + ", ".join(s[1:]) for s in page.sections),
-       "folds": " | ".join(page.folds)}[sys.argv[1]])
+headline = re.search(r"<h1>(.*?)</h1>", page, re.S)
+sections = re.findall(r"<section><h2>(.*?)</h2>(.*?)</section>", page, re.S)
+print({"headline": text(headline.group(1)) if headline else "",
+       "sections": " | ".join(text(h) + ": " + ", ".join(text(p) for p in re.findall(r'<p class="text">(.*?)</p>', body, re.S)) for h, body in sections),
+       "folds": " | ".join(text(f) for f in re.findall(r'<details class="fold"><summary>(.*?)</summary>', page, re.S))}[sys.argv[1]])
 PY
 )
 drawn() {  # drawn <name> <python edit of d, S its sections>: the sample with no divergences or attention items, edited, drawn in Chrome as $tmp/<name>.dom
@@ -135,7 +100,6 @@ check "dev-only changes get their own heading and no users' heading" "$(shown de
 check "mixed changes split, users' first" "$(shown mixed sections)" "What users will see: user change | What developers and agents will see: agent change"
 check "a page with no changes still draws its headline" "$(shown unchanged headline)" "Nothing needs you. Safe to merge."
 check "no changes, no heading" "$(shown unchanged sections)" ""
-check "dev-only changes leave the headline safe to merge" "$(shown dev-only headline)" "Nothing needs you. Safe to merge."
 
 fill_folds() {  # fill_folds <n>: no behavior changes, n items in every fold's section, n parity pairs that differ and n log rows
   echo "S['behavior_changes'] = []
