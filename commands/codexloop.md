@@ -33,7 +33,7 @@ fi
 [ -n "$COMPANION" ] && [ -f "$COMPANION" ] || { echo 'STATUS=FAIL ERROR="openai-codex plugin not found — install it (/plugin install codex@openai-codex) and run /codex:setup"'; exit 0; }
 ```
 - **Ready check:** `node "$COMPANION" setup --json` must show `.ready === true` and `.auth.loggedIn === true`; otherwise `STATUS=FAIL ERROR="Codex not ready — run /codex:setup"` (do not improvise an auth flow).
-- **Model:** the Codex model `CLAUDE.md` names for Codex work; always pass it, since the Codex config sets no default.
+- **Model:** the model `CLAUDE.md` names for Codex reviews; always pass it.
 - **Review call** (the companion gathers the diff from git itself; it prints `{"result": ...}` with `--json` and exits non-zero on failure):
   ```bash
   node "$COMPANION" adversarial-review --scope "$SCOPE" ${BASE:+--base "origin/$BASE"} --model "$MODEL" --json "$FOCUS" \
@@ -164,7 +164,7 @@ Done when the round has started or the run has exited `PAUSED`.
    - **Apply the mechanism rule** in `~/.claude/skills/recap-pr/LEDGER.md` to every finding that adds a mechanism.
    - **Log every finding**, accepted or rejected, as one decision-log row (`phase codexloop`, `source codex` or `claude`, `asked no`; format in LEDGER.md) whose decision starts `F<round>.<k> on <branch>: <title>`: its ID names the round that first raised it and its place in that round's list. A finding that repeats an earlier one keeps that one's ID; one that repeats a rejected ID without new evidence is rejected again under it, and one with new evidence is judged afresh under it. The user audits these rows with `/recap-pr` before merge.
    - For findings you accept, read the referenced file and apply the **smallest correct fix** (prefer Edit over Write). Do NOT blindly apply the reviewer's `recommendation` — verify against the actual code and reject if wrong or out of scope.
-   - **Optional escalation (Claude Code):** for a genuinely hard finding that needs deep multi-file debugging (not a smallest-fix), you may subcontract that one fix to Codex via the plugin's rescue primitive — `node "$COMPANION" task --write "<tight fix prompt>"` (equivalent to `/codex:rescue`) — then review its diff before staging. Default remains: you apply the fix.
+   - **Optional escalation (Claude Code):** for a genuinely hard finding that needs deep multi-file debugging (not a smallest-fix), you may subcontract that one fix to Codex via the plugin's rescue primitive — `node "$COMPANION" task --write --model "<CLAUDE.md's implementation model>" "<tight fix prompt>"` (equivalent to `/codex:rescue`) — then review its diff before staging. Default remains: you apply the fix.
    - **Keep it clean.** Do not leave explanatory comments about the fix, the finding, or the iteration. No "// addressed in codexloop" markers, no narrating-what-the-code-does comments. Only add a comment if a genuinely non-obvious invariant requires it.
    - Run fast verification after fixes using repo-appropriate commands (e.g., `make lint`, `pnpm run lint`, `npm run lint`, and relevant `pytest`/`vitest`/`playwright` if test files changed).
 

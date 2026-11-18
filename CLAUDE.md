@@ -67,7 +67,8 @@ Rankings, higher = better, so a high cost score means cheap. Cost reflects what 
 
 | model | cost | intelligence | taste |
 |---|---|---|---|
-| gpt-6.1-sol (high reasoning) | 10 | 8 | 6 |
+| gpt-6.2-sol (high reasoning) | 10 | 8 | 6 |
+| gpt-6.2-astra (high reasoning) | 7 | 9 | 7 |
 | sonnet-5 | 3 | 5 | 7 |
 | opus-5.5 | 6 | 7 | 8 |
 | fable-5.2 | 3 | 9 | 9 |
@@ -75,19 +76,19 @@ Rankings, higher = better, so a high cost score means cheap. Cost reflects what 
 How to apply:
 - These are defaults, not limits. You have standing permission to override them: if a cheaper model's output doesn't meet the bar, rerun or redo the work with a smarter model without asking. Judge the output, not the price tag. Escalating costs less than shipping mediocre work.
 - Cost should never block using the right model for the job. Lean on the cheaper and faster options to explore widely — gather information, prototype, spike, and run competing hypotheses in parallel — then, once you've settled on the best approach empirically and through a data-driven read of the results, move the finalized work onto the stronger, more expensive model. When the axes genuinely conflict for anything that ships, intelligence > taste > cost.
-- Bulk/mechanical work (clear-spec implementation, data analysis, migrations): gpt-6.1-sol (high reasoning) - it's very cheap and token efficent.
+- Bulk/mechanical work (clear-spec implementation, data analysis, migrations): gpt-6.2-sol (high reasoning) - it's very cheap and token efficient.
 - Anything user-facing (UI, copy, API design) needs taste ≥ 7.
-- Reviews of plans/implementations: opus-5.5, optionally gpt-6.1-sol (high reasoning) as an extra independent perspective.
+- Reviews of plans/implementations: opus-5.5, optionally gpt-6.2-astra (high reasoning) as an extra independent perspective.
 - Fable reviews in a PR loop run when the agent judges a round's changes warrant one; any other Fable subagent needs my ask or approval.
 - Never use Haiku.
-- Mechanics: gpt-6.1-sol (high reasoning) is handled natively via the `openai/codex-plugin-cc` plugin inside Claude Code, which reads your user-level `~/.codex/config.toml`. Pass `--model gpt-6.1-sol` on every Codex call (`/codex:review`, `/codex:adversarial-review`, `/codex:rescue`, or the companion's `review` / `adversarial-review` / `task`), so the reviewer stays pinned whatever that config's default becomes. Avoid writing custom bash scripts; instead, utilize the plugin's built-in tools and skills:
+- Mechanics: the GPT models are handled natively via the `openai/codex-plugin-cc` plugin inside Claude Code, which reads your user-level `~/.codex/config.toml`. Pass `--model` on every Codex call that starts a run, so its model stays pinned whatever that config's default becomes: `gpt-6.2-astra` for reviews (`/codex:review`, `/codex:adversarial-review`, the companion's `review` / `adversarial-review`, `/codexloop` rounds run from Claude Code, a review run through the companion's `task`), and `gpt-6.2-sol` for implementation and all other Codex work (`/codex:rescue`, the companion's `task`). Avoid writing custom bash scripts; instead, utilize the plugin's built-in tools and skills:
     - `/codex:review` - Run non-destructive, read-only code quality assessments. Supports `--base <ref>` for branch analysis.
     - `/codex:adversarial-review` - Perform a skeptical design review to pressure-test tradeoffs, auth, and reliability. Append custom focus text at the end of the command to steer the focus.
     - `/codex:rescue` - Subcontract active debugging, multi-file refactoring, or implementation loops to Codex when a second pass is required.
     - `/codex:status` / `/codex:result` / `/codex:cancel` - Use these to check, fetch, or abort asynchronous jobs when using the `--background` flag on heavy tasks.
 - Claude models (sonnet-5, opus-5.5, fable-5.2) run via the Agent/Workflow model parameter. From Codex, they run through `/Users/<you>/.codex/bin/claude-read claude-opus-5-5 "<brief>" [<extra dirs to read>]` (Fable: `claude-fable-5-2`) (a copy of kstack `codex/bin/`), pointing the brief at files to Read; Codex allows only that read-only wrapper outside the sandbox, as a plain command.
 
-Using gpt-6.1-sol (high reasoning) inside workflows and subagents:
+Using Codex inside workflows and subagents:
 - Subagents and automated workflows should call the plugin's native slash commands or its exposed `codex-cli-runtime` skills to delegate tasks directly, omitting the need for raw terminal wrappers.
 - **Always run long Codex work in the background.** Any Codex job that could plausibly run more than a few minutes must use the plugin's background path (`/codex:review --background`, `/codex:adversarial-review --background`, or `task --background` behind `/codex:rescue`), which spawns a detached worker that survives past Bash's ~10-minute timeout. A synchronous run that trips that timeout tears the call down and we lose all output — never risk that. Launch in the background, then poll `/codex:status` and collect the result with `/codex:result` (or `--wait` only when the work is genuinely small).
 - **Isolate parallel write-capable Codex agents in their own git worktrees.** The Codex plugin runs in the shared checkout — verified: it does NOT create its own worktrees (it resolves to the repo root/cwd and edits in place). So when fanning out multiple `--write` implementation agents over GPT in parallel, give each one an isolated worktree (e.g. Workflow's `isolation: 'worktree'`) so their edits don't collide in the shared tree. Serial single-agent runs don't need this. Re-verify the plugin's behavior if its version changes, in case it starts managing worktrees itself.
