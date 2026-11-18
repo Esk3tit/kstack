@@ -57,8 +57,8 @@ if [ -z "$chrome" ]; then
   exit 1
 fi
 
-# Prints what the drawn page shows: its headline, each section heading with its items (one a Show N more button hides
-# in [brackets]) and that button, and each fold's line, with ' · ' put before the fold's grey note.
+# Prints what the drawn page shows: its headline, each section heading with its items (any a Show N more button hides
+# in [brackets]) and then that button, and each fold's line, with ' · ' put before the fold's grey note.
 shown_py=$(cat <<'PY'
 import collections, html.parser, sys
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
