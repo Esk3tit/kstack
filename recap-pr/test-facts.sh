@@ -159,7 +159,7 @@ print(sum("could not run: no command" in l for l in lines), sum(l.startswith("ok
       sum("`shut/in.dat` could not be read: Permission denied" in l for l in lines),
       sum(l.startswith("_`loop.dat` could not be read") for l in lines), sum("`folder` is a folder" in l for l in lines),
       sum("`gone.dat` does not exist" in l for l in lines), sum("`pipe.dat` is not a regular file" in l for l in lines),
-      sum(l.endswith("ok") and "could not run" not in l for l in lines), sum("is not a usable path" in l for l in lines),
+      sum(l == "\ufffdok" for l in lines), sum("is not a usable path" in l for l in lines),
       sum(sys.argv[2] in l for l in lines))
 PY
 )" "1 1 1 1 1 1 1 1 1 1 0"
@@ -253,7 +253,8 @@ git switch -q --detach HEAD~1
 cp "$FAKE/body" "$FAKE/body.before"
 check "a checkout away from the PR head stops before writing" "$(python3 "$D/facts.py" 7 2>&1 >/dev/null | grep -c 'not the PR head'; cmp -s "$FAKE/body" "$FAKE/body.before" && echo unchanged)" "1
 unchanged"
-check "and a dry run there prints nothing and fails" "$(python3 "$D/facts.py" 7 --dry-run 2>/dev/null | wc -c | tr -d ' ') $(python3 "$D/facts.py" 7 --dry-run >/dev/null 2>&1; echo $?)" "0 1"
+dry_exit=0; python3 "$D/facts.py" 7 --dry-run >"$HOME/dry.out" 2>"$HOME/dry.err" || dry_exit=$?
+check "and a dry run there prints nothing and fails for the same reason" "$(wc -c <"$HOME/dry.out" | tr -d ' ') $dry_exit $(grep -c 'not the PR head' "$HOME/dry.err")" "0 1 1"
 git switch -q -c bare origin/main && git rm -q docs/agents/pr-loop.md && git commit -q -m "no declaration" && git push -q origin bare
 git switch -q --detach HEAD~1 && echo bare > "$FAKE/default"
 bare_block=$(python3 "$D/facts.py" 7 --dry-run 2>&1)
