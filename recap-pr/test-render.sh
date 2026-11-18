@@ -57,7 +57,7 @@ if [ -z "$chrome" ]; then
 fi
 
 # Prints what the drawn page shows: its headline, each section heading with its items' text, and each fold's line.
-SHOWN=$(cat <<'PY'
+SHOWN_PY=$(cat <<'PY'
 import html.parser, sys
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
 class Shown(html.parser.HTMLParser):
@@ -102,14 +102,14 @@ drawn() {
     echo "FAIL $chrome could not draw $1.html"; fail=1
   fi
 }
-shown() { python3 -c "$SHOWN" "$2" < "$tmp/$1.dom"; }
+shown() { python3 -c "$SHOWN_PY" "$2" < "$tmp/$1.dom"; }
 
 USER_CHANGE='{"surface": "Nation tree", "text": "user change"}'
 DEV_CHANGE='{"surface": "Developers and agents", "text": "agent change"}'
-DEV_CHANGE_CASED='{"surface": " developers and agents ", "text": "second agent change"}'
+DEV_CHANGE_LOOSE='{"surface": " developers and agents ", "text": "second agent change"}'
 drawn users-only "S['behavior_changes'] = [$USER_CHANGE]"
-drawn dev-only "S['behavior_changes'] = [$DEV_CHANGE, $DEV_CHANGE_CASED]"
-drawn mixed "S['behavior_changes'] = [$DEV_CHANGE, $USER_CHANGE, $DEV_CHANGE_CASED]"
+drawn dev-only "S['behavior_changes'] = [$DEV_CHANGE, $DEV_CHANGE_LOOSE]"
+drawn mixed "S['behavior_changes'] = [$DEV_CHANGE, $USER_CHANGE, $DEV_CHANGE_LOOSE]"
 drawn unchanged "S['behavior_changes'] = []"
 check "user changes go under the users' heading" "$(shown users-only sections)" "What users will see: user change"
 check "dev-only changes get their own heading and no users' heading" "$(shown dev-only sections)" "What developers and agents will see: agent change, second agent change"
@@ -117,7 +117,7 @@ check "mixed changes split, users' first" "$(shown mixed sections)" "What users 
 check "no changes, no heading" "$(shown unchanged sections)" ""
 check "the headline with only dev-only changes" "$(shown dev-only headline)" "Nothing needs you. Safe to merge."
 
-each() {  # each <n>: n items in every fold's section, n parity pairs that differ and n log rows
+fill_folds() {  # fill_folds <n>: n items in every fold's section, n parity pairs that differ and n log rows
   echo "S['behavior_changes'] = []
 S['attention'] = [{'surface': 'CI', 'text': 'a note'}] * $1
 S['not_asked_for'] = [{'surface': 'Tests', 'text': 'an addition', 'mechanism': True}] * $1
@@ -126,8 +126,8 @@ S['decided_no_change'] = [{'surface': 'Reviews', 'text': 'a decision', 'asked': 
 d['parity'] = {'summary': '', 'pairs': [{'label': 'a check', 'master': '', 'branch': '', 'verdict': 'differs'}] * $1}
 d['log']['rows'] = $1"
 }
-drawn one-each "$(each 1)"
-drawn two-each "$(each 2)"
+drawn one-each "$(fill_folds 1)"
+drawn two-each "$(fill_folds 2)"
 check "count lines agree with one" "$(shown one-each folds)" "1 note · read before merging | 1 addition nobody asked for · 1 mechanism | 1 suggestion turned down | 1 decision that changes nothing for users | Side-by-side check · 1 differs | Who decided what · you were asked about 1 of 4 | About this recap · from 1 log row"
 check "count lines agree with two" "$(shown two-each folds)" "2 notes · read before merging | 2 additions nobody asked for · 2 mechanisms | 2 suggestions turned down | 2 decisions that change nothing for users | Side-by-side check · 2 differ | Who decided what · you were asked about 2 of 8 | About this recap · from 2 log rows"
 check "the headline counts one note" "$(shown one-each headline)" "Nothing to decide. Read one note before merging."

@@ -142,6 +142,26 @@
             "kind": "screenshot"
           }
         ]
+      },
+      {
+        "surface": "Developers and agents",
+        "text": "**docs/e2e.md's fit rule now covers text size:** a test of tree names sweeps the browser's root font size as well as the window width. Main's rule named widths only.",
+        "why": "The ticket asked that a text-size regression fail a test before a reader meets it.",
+        "who": [
+          "me"
+        ],
+        "asked": "yes",
+        "result": "accepted",
+        "rows": [
+          3
+        ],
+        "evidence": [
+          {
+            "label": "docs/e2e.md",
+            "href": "https://github.com/Esk3tit/wt-records/blob/dbec4312/docs/e2e.md",
+            "kind": "file"
+          }
+        ]
       }
     ],
     "not_asked_for": [
