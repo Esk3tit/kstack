@@ -65,29 +65,29 @@ VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "met
 class Shown(html.parser.HTMLParser):
     def __init__(self):
         super().__init__()
-        self.open, self.text, self.depth, self.headline, self.sections, self.folds = [], None, 0, "", [], []
+        self.open, self.capture, self.capture_depth, self.headline, self.sections, self.folds = [], None, 0, "", [], []
     def handle_starttag(self, tag, attrs):
         if tag in VOID:
             return
         cls = (dict(attrs).get("class") or "").split()
         parent_classes = self.open[-1][1] if self.open else []
         self.open.append((tag, cls))
-        if self.text is not None:
+        if self.capture is not None:
             if "note" in cls:
-                self.text.append(" · ")
+                self.capture.append(" · ")
         elif tag in ("h1", "h2") or (tag == "summary" and "fold" in parent_classes) or (tag == "p" and "text" in cls and any(t == "section" for t, _ in self.open)):
-            self.text, self.depth = [], len(self.open)
+            self.capture, self.capture_depth = [], len(self.open)
     def handle_endtag(self, tag):
-        if self.text is not None and len(self.open) == self.depth:
-            text, self.text = "".join(self.text).strip(), None
+        if self.capture is not None and len(self.open) == self.capture_depth:
+            text, self.capture = "".join(self.capture).strip(), None
             if tag == "h1": self.headline = text
             elif tag == "h2": self.sections.append([text])
             elif tag == "summary": self.folds.append(text)
             else: self.sections[-1].append(text)
         self.open.pop()
     def handle_data(self, data):
-        if self.text is not None:
-            self.text.append(data)
+        if self.capture is not None:
+            self.capture.append(data)
 page = Shown()
 page.feed(sys.stdin.read())
 print({"headline": page.headline,
