@@ -101,12 +101,17 @@ print({"headline": page.headline,
        "folds": " | ".join(page.folds)}[sys.argv[1]])
 PY
 )
-drawn() {  # drawn <name> <python edit of d, S its sections>: the sample with nothing for the owner to decide, edited, drawn in Chrome as $tmp/<name>.dom
+drawn() {  # drawn <name> <python edit of d, S its sections>: the sample with no divergences or attention items, edited, drawn in Chrome as $tmp/<name>.dom
   edited "$1" "S = d['sections']; S['divergences'] = []; S['attention'] = []; $2"
   python3 "$D/render.py" "$tmp/$1.json" "$tmp/$1.html" >/dev/null
   if ! "$chrome" --headless --no-first-run --no-default-browser-check --user-data-dir="$tmp/chrome" --dump-dom "$(uri "$tmp/$1.html")" 2>"$tmp/$1.err" > "$tmp/$1.dom" || ! grep -q 'class="verdict"' "$tmp/$1.dom"; then
     err=$(tail -n 1 "$tmp/$1.err")
     echo "FAIL $chrome could not draw $1.html${err:+: $err}"
+    exit 1
+  fi
+  page_error=$(sed -n 's|.*<h1>\(This recap couldn[^<]*\)</h1><p class="about-line">\([^<]*\)<.*|\1 \2|p' "$tmp/$1.dom")
+  if [ -n "$page_error" ]; then
+    echo "FAIL $1.html drew the page's own error: $page_error"
     exit 1
   fi
 }
