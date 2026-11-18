@@ -137,7 +137,7 @@ check "a declared command reads no input" "$(sleep 2 | FACTS_COMMAND_SECONDS=1 P
 import importlib.util, sys
 spec = importlib.util.spec_from_file_location("facts", sys.argv[1]); m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
 print("finished", repr(m.run_declared(["cat"], ".").stdout))' "$D/facts.py" 2>&1 | tail -1)" "finished ''"
-check "an empty command and files that are not UTF-8 or can't be read are reported, without the local path, not raised" "$(PYTHONDONTWRITEBYTECODE=1 python3 - "$D/facts.py" "$HOME" <<'PY'
+check "an empty command, output and files that are not UTF-8, and files that can't be read or named are reported, without the local path, not raised" "$(PYTHONDONTWRITEBYTECODE=1 python3 - "$D/facts.py" "$HOME" <<'PY'
 import importlib.util, os, pathlib, sys
 spec = importlib.util.spec_from_file_location("facts", sys.argv[1]); m = importlib.util.module_from_spec(spec); spec.loader.exec_module(m)
 pathlib.Path(sys.argv[2], "bytes.dat").write_bytes(b"ok \xff\xfe")
@@ -147,7 +147,8 @@ pathlib.Path(sys.argv[2], "loop.dat").symlink_to("loop.dat"); pathlib.Path(sys.a
 os.mkfifo(pathlib.Path(sys.argv[2], "pipe.dat"))
 m.declaration = lambda slug: ("- facts: Empty = run:  \n- facts: Bytes = file: bytes.dat\n- facts: Locked = file: locked.dat\n"
                               "- facts: Shut = file: shut/in.dat\n- facts: Loop = file: loop.dat\n"
-                              "- facts: Folder = file: folder\n- facts: Gone = file: gone.dat\n- facts: Pipe = file: pipe.dat")
+                              "- facts: Folder = file: folder\n- facts: Gone = file: gone.dat\n- facts: Pipe = file: pipe.dat\n"
+                              "- facts: Bin = run: printf '\\377ok'\n- facts: Nul = file: a\x00b")
 m.git = lambda *args, **kw: "a" * 40
 try:
     lines = m.declared_sections(7, "o/r", "a" * 40, "main", sys.argv[2])
@@ -158,9 +159,10 @@ print(sum("could not run: no command" in l for l in lines), sum(l.startswith("ok
       sum("`shut/in.dat` could not be read: Permission denied" in l for l in lines),
       sum(l.startswith("_`loop.dat` could not be read") for l in lines), sum("`folder` is a folder" in l for l in lines),
       sum("`gone.dat` does not exist" in l for l in lines), sum("`pipe.dat` is not a regular file" in l for l in lines),
+      sum(l.endswith("ok") and "could not run" not in l for l in lines), sum("is not a usable path" in l for l in lines),
       sum(sys.argv[2] in l for l in lines))
 PY
-)" "1 1 1 1 1 1 1 1 0"
+)" "1 1 1 1 1 1 1 1 1 1 0"
 check "a command missing on this machine says so" "$(has '_`no-such-command-here` could not run: ')" "1"
 check "a facts line only the PR's head declares is not run" "$(has 'leaked-from-the-head') $(has '**Token**')" "0 0"
 check "a comment marker in declared output is escaped" "$(count "$block" '<!-- pr-facts:end -->') $(has '&lt;!-- pr-facts:end -->') $(has '&lt;!-- pr-facts:record:start -->')" "1 1 1"
@@ -251,6 +253,7 @@ git switch -q --detach HEAD~1
 cp "$FAKE/body" "$FAKE/body.before"
 check "a checkout away from the PR head stops before writing" "$(python3 "$D/facts.py" 7 2>&1 >/dev/null | grep -c 'not the PR head'; cmp -s "$FAKE/body" "$FAKE/body.before" && echo unchanged)" "1
 unchanged"
+check "and a dry run there prints nothing and fails" "$(python3 "$D/facts.py" 7 --dry-run 2>/dev/null | wc -c | tr -d ' ') $(python3 "$D/facts.py" 7 --dry-run >/dev/null 2>&1; echo $?)" "0 1"
 git switch -q -c bare origin/main && git rm -q docs/agents/pr-loop.md && git commit -q -m "no declaration" && git push -q origin bare
 git switch -q --detach HEAD~1 && echo bare > "$FAKE/default"
 bare_block=$(python3 "$D/facts.py" 7 --dry-run 2>&1)

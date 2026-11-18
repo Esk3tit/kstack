@@ -169,8 +169,8 @@ def declaration(slug):
 def run_declared(argv, top):
     """Run a declared command in its own process group; past FACTS_COMMAND_SECONDS, stop the whole group."""
     limit = float(os.environ.get("FACTS_COMMAND_SECONDS", "600"))
-    proc = subprocess.Popen(argv, cwd=top, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
-                            start_new_session=True)
+    proc = subprocess.Popen(argv, cwd=top, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                            encoding="utf-8", errors="replace", start_new_session=True)
     try:
         out, err = proc.communicate(timeout=limit)
     except subprocess.TimeoutExpired:
@@ -224,11 +224,13 @@ def declared_sections(pr, slug, head, base, top):
                     elif not stat.S_ISREG(mode):
                         text = f"_`{source}` is not a regular file._"
                     else:
-                        text = path.read_text(errors="replace").strip()
+                        text = path.read_text(encoding="utf-8", errors="replace").strip()
             except FileNotFoundError:
                 text = f"_`{source}` does not exist._"
             except RuntimeError:
                 text = f"_`{source}` could not be read: a symlink loop_"
+            except ValueError:
+                text = f"_`{source}` is not a usable path._"
             except OSError as problem:
                 # The reason alone: the error's own text names the local path.
                 text = f"_`{source}` could not be read: {cell(problem.strerror or type(problem).__name__)}_"
