@@ -206,6 +206,10 @@ settings you want into your config. Update local paths to match your installatio
 omits terminal UI state (`[tui]`), hook state (`hooks.state`), and saved project trust. Choose
 which project folders to trust when Codex prompts you.
 
+The snapshot preapproves context-mode tools, which run locally with your account's permissions.
+Set context-mode's `default_tools_approval_mode` to `prompt` in your local config to review
+each call.
+
 Run `codex login` to sign in with ChatGPT. Both Appwrite entries are disabled and store their
 full invocation in `command`. Before enabling either entry, split it into an executable and
 arguments. For example, use `command = "uvx"` and `args = ["mcp-server-appwrite", "--users"]`
