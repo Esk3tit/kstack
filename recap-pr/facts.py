@@ -9,7 +9,7 @@ docs/agents/pr-loop.md, and, between <!-- pr-facts:record:start/end -->, the rev
 on the head (log.sh --check) and the time it was written. Sections are read from the declaration on the
 default branch GitHub names, fetched fresh, never the PR's, because their commands run on this machine with
 its credentials. When that declaration has facts lines, a full run or --dry-run from a checkout away from
-the PR head stops before it writes:
+the PR head stops with an error, printing and writing nothing:
 
     - facts: <title> = run: <command and arguments>   (run without a shell and within FACTS_COMMAND_SECONDS,
       default 600, its stdout as Markdown; {pr}, {head}, {base} filled in; it still runs the checkout's
@@ -212,15 +212,19 @@ def declared_sections(pr, slug, head, base, top):
                 text = result.stdout.strip() if result.returncode == 0 else (
                     f"_`{source}` failed with exit {result.returncode}{': ' + error if error else ''}_")
         else:
-            path = Path(top, source).resolve()
-            if not path.is_relative_to(Path(top).resolve()):
-                text = f"_`{source}` is outside the checkout._"
-            else:
+            try:
+                path = Path(top, source).resolve()
+                if not path.is_relative_to(Path(top).resolve()):
+                    text = f"_`{source}` is outside the checkout._"
+                else:
+                    text = path.read_text(errors="replace").strip()
+            except FileNotFoundError:
+                text = f"_`{source}` does not exist._"
+            except IsADirectoryError:
+                text = f"_`{source}` is a folder, not a file._"
+            except (OSError, RuntimeError) as problem:
                 # The reason alone: the error's own text names the local path.
-                try:
-                    text = path.read_text(errors="replace").strip() if path.is_file() else f"_`{source}` does not exist._"
-                except OSError as problem:
-                    text = f"_`{source}` could not be read: {cell(problem.strerror or type(problem).__name__)}_"
+                text = f"_`{source}` could not be read: {cell(getattr(problem, 'strerror', None) or type(problem).__name__)}_"
         lines += ["", f"**{title}** (`{source}`):", "", text or "_empty_"]
     return lines
 

@@ -143,8 +143,10 @@ spec = importlib.util.spec_from_file_location("facts", sys.argv[1]); m = importl
 pathlib.Path(sys.argv[2], "bytes.dat").write_bytes(b"ok \xff\xfe")
 locked = pathlib.Path(sys.argv[2], "locked.dat"); locked.write_text("secret"); locked.chmod(0)
 shut = pathlib.Path(sys.argv[2], "shut"); shut.mkdir(); (shut / "in.dat").write_text("secret"); shut.chmod(0)
+pathlib.Path(sys.argv[2], "loop.dat").symlink_to("loop.dat"); pathlib.Path(sys.argv[2], "folder").mkdir()
 m.declaration = lambda slug: ("- facts: Empty = run:  \n- facts: Bytes = file: bytes.dat\n- facts: Locked = file: locked.dat\n"
-                              "- facts: Shut = file: shut/in.dat")
+                              "- facts: Shut = file: shut/in.dat\n- facts: Loop = file: loop.dat\n"
+                              "- facts: Folder = file: folder\n- facts: Gone = file: gone.dat")
 m.git = lambda *args, **kw: "a" * 40
 try:
     lines = m.declared_sections(7, "o/r", "a" * 40, "main", sys.argv[2])
@@ -152,9 +154,11 @@ finally:
     shut.chmod(0o700)
 print(sum("could not run: no command" in l for l in lines), sum(l.startswith("ok ") for l in lines),
       sum("`locked.dat` could not be read: Permission denied" in l for l in lines),
-      sum(l.startswith("_`shut/in.dat`") for l in lines), sum(sys.argv[2] in l for l in lines))
+      sum("`shut/in.dat` could not be read: Permission denied" in l for l in lines),
+      sum(l.startswith("_`loop.dat` could not be read") for l in lines), sum("`folder` is a folder" in l for l in lines),
+      sum("`gone.dat` does not exist" in l for l in lines), sum(sys.argv[2] in l for l in lines))
 PY
-)" "1 1 1 1 0"
+)" "1 1 1 1 1 1 1 0"
 check "a command missing on this machine says so" "$(has '_`no-such-command-here` could not run: ')" "1"
 check "a facts line only the PR's head declares is not run" "$(has 'leaked-from-the-head') $(has '**Token**')" "0 0"
 check "a comment marker in declared output is escaped" "$(count "$block" '<!-- pr-facts:end -->') $(has '&lt;!-- pr-facts:end -->') $(has '&lt;!-- pr-facts:record:start -->')" "1 1 1"
