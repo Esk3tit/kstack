@@ -57,8 +57,8 @@ if [ -z "$chrome" ]; then
   exit 1
 fi
 
-# Prints what the drawn page shows: its headline, each section heading with its items' text, and each fold's line,
-# with ' · ' put before the fold's grey note.
+# Prints what the drawn page shows: its headline, each section heading with the items it shows (not those a Show N more
+# button hides), and each fold's line, with ' · ' put before the fold's grey note.
 shown_py=$(cat <<'PY'
 import html.parser, sys
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
@@ -69,13 +69,15 @@ class Shown(html.parser.HTMLParser):
     def handle_starttag(self, tag, attrs):
         if tag in VOID:
             return
-        cls = (dict(attrs).get("class") or "").split()
+        attrs = dict(attrs)
+        cls = (attrs.get("class") or "").split()
         parent_classes = self.open[-1][1] if self.open else []
-        self.open.append((tag, cls))
+        self.open.append((tag, cls, "hidden" in attrs))
+        shown_item = tag == "p" and "text" in cls and any(t == "section" for t, _, _ in self.open) and not any(h for _, _, h in self.open)
         if self.capture is not None:
             if "note" in cls:
                 self.capture.append(" · ")
-        elif tag in ("h1", "h2") or (tag == "summary" and "fold" in parent_classes) or (tag == "p" and "text" in cls and any(t == "section" for t, _ in self.open)):
+        elif tag in ("h1", "h2") or (tag == "summary" and "fold" in parent_classes) or shown_item:
             self.capture, self.capture_depth = [], len(self.open)
     def handle_endtag(self, tag):
         if self.capture is not None and len(self.open) == self.capture_depth:
@@ -98,8 +100,10 @@ PY
 drawn() {  # drawn <name> <python edit of d, S its sections>: the sample with nothing for the owner to decide, edited, drawn in Chrome as $tmp/<name>.dom
   edited "$1" "S = d['sections']; S['divergences'] = []; S['attention'] = []; $2"
   python3 "$D/render.py" "$tmp/$1.json" "$tmp/$1.html" >/dev/null
-  if ! "$chrome" --headless --no-first-run --no-default-browser-check --user-data-dir="$tmp/chrome" --dump-dom "$(uri "$tmp/$1.html")" 2>/dev/null > "$tmp/$1.dom" || [ ! -s "$tmp/$1.dom" ]; then
-    echo "FAIL $chrome could not draw $1.html"; fail=1
+  if ! "$chrome" --headless --no-first-run --no-default-browser-check --user-data-dir="$tmp/chrome" --dump-dom "$(uri "$tmp/$1.html")" 2>"$tmp/$1.err" > "$tmp/$1.dom" || ! grep -q 'class="verdict"' "$tmp/$1.dom"; then
+    err=$(tail -n 1 "$tmp/$1.err")
+    echo "FAIL $chrome could not draw $1.html${err:+: $err}"
+    exit 1
   fi
 }
 shown() { python3 -c "$shown_py" "$2" < "$tmp/$1.dom"; }
@@ -117,6 +121,9 @@ check "mixed changes split, users' first" "$(shown mixed sections)" "What users 
 check "a page with no changes still draws its headline" "$(shown unchanged headline)" "Nothing needs you. Safe to merge."
 check "no changes, no heading" "$(shown unchanged sections)" ""
 check "dev-only changes leave the headline safe to merge" "$(shown dev-only headline)" "Nothing needs you. Safe to merge."
+drawn seven-each "S['behavior_changes'] = [{'surface': 'Nation tree', 'text': 'user %d' % i} for i in range(7)] + [{'surface': 'Developers and agents', 'text': 'dev %d' % i} for i in range(7)]"
+check "each heading shows six and folds the seventh behind its own button" "$(shown seven-each sections) | $(grep -o 'Show [0-9]* more' "$tmp/seven-each.dom" | paste -sd, -)" \
+  "What users will see: user 0, user 1, user 2, user 3, user 4, user 5 | What developers and agents will see: dev 0, dev 1, dev 2, dev 3, dev 4, dev 5 | Show 1 more,Show 1 more"
 
 fill_folds() {  # fill_folds <n>: n items in every fold's section, n parity pairs that differ and n log rows
   echo "S['behavior_changes'] = []
