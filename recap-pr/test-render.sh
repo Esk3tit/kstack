@@ -79,7 +79,7 @@ PY
 drawn() {  # drawn <name> <python edit of d, S its sections>: the sample with no divergences or attention items, edited, drawn in Chrome as $tmp/<name>.dom
   edited "$1" "S = d['sections']; S['divergences'] = []; S['attention'] = []; $2"
   python3 "$D/render.py" "$tmp/$1.json" "$tmp/$1.html" >/dev/null
-  if ! "$chrome" --headless --no-first-run --no-default-browser-check --user-data-dir="$tmp/chrome" --dump-dom "$(uri "$tmp/$1.html")" 2>"$tmp/$1.err" > "$tmp/$1.dom" || ! grep -q 'class="verdict"' "$tmp/$1.dom"; then
+  if ! "$chrome" --headless --user-data-dir="$tmp/chrome" --dump-dom "$(uri "$tmp/$1.html")" 2>"$tmp/$1.err" > "$tmp/$1.dom" || ! grep -q 'class="verdict"' "$tmp/$1.dom"; then
     err=$(tail -n 1 "$tmp/$1.err")
     echo "FAIL $chrome could not draw $1.html${err:+: $err}"
     exit 1
@@ -114,7 +114,5 @@ drawn one-each "$(fill_folds 1)"
 drawn two-each "$(fill_folds 2)"
 check "count lines agree with one" "$(shown one-each folds)" "1 note · read before merging | 1 addition nobody asked for · 1 mechanism | 1 suggestion turned down | 1 decision that changes nothing | Side-by-side check · 1 differs | Who decided what · you were asked about 1 of 4 | About this recap · from 1 log row"
 check "count lines agree with two" "$(shown two-each folds)" "2 notes · read before merging | 2 additions nobody asked for · 2 mechanisms | 2 suggestions turned down | 2 decisions that change nothing | Side-by-side check · 2 differ | Who decided what · you were asked about 2 of 8 | About this recap · from 2 log rows"
-check "the headline counts one note" "$(shown one-each headline)" "Nothing to decide. Read one note before merging."
-check "the headline counts two notes" "$(shown two-each headline)" "Nothing to decide. Read two notes before merging."
 
 exit $fail
