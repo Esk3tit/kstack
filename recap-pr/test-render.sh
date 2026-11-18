@@ -63,7 +63,7 @@ VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "met
 class Shown(html.parser.HTMLParser):
     def __init__(self):
         super().__init__()
-        self.open, self.text, self.headline, self.sections, self.folds = [], None, "", [], []
+        self.open, self.text, self.depth, self.headline, self.sections, self.folds = [], None, 0, "", [], []
     def handle_starttag(self, tag, attrs):
         if tag in VOID:
             return
