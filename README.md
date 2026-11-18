@@ -195,11 +195,25 @@ writes a validated starter; verify with `… load-config.mjs --export` from insi
 
 ## 4. Codex CLI setup (`codex/config.toml.example`)
 
-`~/.codex/config.toml` — its `model` line sets the default for any call that passes no `--model`;
-`model_reasoning_effort = "high"`, `[features] multi_agent`.
-MCP servers wired into Codex: **Linear** (`mcp.linear.app`), **Neon** (`mcp.neon.tech`, token redacted
-in the example), and Codex.app's `node_repl` (computer-use). Auth is ChatGPT-mode (`~/.codex/auth.json`).
-Copy `config.toml.example` → `~/.codex/config.toml` and fill in your own tokens.
+The example is a redacted snapshot of my Codex settings. Its `model` setting applies to runs
+without `--model`. The example also covers reasoning effort, desktop settings, plugins and their
+marketplaces, and sandbox write paths. Its MCP servers connect Codex to Railway, Context7,
+context-mode, Appwrite, and Appwrite Docs. The desktop app uses `node_repl` for browser and
+desktop control.
+
+For a new setup, copy the example to `~/.codex/config.toml`. For an existing setup, merge the
+settings you want into your config. Update local paths to match your installations. The snapshot
+omits terminal UI state (`[tui]`), hook state (`hooks.state`), and saved project trust. Choose
+which project folders to trust when Codex prompts you.
+
+The snapshot preapproves context-mode tools, which run locally with your account's permissions.
+Set context-mode's `default_tools_approval_mode` to `prompt` in your local config to review
+each call.
+
+Run `codex login` to sign in with ChatGPT. Both Appwrite entries are disabled and store their
+full invocation in `command`. Before enabling either entry, split it into an executable and
+arguments. For example, use `command = "uvx"` and `args = ["mcp-server-appwrite", "--users"]`
+for Appwrite. That entry also needs your endpoint, project ID, and API key.
 
 ## 5. Third-party skills (installed in `~/.claude/skills/`, NOT vendored here)
 
@@ -236,7 +250,8 @@ Marketplaces: `superpowers-marketplace`, `superpowers-extended-cc-marketplace`, 
 ## 7. MCP servers
 
 - **Claude Code:** Linear, Neon, Slack, claude_design, context7, playwright, sentry, context-mode.
-- **Codex:** Linear + Neon (in `config.toml`) + `node_repl`.
+- **Codex:** Railway, Context7, context-mode, Appwrite and Appwrite Docs (both disabled),
+  and `node_repl` for browser and desktop control.
 
 ## 8. Tooling (CLIs)
 
@@ -261,5 +276,6 @@ context-mode and superpowers. (Dropping those plugins drops their hooks too.)
 6. Install CLIs: `codex`, `gh` + the `gh-axi`/`lavish-axi` tooling, `agent-browser`, `ffmpeg`, `doppler`, `porter`,
    `neonctl`, `aws`. Authenticate each (`gh auth`, `doppler login`, `porter auth login`, `aws login`,
    `neonctl auth`).
-7. Wire MCP servers (Linear, Neon, …) into Claude Code and `~/.codex/config.toml`.
+7. Wire MCP servers (Linear, Neon, …) into Claude Code. Follow section 4 to configure the
+   [Codex servers](#7-mcp-servers) in `~/.codex/config.toml`.
 8. (Optional, being phased out) reinstall plugins from their marketplaces.

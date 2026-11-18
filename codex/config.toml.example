@@ -1,73 +1,113 @@
+notify = ["/Users/khaiphan/.codex/computer-use/Codex Computer Use.app/Contents/SharedSupport/SkyComputerUseClient.app/Contents/MacOS/SkyComputerUseClient", "turn-ended"]
 model = "gpt-6.2-sol"
 model_reasoning_effort = "high"
+service_tier = "default"
 
-
-
-notify = ["/Users/khaiphan/.codex/computer-use/Codex Computer Use.app/Contents/SharedSupport/SkyComputerUseClient.app/Contents/MacOS/SkyComputerUseClient", "turn-ended"]
-
-[mcp_servers.linear]
-url = "https://mcp.linear.app/mcp"
-
-[mcp_servers.Neon]
-url = "https://mcp.neon.tech/mcp"
-
-[mcp_servers.Neon.http_headers]
-Authorization = "Bearer napi_REDACTED_SET_YOUR_OWN"
+[mcp_servers.railway]
+url = "https://mcp.railway.com"
 
 [mcp_servers.node_repl]
 args = []
-command = "/Applications/Codex.app/Contents/Resources/cua_node/bin/node_repl"
+command = "/Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node_repl"
+env_vars = ["BROWSER_USE_ACCESS_EXECUTOR_ID", "BROWSER_USE_ACCESS_PIPE_PATH", "BROWSER_USE_ACCESS_VERIFYING_IDENTITY"]
 startup_timeout_sec = 120
 
 [mcp_servers.node_repl.env]
 NODE_REPL_NATIVE_PIPE_CONNECT_TIMEOUT_MS = "1000"
-NODE_REPL_NODE_MODULE_DIRS = "/Applications/Codex.app/Contents/Resources/cua_node/lib/node_modules"
-NODE_REPL_NODE_PATH = "/Applications/Codex.app/Contents/Resources/cua_node/bin/node"
-NODE_REPL_TRUSTED_CODE_PATHS = "/Users/khaiphan/.codex"
+NODE_REPL_NODE_MODULE_DIRS = "/Applications/ChatGPT.app/Contents/Resources/cua_node/lib/node_modules"
+NODE_REPL_NODE_PATH = "/Applications/ChatGPT.app/Contents/Resources/cua_node/bin/node"
+NODE_REPL_TRUSTED_CODE_PATHS = "/Users/khaiphan/.codex:/Applications/ChatGPT.app/Contents/Resources/cua_node/lib/node_modules"
 CODEX_HOME = "/Users/khaiphan/.codex"
-NODE_REPL_TRUSTED_BROWSER_CLIENT_SHA256S = "59e7bb81812ddd5f102e1d580335166e552c91686b5726218a985b59b4f89ca1"
-BROWSER_USE_AVAILABLE_BACKENDS = "chrome,iab"
-NODE_REPL_INSTRUCTIONS_USE_CASE_BROWSER = "Control the in-app browser in conjunction with the Browser Plugin."
-NODE_REPL_INSTRUCTIONS_USE_CASE_CHROME = "Control the Chrome browser in conjunction with the Chrome Plugin. Prefer this method of controlling Chrome over alternatives (such as Computer Use) unless the user explicitly mentions an alternative."
+BROWSER_USE_AVAILABLE_BACKENDS = "chrome,iab,mcpapps"
+BROWSER_USE_TINYSKY_ENABLED = "1"
+NODE_REPL_INSTRUCTIONS_USE_CASE_BROWSER = ""
+NODE_REPL_INSTRUCTIONS_USE_CASE_CHROME = ""
+NODE_REPL_INSTRUCTIONS_USE_CASE_COMPUTER_USE = ""
 BROWSER_USE_CODEX_APP_BUILD_FLAVOR = "prod"
-BROWSER_USE_CODEX_APP_VERSION = "26.623.42026"
-CODEX_CLI_PATH = "/Applications/Codex.app/Contents/Resources/codex"
+BROWSER_USE_CODEX_APP_VERSION = "26.1111.21308"
+NODE_REPL_TRUSTED_SERVICES = '{"browser":"/Users/khaiphan/.codex/plugins/cache/openai-bundled/browser/26.1111.21308/scripts/browser-service.mjs","sky":"@oai/sky/service"}'
+SKY_CUA_SERVICE_PATH = "/Users/khaiphan/.codex/computer-use/Codex Computer Use.app"
+CODEX_CLI_PATH = "/Applications/ChatGPT.app/Contents/Resources/codex-cli/CodexCLI.app/Contents/MacOS/codex"
 
-[features]
-multi_agent = true
-js_repl = false
+[mcp_servers.appwrite]
+enabled = false
+command = "uvx mcp-server-appwrite --users"
 
-[sandbox_workspace_write]
-writable_roots = ["/Users/khaiphan/.local/share/recap", "/Users/khaiphan/.local/share/research"]  # the /recap-pr decision log, /research notes
+[mcp_servers.appwrite.env]
+APPWRITE_API_KEY = "APPWRITE_API_KEY_REDACTED_SET_YOUR_OWN"
+APPWRITE_ENDPOINT = "https://sfo.cloud.appwrite.io/v1"
+APPWRITE_PROJECT_ID = "APPWRITE_PROJECT_ID_REDACTED_SET_YOUR_OWN"
 
-[projects."/Users/khaiphan/PromptArmor/TPRM-API"]
-trust_level = "trusted"
+[mcp_servers.appwrite-docs]
+enabled = false
+command = "npx mcp-remote https://mcp-for-docs.appwrite.io"
 
-[projects."/Users/khaiphan/PromptArmor/AI-ARG"]
-trust_level = "trusted"
+[mcp_servers.context7]
+url = "https://mcp.context7.com/mcp"
 
-[projects."/"]
-trust_level = "trusted"
+[mcp_servers.context-mode]
+omit_tools_from = ["deferred"]
+default_tools_approval_mode = "approve"
+command = "/opt/homebrew/opt/node/bin/node"
+args = ["/opt/homebrew/lib/node_modules/context-mode/server.mjs", "--agent", "codex"]
 
-[projects."/Users/khaiphan/PromptArmor"]
-trust_level = "trusted"
+[desktop]
+followUpQueueMode = "steer"
+external-agent-import-sync-enabled = true
+conversationDetailMode = "STEPS_COMMANDS"
+ambient-suggestions-enabled = true
 
-[projects."/Users/khaiphan"]
-trust_level = "trusted"
+[desktop.external-agent-import-sync-item-types]
+SESSIONS = false
+SKILLS = "original"
+PLUGINS = "original"
+MCP_SERVER_CONFIG = "original"
+HOOKS = "original"
 
-[projects."/Users/khaiphan/Documents/Codex/2026-05-18/update-the-gh-address-comments-users"]
-trust_level = "trusted"
+[marketplaces.openai-bundled]
+source_type = "local"
+source = "/Users/khaiphan/.codex/.tmp/bundled-marketplaces/openai-bundled"
 
-[plugins."sentry@openai-curated"]
+[marketplaces.openai-primary-runtime]
+source_type = "local"
+source = "/Users/khaiphan/.cache/codex-runtimes/codex-primary-runtime/plugins/openai-primary-runtime"
+
+[marketplaces.claude-plugins-official]
+source_type = "git"
+source = "https://github.com/anthropics/claude-plugins-official.git"
+
+[marketplaces.context-mode]
+source_type = "git"
+source = "https://github.com/mksglu/context-mode.git"
+ref = "v2.1.10"
+
+[marketplaces.openai-codex]
+source_type = "git"
+source = "https://github.com/openai/codex-plugin-cc.git"
+
+[marketplaces.mattpocock]
+source_type = "git"
+source = "https://github.com/mattpocock/skills.git"
+
+[plugins."codex-app-tools@openai-bundled"]
 enabled = true
 
-[plugins."linear@openai-curated"]
+[plugins."browser@openai-bundled"]
 enabled = true
 
-[plugins."github@openai-curated"]
+[plugins."unified-computer-use@openai-bundled"]
+enabled = true
+
+[plugins."visualize@openai-bundled"]
+enabled = true
+
+[plugins."computer-use@openai-bundled"]
 enabled = true
 
 [plugins."documents@openai-primary-runtime"]
+enabled = true
+
+[plugins."pdf@openai-primary-runtime"]
 enabled = true
 
 [plugins."spreadsheets@openai-primary-runtime"]
@@ -76,43 +116,26 @@ enabled = true
 [plugins."presentations@openai-primary-runtime"]
 enabled = true
 
-[plugins."superpowers@openai-curated"]
-enabled = true
-
-[plugins."neon-postgres@openai-curated"]
-enabled = true
-
-[plugins."google-drive@openai-curated"]
-enabled = true
-
-[plugins."slack@openai-curated"]
-enabled = true
-
-[plugins."browser@openai-bundled"]
-enabled = true
-
-[plugins."chrome@openai-bundled"]
-enabled = true
-
-[plugins."pdf@openai-primary-runtime"]
-enabled = true
-
 [plugins."template-creator@openai-primary-runtime"]
 enabled = true
 
-[marketplaces.openai-bundled]
-last_updated = "2026-06-27T20:23:23Z"
-source_type = "local"
-source = "/Users/khaiphan/.codex/.tmp/bundled-marketplaces/openai-bundled"
+[plugins."context7@claude-plugins-official"]
+enabled = true
 
-[marketplaces.openai-primary-runtime]
-last_updated = "2026-06-24T06:11:12Z"
-source_type = "local"
-source = "/Users/khaiphan/.cache/codex-runtimes/codex-primary-runtime/plugins/openai-primary-runtime"
+[plugins."sentry@claude-plugins-official"]
+enabled = true
 
-[notice]
-fast_default_opt_out = true
+[plugins."typescript-lsp@claude-plugins-official"]
+enabled = true
 
-[desktop]
-git-show-sidebar-pr-icons = true
-followUpQueueMode = "queue"
+[plugins."context-mode@context-mode"]
+enabled = true
+
+[plugins."codex@openai-codex"]
+enabled = true
+
+[plugins."mattpocock-skills@mattpocock"]
+enabled = false
+
+[sandbox_workspace_write]
+writable_roots = ["/Users/khaiphan/.local/share/recap", "/Users/khaiphan/.local/share/research"]
