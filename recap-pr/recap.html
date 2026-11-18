@@ -124,9 +124,6 @@ details.more > summary:hover{color:var(--ink)}
   background:var(--wash); border:1px solid var(--hair); border-radius:7px;
 }
 
-.linkish{background:none; border:0; padding:.5rem 0; margin-top:.9rem; cursor:pointer; text-decoration:underline; text-decoration-color:var(--hair); text-underline-offset:.2em}
-.linkish:hover{color:var(--ink)}
-
 .folds{margin-top:4.5rem; border-bottom:1px solid var(--hair)}
 details.fold{border-top:1px solid var(--hair)}
 details.fold > summary{
@@ -181,7 +178,7 @@ dd{margin:0; min-width:0}
   :root{--paper:#fff; --ink:#000; --muted:#444; --hair:#bbb; --wash:#f2f2f2; --edge:#777; --alarm:#8a1711; --call:#6b4500; --ok:#1f5a2a; color-scheme:light}
   body{font-size:11pt}
   main{max-width:none; padding:0}
-  .theme,.copy,.linkish,.answer:placeholder-shown,.opt[aria-pressed="false"]{display:none}
+  .theme,.copy,.answer:placeholder-shown,.opt[aria-pressed="false"]{display:none}
   .verdict{margin-top:1.5rem}
   .item,details.fold > summary{break-inside:avoid}
   details > summary::after{display:none !important}
@@ -387,11 +384,9 @@ dd{margin:0; min-width:0}
 
     window.addEventListener('beforeprint', function () {
       Array.prototype.forEach.call(document.querySelectorAll('details:not([open])'), function (d) { d.open = true; d.setAttribute('data-print', ''); });
-      Array.prototype.forEach.call(document.querySelectorAll('li[hidden]'), function (l) { l.hidden = false; l.setAttribute('data-print', ''); });
     });
     window.addEventListener('afterprint', function () {
       Array.prototype.forEach.call(document.querySelectorAll('details[data-print]'), function (d) { d.open = false; d.removeAttribute('data-print'); });
-      Array.prototype.forEach.call(document.querySelectorAll('li[data-print]'), function (l) { l.hidden = true; l.removeAttribute('data-print'); });
     });
   }
 
@@ -458,25 +453,9 @@ dd{margin:0; min-width:0}
     return head;
   }
 
-  function isDevOnly(it) { return str(it.surface).toLowerCase() === 'developers and agents'; }
+  function isDevOnly(it) { return str(it.surface) === 'Developers and agents'; }
   function behaviorSection(heading, behavior) {
-    var sec = el('section', null, el('h2', { text: heading }));
-    var LIMIT = 6, ul = el('ul');
-    behavior.forEach(function (b, i) {
-      var li = item(b);
-      if (i >= LIMIT) li.hidden = true;
-      ul.appendChild(li);
-    });
-    sec.appendChild(ul);
-    if (behavior.length > LIMIT) {
-      var moreBtn = el('button', { class: 'linkish quiet', type: 'button', text: 'Show ' + (behavior.length - LIMIT) + ' more' });
-      moreBtn.addEventListener('click', function () {
-        Array.prototype.forEach.call(ul.children, function (c) { c.hidden = false; });
-        moreBtn.remove();
-      });
-      sec.appendChild(moreBtn);
-    }
-    return sec;
+    return el('section', null, el('h2', { text: heading }), itemList(behavior));
   }
 
   function folds(data, notes, base) {

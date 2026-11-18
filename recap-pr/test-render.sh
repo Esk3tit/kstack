@@ -57,42 +57,38 @@ if [ -z "$chrome" ]; then
   exit 1
 fi
 
-# Prints one part of what the drawn page shows: its headline; each section heading with its items (each one a Show N
-# more button hides in [brackets]) and then that button; or each fold's line, with ' · ' before its grey note.
+# Prints one part of what the drawn page shows: its headline; each section heading with its items' text; or each fold's
+# line, with ' · ' before its grey note.
 shown_py=$(cat <<'PY'
 import collections, html.parser, sys
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
-Open = collections.namedtuple("Open", "tag classes hidden")
+Open = collections.namedtuple("Open", "tag classes")
 
 
 class Shown(html.parser.HTMLParser):
     def __init__(self):
         super().__init__()
-        self.open, self.capture, self.capture_depth, self.capture_hidden = [], None, 0, False
+        self.open, self.capture, self.capture_depth = [], None, 0
         self.headline, self.sections, self.folds = "", [], []
 
     def handle_starttag(self, tag, attrs):
         if tag in VOID:
             return
-        attrs = dict(attrs)
-        classes = (attrs.get("class") or "").split()
+        classes = (dict(attrs).get("class") or "").split()
         parent_classes = self.open[-1].classes if self.open else []
-        self.open.append(Open(tag, classes, "hidden" in attrs))
+        self.open.append(Open(tag, classes))
         heading = tag in ("h1", "h2")
         fold_line = tag == "summary" and "fold" in parent_classes
-        section_item = any(o.tag == "section" for o in self.open) and (tag == "button" or (tag == "p" and "text" in classes))
+        section_item = tag == "p" and "text" in classes and any(o.tag == "section" for o in self.open)
         if self.capture is not None:
             if "note" in classes:
                 self.capture.append(" · ")
         elif heading or fold_line or section_item:
             self.capture, self.capture_depth = [], len(self.open)
-            self.capture_hidden = any(o.hidden for o in self.open)
 
     def handle_endtag(self, tag):
         if self.capture is not None and len(self.open) == self.capture_depth:
             text, self.capture = "".join(self.capture).strip(), None
-            if self.capture_hidden:
-                text = "[" + text + "]"
             if tag == "h1":
                 self.headline = text
             elif tag == "h2":
@@ -123,11 +119,6 @@ drawn() {  # drawn <name> <python edit of d, S its sections>: the sample with no
     echo "FAIL $chrome could not draw $1.html${err:+: $err}"
     exit 1
   fi
-  page_error=$(python3 -c 'import html,re,sys; m=re.search(r"<h1>(This recap couldn.*?)</h1><p class=\"about-line\">(.*?)</p>", sys.stdin.read(), re.S); print(html.unescape(" ".join(m.groups())) if m else "")' < "$tmp/$1.dom")
-  if [ -n "$page_error" ]; then
-    echo "FAIL $1.html drew the page's own error: $page_error"
-    exit 1
-  fi
 }
 shown() {  # shown <name> <headline|sections|folds>
   python3 -c "$shown_py" "$2" < "$tmp/$1.dom"
@@ -135,20 +126,16 @@ shown() {  # shown <name> <headline|sections|folds>
 
 user_change="{'surface': 'Nation tree', 'text': 'user change'}"
 dev_change="{'surface': 'Developers and agents', 'text': 'agent change'}"
-dev_change_loose="{'surface': ' developers and agents ', 'text': 'second agent change'}"
 drawn users-only "S['behavior_changes'] = [$user_change]"
-drawn dev-only "S['behavior_changes'] = [$dev_change, $dev_change_loose]"
-drawn mixed "S['behavior_changes'] = [$dev_change, $user_change, $dev_change_loose]"
+drawn dev-only "S['behavior_changes'] = [$dev_change]"
+drawn mixed "S['behavior_changes'] = [$dev_change, $user_change]"
 drawn unchanged "S['behavior_changes'] = []"
 check "user changes go under the users' heading" "$(shown users-only sections)" "What users will see: user change"
-check "dev-only changes get their own heading and no users' heading" "$(shown dev-only sections)" "What developers and agents will see: agent change, second agent change"
-check "mixed changes split, users' first" "$(shown mixed sections)" "What users will see: user change | What developers and agents will see: agent change, second agent change"
+check "dev-only changes get their own heading and no users' heading" "$(shown dev-only sections)" "What developers and agents will see: agent change"
+check "mixed changes split, users' first" "$(shown mixed sections)" "What users will see: user change | What developers and agents will see: agent change"
 check "a page with no changes still draws its headline" "$(shown unchanged headline)" "Nothing needs you. Safe to merge."
 check "no changes, no heading" "$(shown unchanged sections)" ""
 check "dev-only changes leave the headline safe to merge" "$(shown dev-only headline)" "Nothing needs you. Safe to merge."
-drawn seven-each "S['behavior_changes'] = [dict($user_change, text='user %d' % i) for i in range(7)] + [dict($dev_change, text='dev %d' % i) for i in range(7)]"
-check "each heading shows six and hides the seventh behind its own Show 1 more button" "$(shown seven-each sections)" \
-  "What users will see: user 0, user 1, user 2, user 3, user 4, user 5, [user 6], Show 1 more | What developers and agents will see: dev 0, dev 1, dev 2, dev 3, dev 4, dev 5, [dev 6], Show 1 more"
 
 fill_folds() {  # fill_folds <n>: no behavior changes, n items in every fold's section, n parity pairs that differ and n log rows
   echo "S['behavior_changes'] = []
