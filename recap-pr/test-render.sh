@@ -57,31 +57,35 @@ if [ -z "$chrome" ]; then
   exit 1
 fi
 
-# Prints what the drawn page shows: its headline, each section heading with the items it shows (not those a Show N more
-# button hides), and each fold's line, with ' · ' put before the fold's grey note.
+# Prints what the drawn page shows: its headline, each section heading with its items (one a Show N more button hides
+# in [brackets]) and that button, and each fold's line, with ' · ' put before the fold's grey note.
 shown_py=$(cat <<'PY'
-import html.parser, sys
+import collections, html.parser, sys
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
+Open = collections.namedtuple("Open", "tag classes hidden")
 class Shown(html.parser.HTMLParser):
     def __init__(self):
         super().__init__()
-        self.open, self.capture, self.capture_depth, self.headline, self.sections, self.folds = [], None, 0, "", [], []
+        self.open, self.capture, self.capture_depth, self.capture_hidden = [], None, 0, False
+        self.headline, self.sections, self.folds = "", [], []
     def handle_starttag(self, tag, attrs):
         if tag in VOID:
             return
         attrs = dict(attrs)
-        cls = (attrs.get("class") or "").split()
-        parent_classes = self.open[-1][1] if self.open else []
-        self.open.append((tag, cls, "hidden" in attrs))
-        shown_item = tag == "p" and "text" in cls and any(t == "section" for t, _, _ in self.open) and not any(h for _, _, h in self.open)
+        classes = (attrs.get("class") or "").split()
+        parent_classes = self.open[-1].classes if self.open else []
+        self.open.append(Open(tag, classes, "hidden" in attrs))
+        in_section = any(o.tag == "section" for o in self.open)
         if self.capture is not None:
-            if "note" in cls:
+            if "note" in classes:
                 self.capture.append(" · ")
-        elif tag in ("h1", "h2") or (tag == "summary" and "fold" in parent_classes) or shown_item:
+        elif tag in ("h1", "h2") or (tag == "summary" and "fold" in parent_classes) or (in_section and (tag == "button" or (tag == "p" and "text" in classes))):
             self.capture, self.capture_depth = [], len(self.open)
+            self.capture_hidden = any(o.hidden for o in self.open)
     def handle_endtag(self, tag):
         if self.capture is not None and len(self.open) == self.capture_depth:
             text, self.capture = "".join(self.capture).strip(), None
+            if self.capture_hidden: text = "[" + text + "]"
             if tag == "h1": self.headline = text
             elif tag == "h2": self.sections.append([text])
             elif tag == "summary": self.folds.append(text)
@@ -122,8 +126,8 @@ check "a page with no changes still draws its headline" "$(shown unchanged headl
 check "no changes, no heading" "$(shown unchanged sections)" ""
 check "dev-only changes leave the headline safe to merge" "$(shown dev-only headline)" "Nothing needs you. Safe to merge."
 drawn seven-each "S['behavior_changes'] = [{'surface': 'Nation tree', 'text': 'user %d' % i} for i in range(7)] + [{'surface': 'Developers and agents', 'text': 'dev %d' % i} for i in range(7)]"
-check "each heading shows six and folds the seventh behind its own button" "$(shown seven-each sections) | $(grep -o 'Show [0-9]* more' "$tmp/seven-each.dom" | paste -sd, -)" \
-  "What users will see: user 0, user 1, user 2, user 3, user 4, user 5 | What developers and agents will see: dev 0, dev 1, dev 2, dev 3, dev 4, dev 5 | Show 1 more,Show 1 more"
+check "each heading shows six and hides the seventh behind its own Show 1 more button" "$(shown seven-each sections)" \
+  "What users will see: user 0, user 1, user 2, user 3, user 4, user 5, [user 6], Show 1 more | What developers and agents will see: dev 0, dev 1, dev 2, dev 3, dev 4, dev 5, [dev 6], Show 1 more"
 
 fill_folds() {  # fill_folds <n>: n items in every fold's section, n parity pairs that differ and n log rows
   echo "S['behavior_changes'] = []
