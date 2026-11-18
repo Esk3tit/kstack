@@ -195,11 +195,19 @@ writes a validated starter; verify with `… load-config.mjs --export` from insi
 
 ## 4. Codex CLI setup (`codex/config.toml.example`)
 
-`~/.codex/config.toml` — its `model` line sets the default for any call that passes no `--model`;
-`model_reasoning_effort = "high"`, `[features] multi_agent`.
-MCP servers wired into Codex: **Linear** (`mcp.linear.app`), **Neon** (`mcp.neon.tech`, token redacted
-in the example), and Codex.app's `node_repl` (computer-use). Auth is ChatGPT-mode (`~/.codex/auth.json`).
-Copy `config.toml.example` → `~/.codex/config.toml` and fill in your own tokens.
+The example is a redacted snapshot of my Codex settings. It includes the CLI defaults
+(`gpt-6.2-sol`, high reasoning effort), desktop settings, plugin marketplaces, and sandbox
+write paths. The MCP servers that connect Codex to tools are Railway, Context7, context-mode,
+Appwrite, Appwrite Docs, and the desktop app's `node_repl`. Both Appwrite entries are disabled
+in the snapshot.
+
+For a new setup, copy the example to `~/.codex/config.toml`. For an existing setup, merge the
+settings you want into your config. Update local paths to match your installations and add
+project trust on the new machine. Codex keeps terminal UI and hook state locally.
+
+Run `codex login` to sign in with ChatGPT. If you enable Appwrite, set your endpoint, project ID
+and API key in your local config. For either Appwrite server, put the executable in `command`
+and pass its arguments in `args`.
 
 ## 5. Third-party skills (installed in `~/.claude/skills/`, NOT vendored here)
 
