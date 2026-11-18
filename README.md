@@ -195,19 +195,20 @@ writes a validated starter; verify with `… load-config.mjs --export` from insi
 
 ## 4. Codex CLI setup (`codex/config.toml.example`)
 
-The example is a redacted snapshot of my Codex settings. It includes the CLI defaults
-(`gpt-6.2-sol`, high reasoning effort), desktop settings, plugin marketplaces, and sandbox
-write paths. The MCP servers that connect Codex to tools are Railway, Context7, context-mode,
-Appwrite, Appwrite Docs, and the desktop app's `node_repl`. Both Appwrite entries are disabled
-in the snapshot.
+The example is a redacted snapshot of my Codex settings. Runs without `--model` default to
+`gpt-6.2-sol`, and the configured reasoning effort is `high`. The example also includes desktop
+settings, plugins and their marketplaces, and sandbox write paths. Its MCP servers connect Codex
+to Railway, Context7, context-mode, Appwrite, Appwrite Docs, and the desktop app's `node_repl`.
 
 For a new setup, copy the example to `~/.codex/config.toml`. For an existing setup, merge the
-settings you want into your config. Update local paths to match your installations and add
-project trust on the new machine. Codex keeps terminal UI and hook state locally.
+settings you want into your config. Update local paths to match your installations. The snapshot
+omits terminal UI state (`[tui]`), hook state (`hooks.state`), and saved project trust. Choose
+which project folders to trust when Codex prompts you.
 
-Run `codex login` to sign in with ChatGPT. If you enable Appwrite, set your endpoint, project ID
-and API key in your local config. For either Appwrite server, put the executable in `command`
-and pass its arguments in `args`.
+Run `codex login` to sign in with ChatGPT. Both Appwrite entries are disabled and store their
+full invocation in `command`. Before enabling either entry, split it into an executable and
+arguments. For example, use `command = "uvx"` and `args = ["mcp-server-appwrite", "--users"]`
+for Appwrite. That entry also needs your endpoint, project ID, and API key.
 
 ## 5. Third-party skills (installed in `~/.claude/skills/`, NOT vendored here)
 
