@@ -74,8 +74,8 @@ print({"sections": " | ".join(text(h) + ": " + ", ".join(text(p) for p in re.fin
        "folds": " | ".join(text(f) for f in re.findall(r'<details class="fold"><summary>(.*?)</summary>', page, re.S))}[sys.argv[1]])
 PY
 )
-drawn() {  # drawn <name> <python edit of d, S its sections>: the sample with no divergences or attention items, edited, drawn in Chrome as $tmp/<name>.dom
-  edited "$1" "S = d['sections']; S['divergences'] = []; S['attention'] = []; $2"
+drawn() {  # drawn <name> <python edit of d, S its sections>: the sample with no divergences, edited, drawn in Chrome as $tmp/<name>.dom
+  edited "$1" "S = d['sections']; S['divergences'] = []; $2"
   python3 "$D/render.py" "$tmp/$1.json" "$tmp/$1.html" >/dev/null
   if ! "$chrome" --headless --user-data-dir="$tmp/chrome" --dump-dom "$(uri "$tmp/$1.html")" 2>"$tmp/$1.err" > "$tmp/$1.dom" || ! grep -q 'class="verdict"' "$tmp/$1.dom"; then
     err=$(tail -n 1 "$tmp/$1.err")
