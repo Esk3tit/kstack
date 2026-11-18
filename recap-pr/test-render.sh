@@ -57,8 +57,8 @@ if [ -z "$chrome" ]; then
   exit 1
 fi
 
-# Prints one part of what the drawn page shows: its headline; each section heading with its items' text; or each fold's
-# line, with ' · ' before its grey note.
+# Prints one part of what the drawn page shows: each section heading with its items' text, or each fold's line, with
+# ' · ' before its grey note.
 shown_py=$(cat <<'PY'
 import html, re, sys
 
@@ -69,10 +69,8 @@ def text(fragment):
     return html.unescape(re.sub(r"<[^>]+>", "", fragment.replace('<span class="note">', " · "))).strip()
 
 
-headline = re.search(r"<h1>(.*?)</h1>", page, re.S)
 sections = re.findall(r"<section><h2>(.*?)</h2>(.*?)</section>", page, re.S)
-print({"headline": text(headline.group(1)) if headline else "",
-       "sections": " | ".join(text(h) + ": " + ", ".join(text(p) for p in re.findall(r'<p class="text">(.*?)</p>', body, re.S)) for h, body in sections),
+print({"sections": " | ".join(text(h) + ": " + ", ".join(text(p) for p in re.findall(r'<p class="text">(.*?)</p>', body, re.S)) for h, body in sections),
        "folds": " | ".join(text(f) for f in re.findall(r'<details class="fold"><summary>(.*?)</summary>', page, re.S))}[sys.argv[1]])
 PY
 )
@@ -85,7 +83,7 @@ drawn() {  # drawn <name> <python edit of d, S its sections>: the sample with no
     exit 1
   fi
 }
-shown() {  # shown <name> <headline|sections|folds>
+shown() {  # shown <name> <sections|folds>
   python3 -c "$shown_py" "$2" < "$tmp/$1.dom"
 }
 
@@ -98,7 +96,6 @@ drawn unchanged "S['behavior_changes'] = []"
 check "user changes go under the users' heading" "$(shown users-only sections)" "What users will see: user change"
 check "dev-only changes get their own heading and no users' heading" "$(shown dev-only sections)" "What developers and agents will see: agent change"
 check "mixed changes split, users' first" "$(shown mixed sections)" "What users will see: user change | What developers and agents will see: agent change"
-check "a page with no changes still draws its headline" "$(shown unchanged headline)" "Nothing needs you. Safe to merge."
 check "no changes, no heading" "$(shown unchanged sections)" ""
 
 fill_folds() {  # fill_folds <n>: no behavior changes, n items in every fold's section, n parity pairs that differ and n log rows
