@@ -113,6 +113,7 @@ drawn unchanged "S['behavior_changes'] = []"
 check "user changes go under the users' heading" "$(shown users-only sections)" "What users will see: user change"
 check "dev-only changes get their own heading and no users' heading" "$(shown dev-only sections)" "What developers and agents will see: agent change, second agent change"
 check "mixed changes split, users' first" "$(shown mixed sections)" "What users will see: user change | What developers and agents will see: agent change, second agent change"
+check "a page with no changes still draws its headline" "$(shown unchanged headline)" "Nothing needs you. Safe to merge."
 check "no changes, no heading" "$(shown unchanged sections)" ""
 check "dev-only changes leave the headline safe to merge" "$(shown dev-only headline)" "Nothing needs you. Safe to merge."
 
