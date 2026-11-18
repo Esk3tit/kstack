@@ -98,7 +98,9 @@ PY
 drawn() {
   edited "$1" "S = d['sections']; S['divergences'] = []; S['attention'] = []; $2"
   python3 "$D/render.py" "$tmp/$1.json" "$tmp/$1.html" >/dev/null
-  "$chrome" --headless --no-first-run --no-default-browser-check --user-data-dir="$tmp/chrome" --dump-dom "$(uri "$tmp/$1.html")" 2>/dev/null > "$tmp/$1.dom"
+  if ! "$chrome" --headless --no-first-run --no-default-browser-check --user-data-dir="$tmp/chrome" --dump-dom "$(uri "$tmp/$1.html")" 2>/dev/null > "$tmp/$1.dom" || [ ! -s "$tmp/$1.dom" ]; then
+    echo "FAIL $chrome could not draw $1.html"; fail=1
+  fi
 }
 shown() { python3 -c "$SHOWN" "$2" < "$tmp/$1.dom"; }
 
