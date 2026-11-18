@@ -251,10 +251,10 @@ trusted=$(python3 "$D/facts.py" 7 --dry-run)
 check "a one-branch clone fetches the base and the default branch GitHub names, and facts come from the latter, not main or the head" "$(count "$trusted" '^from-the-default-branch$') $(count "$trusted" '^chromium ')" "1 0"
 git switch -q --detach HEAD~1
 cp "$FAKE/body" "$FAKE/body.before"
-check "a checkout away from the PR head stops before writing" "$(python3 "$D/facts.py" 7 2>&1 >/dev/null | grep -c 'not the PR head'; cmp -s "$FAKE/body" "$FAKE/body.before" && echo unchanged)" "1
+check "a checkout away from the PR head stops before writing" "$(python3 "$D/facts.py" 7 2>&1 >/dev/null | grep -c '^facts.py: the checkout is at .*, not the PR head'; cmp -s "$FAKE/body" "$FAKE/body.before" && echo unchanged)" "1
 unchanged"
 dry_exit=0; python3 "$D/facts.py" 7 --dry-run >"$HOME/dry.out" 2>"$HOME/dry.err" || dry_exit=$?
-check "and a dry run there prints nothing and fails for the same reason" "$(wc -c <"$HOME/dry.out" | tr -d ' ') $dry_exit $(grep -c 'not the PR head' "$HOME/dry.err")" "0 1 1"
+check "and a dry run there prints nothing and fails for the same reason" "$(wc -c <"$HOME/dry.out" | tr -d ' ') $dry_exit $(grep -c '^facts.py: the checkout is at .*, not the PR head' "$HOME/dry.err")" "0 1 1"
 git switch -q -c bare origin/main && git rm -q docs/agents/pr-loop.md && git commit -q -m "no declaration" && git push -q origin bare
 git switch -q --detach HEAD~1 && echo bare > "$FAKE/default"
 bare_block=$(python3 "$D/facts.py" 7 --dry-run 2>&1)
