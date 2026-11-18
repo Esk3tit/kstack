@@ -56,7 +56,8 @@ if [ -z "$chrome" ]; then
   exit 1
 fi
 
-# Prints what the drawn page shows: its headline, each section heading with its items' text, and each fold's line.
+# Prints what the drawn page shows: its headline, each section heading with its items' text, and each fold's line,
+# with ' · ' put before the fold's grey note.
 shown_py=$(cat <<'PY'
 import html.parser, sys
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
@@ -68,12 +69,12 @@ class Shown(html.parser.HTMLParser):
         if tag in VOID:
             return
         cls = (dict(attrs).get("class") or "").split()
-        parent = self.open[-1] if self.open else ("", [])
+        parent_classes = self.open[-1][1] if self.open else []
         self.open.append((tag, cls))
         if self.text is not None:
             if "note" in cls:
                 self.text.append(" · ")
-        elif tag in ("h1", "h2") or (tag == "summary" and "fold" in parent[1]) or (tag == "p" and "text" in cls and any(t == "section" for t, _ in self.open)):
+        elif tag in ("h1", "h2") or (tag == "summary" and "fold" in parent_classes) or (tag == "p" and "text" in cls and any(t == "section" for t, _ in self.open)):
             self.text, self.depth = [], len(self.open)
     def handle_endtag(self, tag):
         if self.text is not None and len(self.open) == self.depth:
@@ -113,7 +114,7 @@ check "user changes go under the users' heading" "$(shown users-only sections)" 
 check "dev-only changes get their own heading and no users' heading" "$(shown dev-only sections)" "What developers and agents will see: agent change, second agent change"
 check "mixed changes split, users' first" "$(shown mixed sections)" "What users will see: user change | What developers and agents will see: agent change, second agent change"
 check "no changes, no heading" "$(shown unchanged sections)" ""
-check "the headline with only dev-only changes" "$(shown dev-only headline)" "Nothing needs you. Safe to merge."
+check "dev-only changes leave the headline safe to merge" "$(shown dev-only headline)" "Nothing needs you. Safe to merge."
 
 fill_folds() {  # fill_folds <n>: n items in every fold's section, n parity pairs that differ and n log rows
   echo "S['behavior_changes'] = []
