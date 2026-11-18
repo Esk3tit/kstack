@@ -198,7 +198,8 @@ writes a validated starter; verify with `… load-config.mjs --export` from insi
 The example is a redacted snapshot of my Codex settings. Runs without `--model` default to
 `gpt-6.2-sol`, and the configured reasoning effort is `high`. The example also includes desktop
 settings, plugins and their marketplaces, and sandbox write paths. Its MCP servers connect Codex
-to Railway, Context7, context-mode, Appwrite, Appwrite Docs, and the desktop app's `node_repl`.
+to Railway, Context7, context-mode, Appwrite, and Appwrite Docs. The desktop app uses `node_repl`
+for computer use.
 
 For a new setup, copy the example to `~/.codex/config.toml`. For an existing setup, merge the
 settings you want into your config. Update local paths to match your installations. The snapshot
