@@ -10,7 +10,7 @@ fail=0
 check() { if [ "$2" = "$3" ]; then echo "ok   $1"; else echo "FAIL $1: got [$2], want [$3]"; fail=1; fi; }
 block() { python3 -c 'import json,re,sys; s=open(sys.argv[1]).read(); m=re.search(r"<script type=\"application/json\" id=\"recap-data\">(.*?)</script>", s, re.S); print(json.dumps(json.loads(m.group(1)), sort_keys=True))' "$1"; }
 same() { python3 -c 'import json,sys; print(json.dumps(json.load(open(sys.argv[1])), sort_keys=True))' "$1"; }
-edited() {  # edited <name> <python edit of d>: writes the sample, so edited, to $tmp/<name>.json
+edited() {  # edited <name> <python edit of d>: writes the sample with that edit to $tmp/<name>.json
   python3 -c "import json,sys; d=json.load(open(sys.argv[1])); $2; json.dump(d, open(sys.argv[2], 'w'))" "$tmp/recap.json" "$tmp/$1.json"
 }
 uri() { python3 -c 'import pathlib,sys; print(pathlib.Path(sys.argv[1]).resolve().as_uri())' "$1"; }
@@ -63,11 +63,14 @@ shown_py=$(cat <<'PY'
 import collections, html.parser, sys
 VOID = {"area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"}
 Open = collections.namedtuple("Open", "tag classes hidden")
+
+
 class Shown(html.parser.HTMLParser):
     def __init__(self):
         super().__init__()
         self.open, self.capture, self.capture_depth, self.capture_hidden = [], None, 0, False
         self.headline, self.sections, self.folds = "", [], []
+
     def handle_starttag(self, tag, attrs):
         if tag in VOID:
             return
@@ -82,18 +85,27 @@ class Shown(html.parser.HTMLParser):
         elif tag in ("h1", "h2") or (tag == "summary" and "fold" in parent_classes) or (in_section and (tag == "button" or (tag == "p" and "text" in classes))):
             self.capture, self.capture_depth = [], len(self.open)
             self.capture_hidden = any(o.hidden for o in self.open)
+
     def handle_endtag(self, tag):
         if self.capture is not None and len(self.open) == self.capture_depth:
             text, self.capture = "".join(self.capture).strip(), None
-            if self.capture_hidden: text = "[" + text + "]"
-            if tag == "h1": self.headline = text
-            elif tag == "h2": self.sections.append([text])
-            elif tag == "summary": self.folds.append(text)
-            else: self.sections[-1].append(text)
+            if self.capture_hidden:
+                text = "[" + text + "]"
+            if tag == "h1":
+                self.headline = text
+            elif tag == "h2":
+                self.sections.append([text])
+            elif tag == "summary":
+                self.folds.append(text)
+            else:
+                self.sections[-1].append(text)
         self.open.pop()
+
     def handle_data(self, data):
         if self.capture is not None:
             self.capture.append(data)
+
+
 page = Shown()
 page.feed(sys.stdin.read())
 print({"headline": page.headline,
@@ -115,7 +127,9 @@ drawn() {  # drawn <name> <python edit of d, S its sections>: the sample with no
     exit 1
   fi
 }
-shown() { python3 -c "$shown_py" "$2" < "$tmp/$1.dom"; }  # shown <name> <headline|sections|folds>
+shown() {  # shown <name> <headline|sections|folds>
+  python3 -c "$shown_py" "$2" < "$tmp/$1.dom"
+}
 
 user_change="{'surface': 'Nation tree', 'text': 'user change'}"
 dev_change="{'surface': 'Developers and agents', 'text': 'agent change'}"
