@@ -246,7 +246,8 @@ Marketplaces: `superpowers-marketplace`, `superpowers-extended-cc-marketplace`, 
 ## 7. MCP servers
 
 - **Claude Code:** Linear, Neon, Slack, claude_design, context7, playwright, sentry, context-mode.
-- **Codex:** Linear + Neon (in `config.toml`) + `node_repl`.
+- **Codex:** Railway, Context7, context-mode, Appwrite and Appwrite Docs (both disabled),
+  and `node_repl` for browser and desktop control.
 
 ## 8. Tooling (CLIs)
 
@@ -271,5 +272,6 @@ context-mode and superpowers. (Dropping those plugins drops their hooks too.)
 6. Install CLIs: `codex`, `gh` + the `gh-axi`/`lavish-axi` tooling, `agent-browser`, `ffmpeg`, `doppler`, `porter`,
    `neonctl`, `aws`. Authenticate each (`gh auth`, `doppler login`, `porter auth login`, `aws login`,
    `neonctl auth`).
-7. Wire MCP servers (Linear, Neon, …) into Claude Code and `~/.codex/config.toml`.
+7. Wire MCP servers (Linear, Neon, …) into Claude Code. Follow section 4 to configure the
+   [Codex servers](#7-mcp-servers) in `~/.codex/config.toml`.
 8. (Optional, being phased out) reinstall plugins from their marketplaces.
