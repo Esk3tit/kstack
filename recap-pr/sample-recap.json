@@ -145,8 +145,8 @@
       },
       {
         "surface": "Developers and agents",
-        "text": "**docs/e2e.md lists the new `tree-text-size.spec.ts` suite:** every tree name refits as the text size changes, in all three engines. Main's suite table had no row for it.",
-        "why": "The runbook names every e2e suite, so the next agent finds the text-size case before writing another.",
+        "text": "**docs/e2e.md lists the new `tree-text-size.spec.ts` suite,** which checks that every tree name refits as the text size changes, in all three engines. Main's suite table had no row for it.",
+        "why": "Listing the text-size suite helps the next agent find it before writing another.",
         "who": [
           "me"
         ],
