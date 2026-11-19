@@ -12,7 +12,7 @@ Run the whole pre-merge loop on the current branch, and on the same-named branch
 
 Every PR needs **Standards** and **Spec** (step 6's axes; Spec also reads the PR description) and **Codex** (`/codexloop`) clean on the exact head handed back. Reviews run in two tiers, so the expensive ones read a settled head:
 
-- **The cheap tier** (steps 1–4) loops freely: Codex to convergence, CI and the review bots that run on their own, and affected tests, until all of them have settled on one head. Every new commit goes through step 1 before its push. Step 5 then takes app evidence once.
+- **The cheap tier** (steps 1–4) loops freely: Codex to convergence, CI and the review bots that run on their own, and affected tests, until all of them have settled on one head. Every new commit goes through step 1 before its push. Step 5 then takes app evidence.
 - **The tail** (step 6) runs on the head they settled on: Standards and Spec, Fable when its call says so, and the repo's final-pass reviewers, rerun on each new head until every pass is clean on one.
 
 - **Start.** Before step 1, log the run's start row in each repo's branch (`log.sh review me yes "pr-loop run started on <branch>" "a new run" none "head <sha>" accepted`) and, with no ticket, the request that authorized the work, quoted word for word in a `you` row, once; then run `log.sh --check HEAD` there. "This run" means records made after this repo's latest start row: compare the time the check prints for a `NOT REVIEWED` pass with that row's `ts` in the log `log.sh --path` names.
@@ -39,7 +39,7 @@ Done when every repo with commits on the branch has an open PR carrying its fact
 
 ## 3. Bot and CI findings
 
-Commit any fix from steps 4–7. Follow `/address-pr-comments` on each PR, judging every bot finding and red check on the pushed head without another selection prompt; its finalize step takes its fixes through step 1. A `LOOP_STATUS=FAIL` from it goes to step 7, which hands back `Merge-ready: no: <its ERROR>`. Once it converges, a branch short of step 1's Done takes its head through step 1 and runs this step again.
+Commit any fix from steps 4–7. Follow `/address-pr-comments` on each PR, judging every bot finding and red check on the pushed head without another selection prompt. A `LOOP_STATUS=FAIL` from it goes to step 7, which hands back `Merge-ready: no: <its ERROR>`. Once it converges, a branch short of step 1's Done takes its head through step 1 and runs this step again.
 
 A red check that passes on a re-run is an unexplained failure: diagnose it in this run as [FLAKY.md](FLAKY.md) says.
 
@@ -53,7 +53,7 @@ Record each final head, affected commands and collected/executed test results, r
 
 ## 5. Verify in the running app, when the diff changes what renders
 
-When a diff changes what a user sees or does (components, routes, styles, copy, a UI-facing API), run `/no-mistakes` once, on the head steps 1–4 settled on, through a route that drives the browser (frontend or full-stack, never backend-only), with a case for the change on screen, and post its screenshots and recordings to the PR (across repos, the one CROSS-REPO.md names). A diff that changes nothing on screen skips this; log the run-or-skip and why. A fix it causes goes back through step 3.
+When a diff changes what a user sees or does (components, routes, styles, copy, a UI-facing API), run `/no-mistakes` on the head steps 1–4 settled on, and again only on a later head that changes what renders, through a route that drives the browser (frontend or full-stack, never backend-only), with a case for the change on screen, and post its screenshots and recordings to the PR (across repos, the one CROSS-REPO.md names). A diff that changes nothing on screen skips this; log the run-or-skip and why. A fix it causes goes back through step 3.
 
 Done when every PR whose diff changes what renders carries evidence from the last head that changed what renders, or a logged skip.
 
@@ -65,7 +65,7 @@ Once steps 1–5 are done on a PR's head, refresh its facts block (step 2's `fac
 - Fable, when its call says so (**Review order**).
 - The call for each final-pass reviewer the repo names (`/address-pr-comments`, **The final pass**), posting the requests you make together.
 
-Then run step 3, which waits for the final-pass reviews (a push would cancel one still running) and works their findings. Steps 4 and 5 follow for what the fixes touch, then this step runs again on the head they settle on.
+Then run step 3, which waits for the final-pass reviews and works their findings. Steps 4 and 5 follow for what the fixes touch, then this step runs again on the head they settle on.
 
 Done when the check, run again, exits 0, or 3 with every pass it names recorded `not-reviewed` by this run; each head's Fable call is logged; every finding is fixed, logged as rejected with a reason, or logged with result `open` as a question for the user; and each final-pass reviewer is done (**The final pass**, "It's done").
 
@@ -73,7 +73,7 @@ Done when the check, run again, exits 0, or 3 with every pass it names recorded 
 
 1. Follow `~/.claude/skills/recap-pr/SKILL.md`.
 2. Once CI has finished on each final head, or passed its deadline (**Waits** in `/address-pr-comments`), or at once after a FAIL from step 3, refresh its PR's facts block from its repo: step 2's `facts.py <pr>`.
-3. After a FAIL from step 3, skip to 4: the check only reports. Otherwise run `log.sh --check <head> <pr>` in its repo, and the passes it names, as step 6 runs them: a changed fact, the recap's edit or a new `open` row (which goes back to 1 first) reruns Spec, so Spec reads the finished description last. A pass that changes the code sends it back through steps 3 to 6, then step 7 starts again from 1 on the new head; so does a PR missing a push of the head checked, while one whose head moved to a commit this run did not push hands back `Merge-ready: no: pushed from elsewhere`. A `gh` error (exit 2) is retried once; any error then hands back `Merge-ready: no: check could not run: <its message>`.
+3. After a FAIL from step 3, skip to 4: the check only reports. Otherwise run `log.sh --check <head> <pr>` in its repo, and the passes it names, as step 6 runs them: a changed fact, the recap's edit or a new `open` row (which goes back to item 1 first) reruns Spec, so Spec reads the finished description last. A pass that changes the code sends it back through steps 3 to 6, then step 7 starts again from 1 on the new head; so does a PR missing a push of the head checked, while one whose head moved to a commit this run did not push hands back `Merge-ready: no: pushed from elsewhere`. A `gh` error (exit 2) is retried once; any error then hands back `Merge-ready: no: check could not run: <its message>`.
 4. Refresh only the block's review record (`facts.py <pr> --record-only`), keeping the facts Spec read, and run the check a last time: its output is the one handed back. Exit 3 (only `not-reviewed` passes left) hands back `Merge-ready: no: <passes> not reviewed`; any other failure of the check goes back to 3, unless step 3 failed. A `facts.py` failure at 2 or 4 goes back to 2, which rebuilds a missing block; a second one in this step hands back `Merge-ready: no: facts block not written: <its message>`.
 5. Hand back this block for each PR, every line filled from the final head (across repos, with CROSS-REPO.md's merge order):
 
