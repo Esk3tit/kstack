@@ -22,7 +22,7 @@ Every PR needs **Standards** and **Spec** (step 6's axes; Spec also reads the PR
 
 ## 1. Cross-family review to convergence
 
-Run `/codexloop --until-converged --base <base>` on each branch; its reviewer is the other model family (Codex from Claude Code, Claude Opus 5.5 from Codex), and it pushes the head it converges on. When only CI can judge the change (a failure seen only on CI's runners, a suite too heavy to run locally), open a draft PR first. A head short of this step's Done only by its push gets the same push by hand, guarded as `/codexloop`'s step 4 guards it. A diverged remote hands back `Merge-ready: no: remote diverged`.
+Run `/codexloop --until-converged --base <base>` on each branch; its reviewer is the other model family (Codex from Claude Code, Claude Opus 5.5 from Codex), and it pushes the head it converges on. When only CI can judge the change (a failure seen only on CI's runners, a suite too heavy to run locally), open a draft PR first. A head short of this step's Done only by its push gets the same push by hand, with `/codexloop`'s step 4 checks and wait. A diverged remote hands back `Merge-ready: no: remote diverged`.
 
 A `PAUSED` exit from `/codexloop` (its design pause), wherever this run calls it, stops the run on that branch. A design pause is a call the mechanical reviews keep circling, so it runs Fable's read of the cluster as [FABLE.md](FABLE.md) says, logged and carried to the user unapplied. Hand back the branch, and its PR if one is open, with the design question as the open item and `Merge-ready: no: design pause`.
 
@@ -36,7 +36,7 @@ Done when every repo with commits on the branch has an open PR carrying its fact
 
 ## 3. Bot and CI findings
 
-Commit any fix from steps 4–7. Follow `/address-pr-comments` on each PR, judging every bot finding and red check on the pushed head without another selection prompt. A `LOOP_STATUS=FAIL` from it goes to step 7, which hands back `Merge-ready: no: <its ERROR>`. Once it converges, a branch short of step 1's Done takes its head through step 1 and runs this step again.
+Commit any fix from steps 4, 5 and 7. Follow `/address-pr-comments` on each PR, judging every bot finding and red check on the pushed head without another selection prompt. A `LOOP_STATUS=FAIL` from it goes to step 7. Once it converges, a branch short of step 1's Done takes its head through step 1 and runs this step again.
 
 A red check that passes on a re-run is an unexplained failure: diagnose it in this run as [FLAKY.md](FLAKY.md) says.
 
@@ -50,19 +50,19 @@ Record each final head, affected commands and collected/executed test results, r
 
 ## 5. Verify in the running app, when the diff changes what renders
 
-When a diff changes what a user sees or does (components, routes, styles, copy, a UI-facing API), run `/no-mistakes` on the head steps 1–4 settled on through a route that drives the browser (frontend or full-stack, never backend-only), with a case for the change on screen, and post its screenshots and recordings to the PR (across repos, the one CROSS-REPO.md names). A diff that changes nothing on screen skips this; log the run-or-skip and why. A fix it causes goes back through step 3, and the evidence is retaken on the head steps 1–4 settle on after it.
+When a diff changes what a user sees or does (components, routes, styles, copy, a UI-facing API), run `/no-mistakes` on the head steps 1–4 settled on through a route that drives the browser (frontend or full-stack, never backend-only), with a case for the change on screen, and post its screenshots and recordings to the PR (across repos, the one CROSS-REPO.md names). A diff that changes nothing on screen skips this; log the run-or-skip and why. A fix it causes goes back through step 3, and the evidence is retaken on the head steps 1–4 settle on after it; after that, only a head that changes what renders retakes it.
 
 Done when every PR whose diff changes what renders carries evidence taken on or after the last head that fixed what it found or changed what renders, or a logged skip.
 
 ## 6. The tail
 
-This step starts once steps 1–5 are done on a PR's head with Codex clean on it and every required CI check finished: a check gone red sends it back to step 3 first; otherwise a check still `PENDING`, or a Codex pass short of clean, sends it straight to step 7. On the head's first pass through this step, refresh its facts block (step 2's `facts.py <pr>`, retried once; a second failure also goes straight to step 7). Then run `log.sh --check <head> <pr>`, handling a moved head or an error as step 7's item 3 does, and run these on that head together:
+This step starts once steps 1–5 are done on a PR's head with Codex clean on it and every required CI check finished: a check gone red sends it back to step 3 first; otherwise a check still `PENDING`, or a Codex pass short of clean, sends it straight to step 7. Once on each head the tail runs on, refresh its facts block (step 2's `facts.py <pr>`, retried once; a second failure also goes straight to step 7). Then run `log.sh --check <head> <pr>`, handling a moved head or an error as step 7's item 3 does, and run these on that head together:
 
 - `/code-review` for the axes on the check's closing line (skip it when that names neither), with the fixed point `origin/<base>` (the branch it merges into), the spec given up front (the ticket if any, and the user's settled decisions, `log.sh --pins`, which carry the start's request), and `spec-body-<head>.md` beside the log named as the file it saves the PR body to (on every Spec run, step 7's too). Before each Spec run, compare the live body with the last body Spec saved and restore only what a bot wrote back over it, as `/pr`'s **Editing the body** says, keeping a person's change. Fix every hard violation and every spec gap; take a judgement call only when it makes the change simpler or clearer. Log each finding with its outcome, and record each axis that ran on the head it reviewed: `log.sh --pass standards <head> clean|fixed`, and `log.sh --pass spec <head> clean|fixed [<body file>]`, giving that file when Spec read it.
 - Fable, when its call says so (**Review order**).
 - The call for each final-pass reviewer the repo names (`/address-pr-comments`, **The final pass**), posting the requests you make together.
 
-Then commit their fixes and take them through step 1, whose push waits out the final-pass reviews, and run step 3, which works those reviewers' findings. Steps 4 and 5 follow for what the fixes touch, and this step runs again, on the head they settle on, until its Done holds.
+Once Standards, Spec and Fable finish, commit their fixes and take them through step 1, whose push waits out the final-pass reviews; then run step 3, which works those reviewers' findings. Steps 4 and 5 follow for what the fixes touch, and this step runs again, on the head they settle on, until its Done holds.
 
 Done when the check, run again, exits 0, or 3 with every pass it names recorded `not-reviewed` by this run; each head's Fable call is logged; every finding is fixed, logged as rejected with a reason, or logged with result `open` as a question for the user; and each final-pass reviewer is done (**The final pass**, "It's done").
 
@@ -85,7 +85,7 @@ App evidence: <taken on <sha> | skipped: reason>
 Merge-ready: <yes | yes, after <sibling PR> merges | no: what blocks it>
 ```
 
-After a FAIL from step 3, its error comes first among the blockers, naming any commits left unpushed. A deploy job's result is reported but never sets `Merge-ready: no`; a failed reviewer, an open finding, a failing or still-pending required CI check, a required pass this run recorded `not-reviewed` on the final head, or `log.sh --check` exiting non-zero does. A description edit after the hand-back (a settled question) reruns Spec and the check before a `yes` stands again.
+After a FAIL from step 3, `Merge-ready: no: <its ERROR>` comes first among the blockers, naming any commits left unpushed. A deploy job's result is reported but never sets `Merge-ready: no`; a failed reviewer, an open finding, a failing or still-pending required CI check, a required pass this run recorded `not-reviewed` on the final head, or `log.sh --check` exiting non-zero does. A description edit after the hand-back (a settled question) reruns Spec and the check before a `yes` stands again.
 
 Done when `recap.html` exists beside the log, every PR body's "Behavior changes vs master" section matches it, each PR's facts block was written on its final head or its failure handed back, and each PR's block is handed back with its check's output.
 
