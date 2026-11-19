@@ -53,9 +53,9 @@ Record each final head, affected commands and collected/executed test results, r
 
 ## 5. Verify in the running app, when the diff changes what renders
 
-When a diff changes what a user sees or does (components, routes, styles, copy, a UI-facing API), run `/no-mistakes` on the head steps 1–4 settled on through a route that drives the browser (frontend or full-stack, never backend-only), with a case for the change on screen, and post its screenshots and recordings to the PR (across repos, the one CROSS-REPO.md names). A diff that changes nothing on screen skips this; log the run-or-skip and why. A fix it causes goes back through step 3, and the evidence is retaken on the head that fix produces; after that, only a head that changes what renders retakes it.
+When a diff changes what a user sees or does (components, routes, styles, copy, a UI-facing API), run `/no-mistakes` on the head steps 1–4 settled on through a route that drives the browser (frontend or full-stack, never backend-only), with a case for the change on screen, and post its screenshots and recordings to the PR (across repos, the one CROSS-REPO.md names). A diff that changes nothing on screen skips this; log the run-or-skip and why. A fix it causes goes back through step 3, and the evidence is retaken on the head steps 1–4 settle on after it; after that, only a head that changes what renders retakes it.
 
-Done when every PR whose diff changes what renders carries evidence from the last head that fixed what it found or changed what renders, or a logged skip.
+Done when every PR whose diff changes what renders carries evidence that no later fix for what it found, and no later change to what renders, has outdated, or a logged skip.
 
 ## 6. The tail
 
