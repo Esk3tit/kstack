@@ -50,9 +50,9 @@ Record each final head, affected commands and collected/executed test results, r
 
 ## 5. Verify in the running app, when the diff changes what renders
 
-When a diff changes what a user sees or does (components, routes, styles, copy, a UI-facing API), its PR needs evidence that holds: `/no-mistakes` screenshots and recordings, from a route that drives the browser (frontend or full-stack, never backend-only) with a case for the change on screen, posted to the PR (across repos, the one CROSS-REPO.md names). Evidence holds when it was taken on or after the last head that fixed what it found or changed what renders, with no case left blocked. On each visit, take it on the head steps 1–4 settled on only when none holds. A diff that changes nothing on screen skips this; log the run-or-skip and why. A fix it causes goes back through step 3; a case still blocked after its retries goes straight to step 7, which hands back `Merge-ready: no: <its blocker>`.
+When a diff changes what a user sees or does (components, routes, styles, copy, a UI-facing API), its PR needs evidence that holds: `/no-mistakes` screenshots and recordings, from a route that drives the browser (frontend or full-stack, never backend-only) with a case for the change on screen, posted to the PR (across repos, the one CROSS-REPO.md names). Evidence holds when it was taken on or after the last head that fixed what it found or changed what renders, with no case left blocked. On each visit, take it on the head steps 1–4 settled on only when none holds. A diff that changes nothing on screen skips this; log the run-or-skip and why. A fix it causes goes back through step 3; a run that ends `BLOCKED` (before any case, or with a case still blocked after its retries) goes straight to step 7, which hands back `Merge-ready: no: <its reason>`.
 
-Done when every PR whose diff changes what renders carries evidence that holds, a logged skip, or a blocked case sent to step 7.
+Done when every PR whose diff changes what renders carries evidence that holds, a logged skip, or a `BLOCKED` run sent to step 7.
 
 ## 6. The tail
 
