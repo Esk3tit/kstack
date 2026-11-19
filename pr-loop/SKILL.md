@@ -62,7 +62,7 @@ This step starts once steps 1–5 are done on a PR's head with Codex clean on it
 - Fable, when its call says so (**Review order**).
 - The call for each final-pass reviewer the repo names (`/address-pr-comments`, **The final pass**), posting the requests you make together.
 
-Then run step 3, which waits for the final-pass reviews and works their findings. Steps 4 and 5 follow for what the fixes touch, and this step runs again, on the head they settle on, until its Done holds.
+Then take their fixes through step 1, whose push waits out the final-pass reviews, and run step 3, which works those reviewers' findings. Steps 4 and 5 follow for what the fixes touch, and this step runs again, on the head they settle on, until its Done holds.
 
 Done when the check, run again, exits 0, or 3 with every pass it names recorded `not-reviewed` by this run; each head's Fable call is logged; every finding is fixed, logged as rejected with a reason, or logged with result `open` as a question for the user; and each final-pass reviewer is done (**The final pass**, "It's done").
 
