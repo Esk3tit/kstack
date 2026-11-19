@@ -26,7 +26,7 @@ Every PR needs **Standards** and **Spec** (step 6's axes; Spec also reads the PR
 
 Run `/codexloop --until-converged --base <base>` on each branch, once any final-pass review still running on its PR has finished (a push would cancel it); its reviewer is the other model family (Codex from Claude Code, Claude Opus 5.5 from Codex), and it pushes the head it converges on. When only CI can judge the change (a failure seen only on CI's runners, a suite too heavy to run locally), open a draft PR first. A branch whose Codex pass this run recorded `not-reviewed` gets the same push by hand, guarded as `/codexloop`'s step 4 guards it. A diverged remote hands back `Merge-ready: no: remote diverged`.
 
-A `PAUSED` exit from `/codexloop` (its design pause), wherever this run calls it, stops the run on that branch. A design pause is a call the mechanical reviews keep circling, so it runs Fable's read of the cluster as [FABLE.md](FABLE.md) says, logged and carried to the user unapplied. Hand back the branch, and its PR if one is open, with the design question as the open item and `Merge-ready: no: design pause`.
+A `PAUSED` exit from `/codexloop` (its design pause), wherever this run calls it, stops the run on that branch. A design pause is a call the mechanical reviews keep circling, so it runs Fable's read of the cluster as [FABLE.md](FABLE.md) says, logged and carried to the user unapplied. Hand back the branch, and its PR if one is open (listing every `open` row with its open questions), with the design question as the open item and `Merge-ready: no: design pause`.
 
 Done when every branch has Codex clean on its head, or recorded `not-reviewed` there by this run, and that head on the remote; or has stopped on a design pause.
 
