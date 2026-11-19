@@ -36,7 +36,7 @@ Done when every repo with commits on the branch has an open PR carrying its fact
 
 ## 3. Bot and CI findings
 
-Commit any fix from steps 4, 5 and 7. Follow `/address-pr-comments` on each PR, judging every bot finding and red check on the pushed head without another selection prompt. A `LOOP_STATUS=FAIL` from it goes to step 7. Once it converges, a branch short of step 1's Done takes its head through step 1 and runs this step again.
+Commit any fix from steps 4, 5 and 7 and take it through step 1 first, so the comments pass reads the head that carries it. Follow `/address-pr-comments` on each PR, judging every bot finding and red check on the pushed head without another selection prompt. A `LOOP_STATUS=FAIL` from it goes to step 7. Once it converges, a branch short of step 1's Done takes its head through step 1 and runs this step again.
 
 A red check that passes on a re-run is an unexplained failure: diagnose it in this run as [FLAKY.md](FLAKY.md) says.
 
