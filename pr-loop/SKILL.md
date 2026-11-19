@@ -58,13 +58,13 @@ Done when every PR whose diff changes what renders carries evidence from the las
 
 ## 6. The tail
 
-Once steps 1–5 are done on a PR's head, run `log.sh --check <head> <pr>`, handling a moved head or an error as step 7's item 3 does, then run these on that head together:
+Once steps 1–5 are done on a PR's head, refresh its facts block (step 2's `facts.py <pr>`), run `log.sh --check <head> <pr>`, handling a moved head or an error as step 7's item 3 does, then run these on that head together:
 
 - `/code-review` for the axes on the check's closing line (skip it when that names neither), with the fixed point `origin/<base>` (the branch it merges into), the spec given up front (the ticket if any, and the user's settled decisions, `log.sh --pins`, which carry the start's request), and `spec-body-<head>.md` beside the log named as the file it saves the PR body to (on every Spec run, step 7's too). Before each Spec run, compare the live body with the last body Spec saved and restore only what a bot wrote back over it, as `/pr`'s **Editing the body** says, keeping a person's change. Fix every hard violation and every spec gap; take a judgement call only when it makes the change simpler or clearer. Log each finding with its outcome, and record each axis that ran on the head it reviewed: `log.sh --pass standards <head> clean|fixed`, and `log.sh --pass spec <head> clean|fixed [<body file>]`, giving that file when Spec read it.
 - Fable, when its call says so (**Review order**).
 - The call for each final-pass reviewer the repo names (`/address-pr-comments`, **The final pass**), posting the requests you make together.
 
-Then run step 3, which waits for the final-pass reviews (a push would cancel one still running) and works their findings. Steps 4 and 5 follow for what the fixes touch, then this step runs again on the head they settle on.
+List each `open` row they log with the PR's open questions. Then run step 3, which waits for the final-pass reviews (a push would cancel one still running) and works their findings. Steps 4 and 5 follow for what the fixes touch, then this step runs again on the head they settle on.
 
 Done when the check, run again, exits 0, or 3 with every pass it names recorded `not-reviewed` by this run; each head's Fable call is logged; every finding is fixed, logged as rejected with a reason, or logged with result `open` as a question for the user; and each final-pass reviewer is done (**The final pass**, "It's done").
 
