@@ -38,7 +38,7 @@ Done when every repo with commits on the branch has an open PR carrying its fact
 
 ## 3. Bot and CI findings
 
-Commit any fix from steps 4–7. Follow `/address-pr-comments` on each PR, judging every bot finding and red check on the pushed head without another selection prompt; its finalize step takes its fixes through step 1. A `LOOP_STATUS=FAIL` from it goes to step 7, which hands back `Merge-ready: no: <its ERROR>`. Once it converges, a branch whose head Codex is not clean on (unpushed commits, or a push from elsewhere, fast-forwarded to first) takes it through step 1 and runs this step again.
+Commit any fix from steps 4–7, and fast-forward each branch to any push made from elsewhere. Follow `/address-pr-comments` on each PR, judging every bot finding and red check on the pushed head without another selection prompt; its finalize step takes its fixes through step 1. A `LOOP_STATUS=FAIL` from it goes to step 7, which hands back `Merge-ready: no: <its ERROR>`. Once it converges, a branch short of step 1's Done takes its head through step 1 and runs this step again.
 
 A red check that passes on a re-run is an unexplained failure: diagnose it in this run as [FLAKY.md](FLAKY.md) says.
 
