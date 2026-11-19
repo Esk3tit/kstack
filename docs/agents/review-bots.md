@@ -11,7 +11,7 @@ Its tag is a PR comment: `@macroscope-app review`. Its automatic reviews are off
 - **Why last:** every review is billed. In this repo's Balanced mode that's $0.05 per KB of reviewable diff, with a $0.50 minimum (10 KB) per review ([pricing](https://docs.macroscope.com/pricing)). Most of its findings repeat the cheaper bots'; reviewing last, it finds only what they missed.
 - **What it bills for:** the diff minus its [ignore rules](https://docs.macroscope.com/code-review/ignore-files) (the repo's ignore file, or Macroscope's defaults without one) and minus tests. Before requesting it for a risk, check that the file carrying the risk is reviewed.
 - **Reading its review:** its check run, `Macroscope - Correctness Check`, completes with a summary naming the head it reviewed and what it found; findings also come as review threads. A clean review posts no comment or review, so a T3 watch does not wake for it: read the check run.
-- **A skip for cost:** its check run's summary names the detection mode and the three costliest files (`gh api repos/Esk3tit/kstack/commits/<sha>/check-runs`). Report those files rather than tagging it again.
+- **Price it before tagging:** a tag bypasses its per-review and per-PR spend caps ([spend controls](https://docs.macroscope.com/spend-limits)), so no skip for cost will stop a large review. Size what it bills for and log the price with the call.
 
 ## Final-pass reviewer: Cursor Bugbot
 
