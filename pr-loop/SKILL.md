@@ -32,7 +32,7 @@ Done when every branch has Codex clean on its head, or recorded `not-reviewed` t
 
 ## 2. Open the PRs
 
-Open one PR per repo against `<base>`, ready for review (review bots can skip drafts), with the `/pr` template (a change across repos adds CROSS-REPO.md's merge order and links), marked as closing the spec and tickets it finishes, its "Behavior changes vs master" section filled from the log's accepted rows with a `prod_delta` other than `none`. A branch that already has a PR keeps it, with its body updated the same way, and a draft opened under step 1 is marked ready. Then, in each repo, write its PR's facts block (`python3 ~/.claude/skills/recap-pr/facts.py <pr>`; a failure is retried in step 7).
+Open one PR per repo against `<base>`, ready for review (review bots can skip drafts), with the `/pr` template (a change across repos adds CROSS-REPO.md's merge order and links), marked as closing the spec and tickets it finishes, its "Behavior changes vs master" section filled from the log's accepted rows with a `prod_delta` other than `none`, and the log's `open` rows listed as open questions. A branch that already has a PR keeps it, with its body updated the same way, and a draft opened under step 1 is marked ready. Then, in each repo, write its PR's facts block (`python3 ~/.claude/skills/recap-pr/facts.py <pr>`; a failure is retried in step 7).
 
 Done when every repo with commits on the branch has an open PR carrying its facts block, or a `facts.py` failure left for step 7.
 
