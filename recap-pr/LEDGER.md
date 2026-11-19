@@ -68,7 +68,7 @@ ts	repo	phase	source	asked	decision	why	prod_delta	evidence	result
 
 ## Review passes
 
-A **review pass** is one run of a reviewer `/pr-loop` runs before merge: `standards`, `spec`, `codexloop`, and `fable` on a cycle that warrants it. Record each one as it lands:
+A **review pass** is one run of a reviewer `/pr-loop` runs before merge: `standards`, `spec`, `codexloop`, and `fable` when the tail's call warrants it. Record each one as it lands:
 
 ```bash
 ~/.claude/skills/recap-pr/log.sh --pass <pass> <head> <verdict> [<PR body file it read>]

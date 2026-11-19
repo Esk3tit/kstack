@@ -79,7 +79,7 @@ How to apply:
 - Bulk/mechanical work (clear-spec implementation, data analysis, migrations): gpt-6.2-sol (high reasoning) - it's very cheap and token efficient.
 - Anything user-facing (UI, copy, API design) needs taste ≥ 7.
 - Reviews of plans/implementations: opus-5.5, optionally gpt-6.2-astra (high reasoning) as an extra independent perspective.
-- Fable reviews in a PR loop run when the agent judges a round's changes warrant one; any other Fable subagent needs my ask or approval.
+- Fable reviews in a PR loop run in its tail, when the agent judges the changes warrant one; any other Fable subagent needs my ask or approval.
 - Never use Haiku.
 - Mechanics: the GPT models are handled natively via the `openai/codex-plugin-cc` plugin inside Claude Code, which reads your user-level `~/.codex/config.toml`. Pass `--model` on every Codex call that starts a run, so its model stays pinned whatever that config's default becomes: `gpt-6.2-astra` for reviews (`/codex:review`, `/codex:adversarial-review`, the companion's `review` / `adversarial-review`, `/codexloop` rounds run from Claude Code, a review run through the companion's `task`), and `gpt-6.2-sol` for implementation and all other Codex work (`/codex:rescue`, the companion's `task`). Avoid writing custom bash scripts; instead, utilize the plugin's built-in tools and skills:
     - `/codex:review` - Run non-destructive, read-only code quality assessments. Supports `--base <ref>` for branch analysis.
