@@ -182,9 +182,9 @@ Done when the round has started or the run has exited `PAUSED`.
    - `STATUS=FAIL ERROR="..."` — reviewer error (non-zero exit with no review output / auth failure / unparseable review), lint/test failure, or merge conflict; DO NOT push.
 
 4. **Post-loop push (only on `STATUS=CLEAN`):**
-   - Under `/pr-loop`, push only once `~/.claude/skills/recap-pr/log.sh --check HEAD` exits 0 or 3 (step 2e's draft-PR pushes for CI aside); on exit 1 exit `STATUS=CLEAN` unpushed and leave the push to its pass sequence, and on exit 2 exit `STATUS=FAIL ERROR="check could not run: <its message>"`.
    - Confirm current branch is not `master`/`main` (abort push if it is).
    - Confirm commits exist beyond the base: `git log origin/<base>..HEAD --oneline` is non-empty.
+   - Wait out any final-pass review still running on the PR, until it lands or its deadline passes (`/address-pr-comments`, **The final pass** and **Waits**): a push cancels it.
    - Push the current branch with upstream tracking: `git push -u origin HEAD`.
    - Never force-push. If the remote has diverged, STOP and surface the conflict to the user instead.
    - If an open PR exists for this branch, print its URL (`gh pr view --json url -q .url`).
