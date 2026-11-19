@@ -184,6 +184,7 @@ Done when the round has started or the run has exited `PAUSED`.
 4. **Post-loop push (only on `STATUS=CLEAN`):**
    - Confirm current branch is not `master`/`main` (abort push if it is).
    - Confirm commits exist beyond the base: `git log origin/<base>..HEAD --oneline` is non-empty.
+   - Wait out any final-pass review still running on the PR (`/address-pr-comments`, **The final pass**): a push cancels it.
    - Push the current branch with upstream tracking: `git push -u origin HEAD`.
    - Never force-push. If the remote has diverged, STOP and surface the conflict to the user instead.
    - If an open PR exists for this branch, print its URL (`gh pr view --json url -q .url`).
