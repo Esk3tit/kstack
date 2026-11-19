@@ -2,7 +2,7 @@
 
 Macroscope and Cursor Bugbot are this repo's final-pass reviewers.
 
-**Which to request:** Bugbot is the default; once requested on a PR, `/pr-loop`'s tail requests it on each later head until it is clean (`/address-pr-comments`, **The final pass**). Add Macroscope when the change carries residual risk of the kinds where, on wt-records, its findings outran Bugbot's: two writers or runs touching the same file (a decision log, a branch's key file), a token, secret or permission check, or how failures are caught and reported.
+**Which to request:** Bugbot is the default, and `/address-pr-comments`, **The final pass**, says when `/pr-loop`'s tail requests it again. Add Macroscope when the change carries residual risk of the kinds where, on wt-records, its findings outran Bugbot's: two writers or runs touching the same file (a decision log, a branch's key file), a token, secret or permission check, or how failures are caught and reported.
 
 ## Final-pass reviewer: Macroscope
 
