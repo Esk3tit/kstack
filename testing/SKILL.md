@@ -25,12 +25,12 @@ A test that passes both edits earns its place. Prefer no new test to a bad one.
 A lasting behavior is **guarded** by a committed test. A one-time truth is **checked once**, at the change, with its evidence (the commands and their output, the screenshots) in the PR description. These are checked once:
 
 - **A one-time change to data:** a migration's effect on existing rows, a backfill, a one-off repair. Run it against rows in the old shape, count with a read-only query the production rows it will touch, and put both in the PR. Once it has run on every database it will touch, no input can reach it again; until then, as when customers upgrade their own installs from older releases, it is current behavior and stays guarded.
-- **Internal backward compatibility:** an old data shape or function form that only our own code still sends. Move the callers to the new form and delete the old path with its tests. Stored data is a caller too, including what visitors' browsers keep: count what is still in the old shape (for rows, with a read-only query), and while any remains, the old path is current behavior; guard it, or convert what remains and then delete it. A link or format someone outside still holds, such as a shared URL, a published file format or a public API, is observable behavior and stays guarded.
+- **Internal backward compatibility:** an old data shape or function form that only our own code still sends. Move the callers to the new form and delete the old path with its tests. Stored data is a caller too, including what visitors' browsers keep: count what is still in the old shape (for rows, with a read-only query; what browsers keep, which no query reaches, counts as remaining until it expires), and while any remains, the old path is current behavior; guard it, or convert what remains and then delete it. A link or format someone outside still holds, such as a shared URL, a published file format or a public API, is observable behavior and stays guarded.
 - **Looks:** alignment, font sizes, spacing, proportions, a focus ring's exact width. Look at them: screenshots of the change beside its closest sibling, or an image diff when the change should leave looks untouched. A measurement stays guarded only when its failure lasts until the person acts and either:
   - **stops use:** a control off screen or covered, a phone page scrolling sideways, a control sliding out from under the pointer, a tap landing on a different control from the one drawn where the wrong action takes effect at once. A size floor alone is looks.
   - **hides what they need to act:** which option is chosen, whether focus is on screen, text cut short where the choices differ at the cut. Cut text whose whole is one step away is looks.
 
-  A state that clears by itself within seconds, or shows for a frame or two, is looks. A setting the person chose, such as reduced motion, is behavior: guard that it is honoured, and leave how the motion looks to the eye.
+  A state that clears by itself within seconds, or shows for a frame or two, is looks when nothing the person does during it lands on the wrong control. A setting the person chose, such as reduced motion, is behavior: guard that it is honoured, and leave how the motion looks to the eye.
 - **Tools a person reads:** dev scripts, reports, CI and config files, test helpers. Guard a tool only when it acts with nobody reading its output and a wrong answer does lasting harm, such as the guard that stops a destructive migration or a command that must keep a password out of its logs.
 - **Rules a compiler or linter can hold:** make them a type or a lint rule.
 - **A dependency's own guarantees:** test our use of the library, and trust the library.
@@ -61,7 +61,7 @@ While writing:
 
 1. Reproduce it on the surface where the user met it, and watch the reproduction go red.
 2. Fix it, and watch the same reproduction go green on the same surface. A unit test shows how one branch behaves, not that the bug is gone.
-3. Decide what stays. Commit the reproduction as a test when it passes the bar and the bug broke something important or stopped someone using the page, in its own commit ahead of the fix's, so the history shows red first. Otherwise put the red-then-green output in the PR and delete the reproduction.
+3. Decide what stays. Commit the reproduction as a test when it earns Keep (**Judging an existing test**) and the bug broke something important or stopped someone using the page, in its own commit ahead of the fix's, so the history shows red first. Otherwise put the red-then-green output in the PR and delete the reproduction.
 
 ## A test that fails after a change
 
@@ -80,7 +80,7 @@ For each test, name what it guards, run the two edits (in your head, or for real
 
 - **Keep:** it passes the bar on a lasting behavior (**Guarded or checked once**), and **Where a test lives** keeps it over any other test that catches the same failure.
 - **Trim:** its outcome assertions earn Keep, but other lines are pinned, looks-only or duplicated. Drop those lines and keep the test.
-- **Rewrite:** it fails the bar, but it is the only guard on something important. Name the outcome it should assert instead.
+- **Rewrite:** it fails the bar on something important that no kept or trimmed test guards. Name the outcome it should assert instead, and rewrite only one of several such tests.
 - **Delete:** everything else.
 
 A test guards only where CI runs it. One that skips unless a flag CI never sets gets a CI job or goes, and only a test CI runs can make another a duplicate.
