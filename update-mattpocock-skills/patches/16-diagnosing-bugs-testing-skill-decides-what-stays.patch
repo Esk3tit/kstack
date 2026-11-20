@@ -1,0 +1,18 @@
+--- a/SKILL.md
++++ b/SKILL.md
+@@ -126,13 +126,14 @@
+ 3. Apply the fix.
+ 4. Watch it pass.
+ 5. Re-run the Phase 1 feedback loop against the original (un-minimised) scenario.
++6. Decide whether the test stays, by the `testing` skill's bug-fix rule. When it doesn't, put its red-then-green output in the PR and delete it.
+ 
+ ## Phase 6: Cleanup
+ 
+ Required before declaring done:
+ 
+ - [ ] Original repro no longer reproduces (re-run the Phase 1 loop)
+-- [ ] Regression test passes (or absence of seam is documented)
++- [ ] Regression test passes and is committed, or its red-then-green output is in the PR (Phase 5 step 6), or absence of seam is documented
+ - [ ] All `[DEBUG-...]` instrumentation removed (`grep` the prefix)
+ - [ ] Throwaway prototypes deleted (or moved to a clearly-marked debug location)
+ - [ ] The hypothesis that turned out correct is stated in the commit / PR message, so the next debugger learns

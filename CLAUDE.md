@@ -27,7 +27,7 @@ This is not a cost argument and does not soften the section above — effort is 
 
 ## Bug fixes
 
-When doing bug fixes, always start with reproducing the bug in an E2E setting as closely aligned with how an end user would experience it as possible. This makes sure you find the real problem so your fix will actually solve it.
+When doing bug fixes, always start with reproducing the bug in an E2E setting as closely aligned with how an end user would experience it as possible. This makes sure you find the real problem so your fix will actually solve it. Once it is fixed, the `testing` skill decides whether the reproduction stays as a committed test.
 
 ## Decision log
 
