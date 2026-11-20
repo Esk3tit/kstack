@@ -61,7 +61,7 @@ While writing:
 
 1. Reproduce it on the surface where the user met it, and watch the reproduction go red.
 2. Fix it, and watch the same reproduction go green on the same surface. A unit test shows how one branch behaves, not that the bug is gone.
-3. Decide what stays. Judge the reproduction by **Judging an existing test**. When it earns Keep or Trim (trimmed first) and the bug broke something important or stopped someone using the page, commit it in its own commit ahead of the fix's, so the history shows red first. Otherwise put the red-then-green output in the PR and delete the reproduction.
+3. Decide what stays. Judge the reproduction by **Judging an existing test**, carry out a Trim or Rewrite, and watch the result go red without the fix and green with it. When it now earns Keep and the bug broke something important or stopped someone using the page, commit it in its own commit ahead of the fix's, so the history shows red first. Otherwise put the red-then-green output in the PR and delete the reproduction.
 
 ## A test that fails after a change
 
