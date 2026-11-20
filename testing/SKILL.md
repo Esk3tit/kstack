@@ -33,7 +33,7 @@ Give each test the first verdict that fits:
 
 - **Rewrite:** an important outcome has no guard, and this is the test to make its guard. Name the outcome it should assert.
 - **Keep:** it is a guard, and each assertion is sound and serves an outcome it guards.
-- **Trim:** it is a guard; drop each assertion that isn't.
+- **Trim:** it is a guard; keep the assertions Keep allows and drop the rest.
 - **Delete:** it guards nothing. A duplicate's reason names the guard that stays.
 
 Done when every test in scope has a verdict and a one-line reason.
@@ -53,7 +53,7 @@ Rerun it, then ask whether the observable outcome changed:
 - **Green on a rerun:** it is flaky. A race users can hit is a product bug; a test that checked too early waits for the observable outcome.
 - **On purpose:** judge it by **Choosing what stays** against the new requirement.
 - **By accident:** the test caught a bug. Fix the product.
-- **Not at all:** repair a broken locator or setup, finding elements the way the user does (role, label, visible text). A broken assertion means the test is pinned: judge it by **Choosing what stays** rather than patching it to the new internals.
+- **Not at all:** repair a broken locator or setup, finding elements the way the user does (role, label, visible text). A broken assertion is pinned: judge it by **Choosing what stays** rather than patching it to the new internals.
 
 ## Auditing a suite
 
