@@ -5,20 +5,20 @@ description: Which tests to write, keep, trim, rewrite or delete. Use when writi
 
 # Testing
 
-A test guards **observable** behavior: what someone outside the code can see, including outside systems that read the product's output, such as a link preview or an error report. Behavior is **important** when it is a security boundary, a business rule, data integrity, or a core flow the product exists for. The repo's coding standards hold its own stack's test details; read them beside this.
+A test checks **observable** behavior: what someone outside the code can see, including outside systems that read the product's output, such as a link preview or an error report. Behavior is **important** when it is a security boundary, a business rule, data integrity, or a core flow the product exists for.
 
 ## The bar
 
-A **sound** test passes two edits:
+An assertion is **sound** when it passes two edits:
 
-- **The break.** Make the behavior wrong, and the test goes **red**. Its expected value comes from the requirement, not from the code under test.
-- **The refactor.** Change the internals and keep every observable result, and its assertions stay **green**. A test whose assertion goes red is **pinned**: it asserts internal state, call order, class names or markup.
+- **The break.** Make the behavior wrong, and it goes **red**. Its expected value comes from the requirement, not from the code under test.
+- **The refactor.** Change the internals and keep every observable result, and it stays **green**. One that goes red is **pinned**: it asserts internal state, call order, class names or markup.
 
 ## Checked once
 
 These get no committed test. Check each once, on the change, with the evidence in the PR.
 
-- **A one-time change to data** (a migration, a backfill, a repair): run it on rows in the old shape and check what it leaves; count, through a read-only path, the production rows it will touch.
+- **A one-time change to data** (a migration, a backfill, a repair): run it on rows in the old shape and check what it leaves; count the production rows it will touch.
 - **Internal backward compatibility:** move what still uses an old data shape or call form to the new one, show in the PR that nothing uses the old one, and retire it with its tests. A format someone outside holds (a shared link, a public API) stays guarded.
 - **Looks:** compare screenshots. Guard a measurement only when its failure stops someone using the product or hides what they need to act, such as a control off screen or which option is chosen.
 - **Developer tools a person reads** (dev scripts, CI config, test helpers): run them and read the output. Guard a tool that acts unattended where a wrong answer does lasting harm.
@@ -27,7 +27,7 @@ These get no committed test. Check each once, on the change, with the evidence i
 
 ## Choosing what stays
 
-Tests overlap, so judge them together. Each outcome worth guarding has one **guard**: the cheapest sound test CI runs that sees the outcome itself (the rendered words, a role, the stored row) rather than a stand-in for it. A dearer test keeps what only it sees: a unit test can catch a wrong total, while a checkout test catches a right total that never reaches the receipt.
+Tests overlap, so judge them together. Each outcome worth guarding has one **guard**: the cheapest test CI runs with a sound assertion that sees the outcome itself (the rendered words, a role) rather than a stand-in for it. A dearer test keeps what only it sees: a unit test can catch a wrong total, while a checkout test catches a right total that never reaches the receipt.
 
 Give each test the first verdict that fits:
 
@@ -44,9 +44,7 @@ Look for the outcome's guard first; if it has one, there is no test to write. Ot
 
 ## Fixing a bug
 
-1. Reproduce it where the user met it, and watch the reproduction go red.
-2. Fix it, and watch the same reproduction go green.
-3. When the bug broke lasting behavior that is important or that someone needs to use the product, and a test can catch it, keep a guard for it: the reproduction, or a cheaper test that goes red on the bug. When the reproduction isn't the guard, remove what it added and put its red-then-green output in the PR.
+Once the fix turns the user's reproduction from red to green: when the bug broke lasting behavior that is important or that someone needs to use the product, and a test can catch it, keep a guard for it, the reproduction or a cheaper test that goes red on the bug. When the reproduction isn't the guard, remove what it added and put its red-then-green output in the PR.
 
 ## A test that fails after a change
 

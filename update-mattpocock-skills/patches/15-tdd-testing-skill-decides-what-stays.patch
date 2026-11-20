@@ -4,7 +4,7 @@
  
  See [tests.md](tests.md) for examples and [mocking.md](mocking.md) for mocking guidelines.
  
-+Whether a behavior earns a committed test at all, or is checked once at the change, is the `testing` skill's call: load it before the first test of a loop, and again before committing tests a loop leaves behind.
++Which tests a loop writes and keeps is the `testing` skill's call: apply it before the first test, and its **Choosing what stays** before committing the tests the loop leaves behind.
 +
  ## Seams: where tests go
  

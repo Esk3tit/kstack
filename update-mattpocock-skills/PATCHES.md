@@ -108,7 +108,7 @@ patch -p1 -d ~/.agents/skills/<skill> < ~/.claude/skills/update-mattpocock-skill
 
 `patches/15-tdd-testing-skill-decides-what-stays.patch`, added 2026-11-19. Requires kstack's `testing` skill.
 
-- **What it does:** before the first test of a red → green loop, and again before committing the tests a loop leaves behind, the agent loads the `testing` skill, which decides whether a behavior earns a committed test or is checked once at the change.
+- **What it does:** the agent applies the `testing` skill before the first test of a red → green loop, and its **Choosing what stays** before committing the tests a loop leaves behind.
 - **Why:** `tdd` keeps every test a loop writes. A WT Records audit marked 1,259 of its 3,953 tests for deletion: vacuous, tied to implementation, duplicated, looks-only, or guarding one-time changes.
 
 ## 16 · diagnosing-bugs · the testing skill decides what stays
