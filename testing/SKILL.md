@@ -40,7 +40,7 @@ Done when every test in scope has a verdict and a one-line reason.
 
 ## Writing a test
 
-Look for the outcome's guard first; a sound one means there is no test to write. Otherwise drive the public interface or the user-facing controls with a concrete input and an expected value from the requirement. For "this never happens", include a case where it does, so the test can see the thing at all. Keep real collaborators; substitute only what the product doesn't own (a third-party service, the clock, randomness) or what the runner can't provide (a platform API, a forced error response). Done when you have seen it go red on the break, for the reason it names, and green on working code.
+Look for the outcome's guard first; a sound one means there is no test to write. Otherwise drive the public interface or the user-facing controls with a concrete input and an expected value from the requirement. Keep real collaborators; substitute only what the product doesn't own (a third-party service, the clock, randomness) or what the runner can't provide (a platform API, a forced error response). Done when you have seen it go red on the break, for the reason it names, and green on working code.
 
 ## Fixing a bug
 
