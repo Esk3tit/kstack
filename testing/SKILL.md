@@ -33,7 +33,7 @@ Give each test one verdict from everything it guards:
 
 - **Keep:** it guards an outcome, and every check serves its guards.
 - **Trim:** drop its checks that are pinned, checked once, or another guard's, keeping the steps its own outcomes need.
-- **Rewrite:** an important outcome has no sound guard, and this test, rewritten, would be its guard. Name the outcome it should assert. Tests that lean on the rewrite stay until it passes the bar.
+- **Rewrite:** an important outcome has no sound guard, and this test, rewritten or added to CI, would be its guard. Name the outcome it should assert. Tests that lean on the rewrite stay until it passes the bar.
 - **Delete:** it guards nothing. A duplicate's reason names the guard that stays.
 
 Done when every test in scope has a verdict and a one-line reason.
@@ -46,7 +46,7 @@ Look for the outcome's guard first; a sound one means there is no test to write.
 
 1. Reproduce it where the user met it, and watch the reproduction go red.
 2. Fix it, and watch the same reproduction go green.
-3. When the bug was important or stopped someone using the product, give it a guard by **Choosing what stays** (the reproduction, or a cheaper test that goes red on the bug) and commit the guard ahead of the fix, so the history shows red first. When the reproduction doesn't stay, remove what it added and put its red-then-green output in the PR.
+3. When the bug broke important lasting behavior or stopped someone using the product, give it a guard by **Choosing what stays** (the reproduction, or a cheaper test that goes red on the bug) and commit the guard ahead of the fix, so the history shows red first. When the reproduction doesn't stay, remove what it added and put its red-then-green output in the PR.
 
 ## A test that fails after a change
 
