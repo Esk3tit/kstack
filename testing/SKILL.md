@@ -47,7 +47,7 @@ A **failure** is one break of a lasting behavior as someone outside sees it: a s
 
 ## Writing a test
 
-1. Run each check the change needs once (**Guarded or checked once**) and put its evidence in the PR. When nothing lasting is left to guard, stop.
+1. List each check the change needs once (**Guarded or checked once**), and run each once its inputs exist, putting the evidence in the PR. When nothing lasting is left to guard, there is no test to write.
 2. Name the observable behavior and who would notice it break, then look for its guard among the tests CI runs. With nobody to name, or a guard already there, there is nothing to write, and the work ends here.
 3. Pick the level.
 4. Drive it the way its user does, through the public interface or the user-facing controls, with a concrete input and an expected value written out from the requirement. Keep real collaborators; substitute only what the product doesn't own: a third-party service, the clock, randomness.
