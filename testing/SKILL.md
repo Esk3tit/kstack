@@ -36,7 +36,7 @@ Give each test one verdict from what it guards:
 - **Rewrite:** an important outcome has no guard, and this test, rewritten or added to CI, would be its guard. Name the outcome it should assert.
 - **Delete:** it guards nothing. A duplicate's reason names the guard that stays.
 
-An assertion stays until whatever replaces it passes the bar. Done when every test in scope has a verdict and a one-line reason.
+An assertion that something replaces stays until the replacement has landed and passes the bar. Done when every test in scope has a verdict and a one-line reason.
 
 ## Writing a test
 
