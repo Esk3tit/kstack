@@ -24,7 +24,7 @@ A test that passes both edits earns its place. Prefer no new test to a bad one.
 
 A lasting behavior is **guarded** by a committed test. A one-time truth is **checked once**, at the change, with its evidence (the commands and their output, the screenshots) in the PR description. These are checked once:
 
-- **A one-time change to data:** a migration's effect on existing rows, a backfill, a one-off repair. Run it against rows in the old shape, count with a read-only query the production rows it will touch, and put both in the PR. Once it has run in production, no input can reach it again.
+- **A one-time change to data:** a migration's effect on existing rows, a backfill, a one-off repair. Run it against rows in the old shape, count with a read-only query the production rows it will touch, and put both in the PR. Once it has run on every database it will touch, no input can reach it again; until then, as when customers upgrade their own installs from older releases, it is current behavior and stays guarded.
 - **Internal backward compatibility:** an old data shape or function form that only our own code still sends. Move the callers to the new form and delete the old path with its tests. Stored data is a caller too, including what visitors' browsers keep: count what is still in the old shape (for rows, with a read-only query), and while any remains, the old path is current behavior; guard it, or convert what remains and then delete it. A link or format someone outside still holds, such as a shared URL, a published file format or a public API, is observable behavior and stays guarded.
 - **Looks:** alignment, font sizes, spacing, proportions, a focus ring's exact width. Look at them: screenshots of the change beside its closest sibling, or an image diff when the change should leave looks untouched. A measurement stays guarded only when its failure lasts until the person acts and either:
   - **stops use:** a control off screen or covered, a phone page scrolling sideways, a control sliding out from under the pointer, a tap landing on a different control from the one drawn where the wrong action takes effect at once. A size floor alone is looks.
@@ -69,7 +69,7 @@ Ask first whether observable behavior changed:
 
 - **Changed on purpose:** update the expected value, and say in the PR what changed for the user.
 - **Changed by accident:** the test caught a bug. Fix the code and leave the assertion alone.
-- **Unchanged:** the test is pinned. Give it a verdict by **Judging an existing test**; patching its selector or its timing keeps it alive for the next refactor to break.
+- **Unchanged:** when only its locator broke, find the element the way its user does (role, label, visible text) and the test stands. Otherwise the test is pinned: give it a verdict by **Judging an existing test**, since patching it to match the new internals keeps it alive for the next refactor to break.
 - **Green on a rerun:** it is flaky. Find out whether the test races the app or the app holds the race. An app race is a bug; a test racing the app needs its wait fixed, which is upkeep, not a rewrite.
 
 Weaken an assertion only when the behavior genuinely changed, and say why in the PR.
@@ -78,10 +78,10 @@ Weaken an assertion only when the behavior genuinely changed, and say why in the
 
 For each test, name what it guards, run the two edits (in your head, or for real when unsure), match it against the smells, and give it a verdict:
 
-- **Keep:** it passes the bar.
-- **Trim:** its outcome assertions pass the bar, but other lines are pinned, looks-only or duplicated. Drop those lines and keep the test.
+- **Keep:** it passes the bar on a lasting behavior (**Guarded or checked once**), and **Where a test lives** keeps it over any other test that catches the same failure.
+- **Trim:** its outcome assertions earn Keep, but other lines are pinned, looks-only or duplicated. Drop those lines and keep the test.
 - **Rewrite:** it fails the bar, but it is the only guard on something important. Name the outcome it should assert instead.
-- **Delete:** everything else, including a duplicate of a cheaper test that sees the same failure.
+- **Delete:** everything else.
 
 A test guards only where CI runs it. One that skips unless a flag CI never sets gets a CI job or goes, and only a test CI runs can make another a duplicate.
 
@@ -96,7 +96,7 @@ Done when every test in scope has a verdict, its smell and a one-line reason.
 - **Over-mocked:** our own logic never runs: the real authorization, persistence or integration is replaced, so the test fails only when the rehearsed calls change. Stubbing a response to force an error, standing in for a platform API the runner lacks, and asserting what our code hands a substituted third-party SDK are all fair. Mocking our own server function is fair only for a client rule the stored result can't show, such as whether it writes at all.
 - **Duplicate:** another test catches the same failure, and **Where a test lives** keeps that one.
 - **Snapshot sprawl:** it compares a large recorded output, and nobody can say which part of it is promised.
-- **Time-bound:** it guards a one-time change that has already run.
+- **Time-bound:** it guards a one-time change that no input can reach again.
 - **Looks-only:** a measurement the **Looks** rule leaves to the eye.
 - **Flaky:** the same commit both passes and fails.
 
