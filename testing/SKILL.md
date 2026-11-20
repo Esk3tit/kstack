@@ -48,9 +48,9 @@ A **failure** is one break of a lasting behavior as someone outside sees it: a s
 ## Writing a test
 
 1. List each check the change needs once (**Guarded or checked once**). Each stays due until it has run on the change and its evidence is in the PR, whatever the steps below decide. When nothing lasting is left to guard, there is no test to write.
-2. Name the observable behavior and who would notice it break, then look for its guard among the tests CI runs. With nobody to name, or a guard already there, there is no test to write.
+2. Name the observable behavior and who would notice it break, then look for its guard among the tests CI runs. With nobody to name, or a sound guard already there, there is no test to write; an unsound guard is rewritten instead.
 3. Pick the level.
-4. Drive it the way its user does, through the public interface or the user-facing controls, with a concrete input and an expected value written out from the requirement. Keep real collaborators; substitute only what the product doesn't own: a third-party service, the clock, randomness.
+4. Drive it the way its user does, through the public interface or the user-facing controls, with a concrete input and an expected value written out from the requirement. Keep real collaborators; substitute only what the product doesn't own (a third-party service, the clock, randomness) and what the **Over-mocked** smell calls fair.
 5. Watch it go red on the break: revert the fix or mutate the guarded line, and confirm the mutation applied. Restore it and watch it go green. Done when you have seen red for the reason the test names.
 
 While writing:
