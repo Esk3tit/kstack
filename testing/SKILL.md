@@ -29,11 +29,11 @@ These get no committed test. Check each once, on the change, and put the evidenc
 
 Tests overlap, so judge them together. Each outcome worth guarding, under one set of conditions, has one **guard**: the cheapest sound test CI runs that sees the outcome itself (the rendered words, a role, the stored row) rather than a stand-in for it. A dearer test keeps what only it sees: a unit test can catch a wrong total, while a checkout test catches a right total that never reaches the receipt.
 
-Give each test one verdict from what it guards:
+Give each test the first verdict that fits:
 
+- **Rewrite:** an important outcome has no guard, and this test, rewritten or added to CI, would be its guard. Name the outcome it should assert.
 - **Keep:** it is a guard, and every assertion serves an outcome it guards.
 - **Trim:** it is a guard; drop the assertions that serve no outcome it guards, keeping the steps those outcomes need.
-- **Rewrite:** an important outcome has no guard, and this test, rewritten or added to CI, would be its guard. Name the outcome it should assert.
 - **Delete:** it guards nothing. A duplicate's reason names the guard that stays.
 
 An assertion that something replaces stays until the replacement has landed and passes the bar. Done when every test in scope has a verdict and a one-line reason.
