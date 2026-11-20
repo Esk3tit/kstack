@@ -37,7 +37,7 @@ A lasting behavior is **guarded** by a committed test. A one-time truth is **che
 
 ## Where a test lives
 
-Pick the cheapest level that sees the behavior the way its user does. When two tests catch the same failure, the cheaper one wins if it sees the outcome itself (the rendered words, a role, focus, the stored row) rather than a stand-in for it (a styling hook, a mock's payload, simulated layout). The dearer one stays only for evidence nothing else at its level gives, such as wiring, persistence, permissions or the browser.
+Pick the cheapest level that sees the behavior the way its user does. When two tests catch the same failure, the cheaper one wins if it sees the outcome itself (the rendered words, a role, focus, the stored row) rather than a stand-in for it (a styling hook, a mock's payload, simulated layout). The dearer one stays only for evidence nothing else at its level gives, such as wiring, persistence, permissions or the browser. Of two equal tests, one stays.
 
 - **Unit:** rules and calculations with their boundary cases (a ranking, a validation, a permission decision, a format), driven through the module's public interface with real neighbours wherever they are cheap.
 - **Database:** queries, constraints, row-level policies and transactions, through the app's own read and write path against a real database engine.
@@ -69,7 +69,7 @@ Ask first whether observable behavior changed:
 
 - **Changed on purpose:** update the expected value, and say in the PR what changed for the user.
 - **Changed by accident:** the test caught a bug. Fix the code and leave the assertion alone.
-- **Unchanged:** when only its locator broke, find the element the way its user does (role, label, visible text) and the test stands. Otherwise the test is pinned: give it a verdict by **Judging an existing test**, since patching it to match the new internals keeps it alive for the next refactor to break.
+- **Unchanged:** if only its locator broke, re-point it at what its user finds (role, label, visible text); otherwise the test is pinned, and patching it to match the new internals keeps it alive for the next refactor to break. Either way, give it a verdict by **Judging an existing test**.
 - **Green on a rerun:** it is flaky. Find out whether the test races the app or the app holds the race. An app race is a bug; a test racing the app needs its wait fixed, which is upkeep, not a rewrite.
 
 Weaken an assertion only when the behavior genuinely changed, and say why in the PR.
@@ -94,7 +94,7 @@ Done when every test in scope has a verdict, its smell and a one-line reason.
 - **Change detector:** its expected value restates the code (a constant, a config shape, a workflow file, source text) with no separate requirement behind it. A fixed value is fair when an outside party requires it, as with a published format or a documented limit.
 - **Self-test:** it fails only if a dependency breaks its own guarantee. Remove our wiring and it still passes.
 - **Over-mocked:** our own logic never runs: the real authorization, persistence or integration is replaced, so the test fails only when the rehearsed calls change. Stubbing a response to force an error, standing in for a platform API the runner lacks, and asserting what our code hands a substituted third-party SDK are all fair. Mocking our own server function is fair only for a client rule the stored result can't show, such as whether it writes at all.
-- **Duplicate:** another test catches the same failure, and **Where a test lives** keeps that one.
+- **Duplicate:** another test catches the same failure, and **Where a test lives** keeps that one; the reason names it.
 - **Snapshot sprawl:** it compares a large recorded output, and nobody can say which part of it is promised.
 - **Time-bound:** it guards a one-time change that no input can reach again.
 - **Looks-only:** a measurement the **Looks** rule leaves to the eye.
