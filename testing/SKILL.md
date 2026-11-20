@@ -5,7 +5,7 @@ description: Which tests to write, keep, trim, rewrite or delete. Use when writi
 
 # Testing
 
-A test guards **observable** behavior: what someone outside the code can see. That someone is a person using the product, a caller of a public interface, or an outside system that reads the product's output, such as a link preview, a search engine or an error report. Behavior is **important** when it is a security boundary, a business rule, data integrity, or a core flow the product exists for. The repo's coding standards hold its own stack's test details; read them beside this.
+A test guards **observable** behavior: what someone outside the code can see, including outside systems that read the product's output, such as a link preview or an error report. Behavior is **important** when it is a security boundary, a business rule, data integrity, or a core flow the product exists for. The repo's coding standards hold its own stack's test details; read them beside this.
 
 ## The bar
 
@@ -16,31 +16,31 @@ A **sound** test passes two edits:
 
 ## Checked once
 
-These get no committed test. Check each once, on the change, and put the evidence (the commands and their output, the screenshots) in the PR, even when the change also needs a lasting test.
+These get no committed test. Check each once, on the change, with the evidence in the PR.
 
-- **A one-time change to data** (a migration, a backfill, a repair): check the values it leaves on sample rows in the old shape, and count through a read-only path the production rows it will touch.
-- **Internal backward compatibility:** an old data shape or call form that only our code or stored data still uses. Move what uses it to the new form, show in the PR that nothing still uses the old one, and retire the old path with its tests. A format someone outside still holds (a shared link, a published file format, a public API) is current behavior and stays guarded.
+- **A one-time change to data** (a migration, a backfill, a repair): run it on rows in the old shape and check what it leaves; count, through a read-only path, the production rows it will touch.
+- **Internal backward compatibility:** move what still uses an old data shape or call form to the new one, show in the PR that nothing uses the old one, and retire it with its tests. A format someone outside holds (a shared link, a public API) stays guarded.
 - **Looks:** compare screenshots. Guard a measurement only when its failure stops someone using the product or hides what they need to act, such as a control off screen or which option is chosen.
-- **Developer tools a person reads** (dev scripts and their reports, CI config, test helpers): run them and read the output. Guard a tool that acts unattended where a wrong answer does lasting harm.
+- **Developer tools a person reads** (dev scripts, CI config, test helpers): run them and read the output. Guard a tool that acts unattended where a wrong answer does lasting harm.
 - **Rules a type or lint rule can hold:** make them one.
 - **A dependency's own guarantees:** test our use of the library, and trust the library.
 
 ## Choosing what stays
 
-Tests overlap, so judge them together. Each outcome worth guarding, under one set of conditions, has one **guard**: the cheapest sound test CI runs that sees the outcome itself (the rendered words, a role, the stored row) rather than a stand-in for it. A dearer test keeps what only it sees: a unit test can catch a wrong total, while a checkout test catches a right total that never reaches the receipt.
+Tests overlap, so judge them together. Each outcome worth guarding has one **guard**: the cheapest sound test CI runs that sees the outcome itself (the rendered words, a role, the stored row) rather than a stand-in for it. A dearer test keeps what only it sees: a unit test can catch a wrong total, while a checkout test catches a right total that never reaches the receipt.
 
 Give each test the first verdict that fits:
 
-- **Rewrite:** an important outcome has no guard, and this test, rewritten or added to CI, would be its guard. Name the outcome it should assert.
+- **Rewrite:** an important outcome has no guard, and this test, rewritten, would be its guard. Name the outcome it should assert.
 - **Keep:** it is a guard, and every assertion serves an outcome it guards.
-- **Trim:** it is a guard; drop the assertions that serve no outcome it guards, keeping the steps those outcomes need.
+- **Trim:** it is a guard; drop the assertions that serve no outcome it guards.
 - **Delete:** it guards nothing. A duplicate's reason names the guard that stays.
 
-An assertion that something replaces stays until the replacement has landed and passes the bar. Done when every test in scope has a verdict and a one-line reason.
+Done when every test in scope has a verdict and a one-line reason.
 
 ## Writing a test
 
-Look for the outcome's guard first; if it has one, there is no test to write. Otherwise drive the public interface or the user-facing controls with a concrete input and an expected value from the requirement. Keep real collaborators; substitute only what the product doesn't own (a third-party service, the clock, randomness) or what the runner can't provide (a platform API, a forced error response). Done when you have seen it go red on the break, for the reason it names, and green on working code.
+Look for the outcome's guard first; if it has one, there is no test to write. Otherwise drive the public interface or the user-facing controls. Keep real collaborators; substitute only what the product doesn't own (a third-party service, the clock, randomness) or what the runner can't provide (a platform API, a forced error). Done when you have seen it go red on the break, for the reason it names, and green on working code.
 
 ## Fixing a bug
 
@@ -52,10 +52,10 @@ Look for the outcome's guard first; if it has one, there is no test to write. Ot
 
 Rerun it, then ask whether the observable outcome changed:
 
-- **Green on a rerun:** it is flaky. Find why the result changed: a race users can hit is a product bug, and a test that checked too early waits for the observable outcome.
-- **On purpose:** update the expected value if the test still stays by **Choosing what stays**, or delete it, and say in the PR what changed for the user.
+- **Green on a rerun:** it is flaky. A race users can hit is a product bug; a test that checked too early waits for the observable outcome.
+- **On purpose:** update the expected value if the test still stays by **Choosing what stays**; otherwise delete it.
 - **By accident:** the test caught a bug. Fix the product and keep the assertion.
-- **Not at all:** when what broke is how the test reaches the outcome (a locator, its setup), repair that, finding elements the way the user does (role, label, visible text). When it is the assertion, the test is pinned: judge it by **Choosing what stays**, since patching it to the new internals keeps it alive for the next refactor to break.
+- **Not at all:** repair a broken locator or setup, finding elements the way the user does (role, label, visible text). A broken assertion means the test is pinned: judge it by **Choosing what stays** rather than patching it to the new internals.
 
 ## Auditing a suite
 

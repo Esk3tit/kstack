@@ -7,4 +7,4 @@ An audit gives every test a verdict by **Choosing what stays** in [SKILL.md](SKI
 3. **Rules.** Show the owner the cost and history, and settle what the skill leaves to the repo: which flows are core, which one-time changes are finished, which tools act unattended.
 4. **Score.** Split the suite into areas. Two auditors from different model families read every test and the code it drives, independently and read-only, and give each test the outcomes it is for, whether it passes the bar on each, and a one-line reason. Each lists the important outcomes no test guards. A third reader settles where they differ.
 5. **Choose.** Across the whole suite, pick each outcome's guard and read off every verdict, so a duplicate in one area names its guard in another. Done when every test has one verdict.
-6. **Hand over.** File one spec issue with a ticket per area. Report the projected cuts, rewrites, CI time saved per job and missing tests, labelled as projections.
+6. **Hand over.** File one spec issue with a ticket per area. Report the projected cuts, rewrites, CI time saved and missing tests.
