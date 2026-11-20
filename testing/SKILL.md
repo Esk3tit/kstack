@@ -46,7 +46,7 @@ Look for the outcome's guard first; a sound one means there is no test to write.
 
 1. Reproduce it where the user met it, and watch the reproduction go red.
 2. Fix it, and watch the same reproduction go green.
-3. When the bug was important or stopped someone using the product, give it a guard by **Choosing what stays** (the reproduction, or a cheaper test that goes red on the bug) and commit the guard ahead of the fix, so the history shows red first. A reproduction that doesn't stay is deleted, with its red-then-green output in the PR.
+3. When the bug was important or stopped someone using the product, give it a guard by **Choosing what stays** (the reproduction, or a cheaper test that goes red on the bug) and commit the guard ahead of the fix, so the history shows red first. When the reproduction doesn't stay, remove what it added and put its red-then-green output in the PR.
 
 ## A test that fails after a change
 
