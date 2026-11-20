@@ -20,7 +20,7 @@ An audit gives every test in a suite one verdict against [SKILL.md](SKILL.md), w
 
 5. **Reconcile.**
    - **Disagreements:** two rows agree when they list the same failures with the same marks, however worded, and an agreed row stands. Where they differ, a third reader from the strongest model at hand reads the test and rules, one area at a time; an auditor whose reason is generic carries no weight.
-   - **Guards:** merge every area's settled rows into one table, sorted by the code where each break would be made. The third reader takes one code location at a time and does step 2 of **Judging tests**, with each test's own duration from the **Cost** step deciding which is cheapest; once every failure has its guard, it does step 3 for each test. Then strike from the missing-test lists each behavior a guard now covers.
+   - **Guards:** merge every area's settled rows into one table and group them by failure, using the code where each break would be made to find a failure's candidates. The third reader takes one failure at a time and does step 2 of **Judging tests**, with each test's own duration from the **Cost** step deciding which is cheapest; once every failure has its guard, it does step 3 for each test. Then strike from the missing-test lists each behavior a guard now covers.
    - **Owner calls** (legal, brand, visual direction, a rule's edge) go to whoever the owner has delegated judgement to, and to the owner only when that delegate can't settle them or the step needs the owner's permission.
    - **Gaps in SKILL.md** a disagreement exposes: draft the clause each needs in the audit notes. The skill is shared by every repo, so the clause lands as its own change with the owner's yes.
 
