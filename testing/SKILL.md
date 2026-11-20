@@ -21,7 +21,7 @@ A one-time truth gets no committed test. Check it on the change and put the evid
 - **A one-time change to data** (a migration, a backfill, a repair): run it on rows in the old shape, and count through a read-only path the production rows it will touch.
 - **Internal backward compatibility:** retire an old data shape or call form, with its tests, once our callers and stored data have moved off it. A format someone outside still holds (a shared link, a published file format, a public API) is current behavior and stays guarded.
 - **Looks:** compare screenshots. Guard a measurement only when its failure stops someone using the product or hides what they need to act, such as a control off screen or which option is chosen.
-- **Tools a person reads** (dev scripts, reports, CI config, test helpers): run them and read the output. Guard a tool that acts unattended where a wrong answer does lasting harm.
+- **Developer tools a person reads** (dev scripts and their reports, CI config, test helpers): run them and read the output. Guard a tool that acts unattended where a wrong answer does lasting harm.
 - **Rules a type or lint rule can hold:** make them one.
 - **A dependency's own guarantees:** test our use of the library, and trust the library.
 
