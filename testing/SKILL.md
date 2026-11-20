@@ -63,7 +63,7 @@ While writing:
 
 1. Reproduce it on the surface where the user met it, and watch the reproduction go red.
 2. Fix it, and watch the same reproduction go green on the same surface. A unit test shows how one branch behaves, not that the bug is gone.
-3. Decide what stays. When the bug broke something important or stopped someone using the page, its failure needs a guard: the reproduction, or a cheaper test that catches it, chosen by **Where a test lives** and carried through its verdict by **Judging tests**. Watch the guard, as it will be committed, go red without the fix and green with it, and commit it in its own commit ahead of the fix's, so the history shows red first. When the reproduction isn't the guard, delete it and put its red-then-green output in the PR.
+3. Decide what stays. When the bug broke something important or stopped someone using the page, its failure needs a guard: the reproduction, or a cheaper test that catches it (**Where a test lives**). Watch the guard, as it will be committed, go red without the fix and green with it, and commit it in its own commit ahead of the fix's, so the history shows red first. Then judge the reproduction by **Judging tests** like any other test; when its verdict is Delete, put its red-then-green output in the PR.
 
 ## A test that fails after a change
 
@@ -80,8 +80,8 @@ Weaken an assertion only when the behavior genuinely changed, and say why in the
 
 Tests overlap in what they catch, so a verdict comes from the whole suite: settle each test's failures, then each failure's guard, then read off the verdicts.
 
-1. **List each test's failures.** Run the two edits on it (in your head, or for real when unsure) and match it against the smells. List each failure it catches, marked **sound** where it passes the bar on that failure, or **unsound** where it fails the bar and the behavior is important. Every other check catches no failure and takes a smell. Done when every test in scope has its list, read from that test and the code it drives.
-2. **Give each failure its guard.** Gather every test CI runs that lists the same failure, listing any outside the scope by step 1. Two tests list the same failure when the same break turns both red; read both bodies to confirm. Choose the guard by **Where a test lives** among the sound tests, or among the unsound ones when none is sound. A test that skips unless a flag CI never sets gets a CI job or goes. Done when every listed failure names one guard.
+1. **List each test's failures.** Run the two edits on it (in your head, or for real when unsure) and match it against the smells. List each failure it is for, marked **sound** where it passes the bar on that failure, or **unsound** where it fails the bar and the behavior is important. Every other check is for no failure and takes a smell. Done when every test in scope has its list, read from that test and the code it drives.
+2. **Give each failure its guard.** Gather every test CI runs that lists the same failure, listing any outside the scope by step 1. Two tests list the same failure when they check the same outcome under the same conditions; read both bodies to confirm. Choose the guard by **Where a test lives** among the sound tests, or among the unsound ones when none is sound. A test that skips unless a flag CI never sets gets a CI job or goes. Done when every listed failure names one guard.
 3. **Read off each verdict.**
    - **Keep:** it guards only failures it is sound on, and every check serves one of them.
    - **Trim:** it guards only failures it is sound on, and other checks carry a smell or belong to a failure another test guards. Drop those, keeping any the test needs to reach an outcome it guards.
@@ -97,7 +97,7 @@ Tests overlap in what they catch, so a verdict comes from the whole suite: settl
 - **Change detector:** its expected value restates the code (a constant, a config shape, a workflow file, source text) with no separate requirement behind it. A fixed value is fair when an outside party requires it, as with a published format or a documented limit.
 - **Self-test:** it fails only if a dependency breaks its own guarantee. Remove our wiring and it still passes.
 - **Over-mocked:** our own logic never runs: the real authorization, persistence or integration is replaced, so the test fails only when the rehearsed calls change. Stubbing a response to force an error, standing in for a platform API the runner lacks, and asserting what our code hands a substituted third-party SDK are all fair. Mocking our own server function is fair only for a client rule the stored result can't show, such as whether it writes at all.
-- **Duplicate:** every failure it catches has another test as its guard; the reason names each guard.
+- **Duplicate:** every failure it is for has another test as its guard; the reason names each guard.
 - **Snapshot sprawl:** it compares a large recorded output, and nobody can say which part of it is promised.
 - **Time-bound:** it guards a one-time change that no input can reach again.
 - **Looks-only:** a measurement the **Looks** rule leaves to the eye.
