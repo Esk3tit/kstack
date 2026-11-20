@@ -53,7 +53,7 @@ Look for the outcome's guard first; if it has one, there is no test to write. Ot
 Rerun it, then ask whether the observable outcome changed:
 
 - **Green on a rerun:** it is flaky. Find why the result changed: a race users can hit is a product bug, and a test that checked too early waits for the observable outcome.
-- **On purpose:** update the expected value, or delete the test when what it guarded is gone, and say in the PR what changed for the user.
+- **On purpose:** update the expected value if the test still stays by **Choosing what stays**, or delete it, and say in the PR what changed for the user.
 - **By accident:** the test caught a bug. Fix the product and keep the assertion.
 - **Not at all:** when what broke is how the test reaches the outcome (a locator, its setup), repair that, finding elements the way the user does (role, label, visible text). When it is the assertion, the test is pinned: judge it by **Choosing what stays**, since patching it to the new internals keeps it alive for the next refactor to break.
 
