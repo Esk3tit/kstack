@@ -30,7 +30,7 @@ A lasting behavior is **guarded** by a committed test. A one-time truth is **che
   - **stops use:** a control off screen or covered, a phone page scrolling sideways, a control sliding out from under the pointer, a tap landing on a different control from the one drawn where the wrong action takes effect at once. A size floor alone is looks.
   - **hides what they need to act:** which option is chosen, whether focus is on screen, text cut short where the choices differ at the cut. Cut text whose whole is one step away is looks.
 
-  A state that clears by itself within seconds, or shows for a frame or two, is looks when nothing the person does during it lands on the wrong control. A setting the person chose, such as reduced motion, is behavior: guard that it is honoured, and leave how the motion looks to the eye.
+  A state that clears by itself within seconds, or shows for a frame or two, is looks when acting during it does no lasting harm. A setting the person chose, such as reduced motion, is behavior: guard that it is honoured, and leave how the motion looks to the eye.
 - **Tools a person reads:** dev scripts, reports, CI and config files, test helpers. Guard a tool only when it acts with nobody reading its output and a wrong answer does lasting harm, such as the guard that stops a destructive migration or a command that must keep a password out of its logs.
 - **Rules a compiler or linter can hold:** make them a type or a lint rule.
 - **A dependency's own guarantees:** test our use of the library, and trust the library.
@@ -61,7 +61,7 @@ While writing:
 
 1. Reproduce it on the surface where the user met it, and watch the reproduction go red.
 2. Fix it, and watch the same reproduction go green on the same surface. A unit test shows how one branch behaves, not that the bug is gone.
-3. Decide what stays. Commit the reproduction as a test when it earns Keep (**Judging an existing test**) and the bug broke something important or stopped someone using the page, in its own commit ahead of the fix's, so the history shows red first. Otherwise put the red-then-green output in the PR and delete the reproduction.
+3. Decide what stays. Judge the reproduction by **Judging an existing test**. When it earns Keep or Trim (trimmed first) and the bug broke something important or stopped someone using the page, commit it in its own commit ahead of the fix's, so the history shows red first. Otherwise put the red-then-green output in the PR and delete the reproduction.
 
 ## A test that fails after a change
 
