@@ -33,7 +33,7 @@ Give each test one verdict from everything it guards:
 
 - **Keep:** it guards an outcome, and every check serves its guards.
 - **Trim:** drop its checks that are pinned, checked once, or another guard's, keeping the steps its own outcomes need.
-- **Rewrite:** an important outcome has no sound guard, and this is the test cheapest to make one. Name the outcome it should assert. Tests that lean on the rewrite stay until it passes the bar.
+- **Rewrite:** an important outcome has no sound guard, and this test, rewritten, would be its guard. Name the outcome it should assert. Tests that lean on the rewrite stay until it passes the bar.
 - **Delete:** it guards nothing. A duplicate's reason names the guard that stays.
 
 Done when every test in scope has a verdict and a one-line reason.
