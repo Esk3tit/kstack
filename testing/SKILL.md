@@ -46,7 +46,7 @@ Look for the outcome's guard first; if it has one, there is no test to write. Ot
 
 1. Reproduce it where the user met it, and watch the reproduction go red.
 2. Fix it, and watch the same reproduction go green.
-3. When the bug broke lasting behavior that is important or that someone needs to use the product, keep a guard for it: the reproduction, or a cheaper test that goes red on the bug. When the reproduction isn't the guard, remove what it added and put its red-then-green output in the PR.
+3. When the bug broke lasting behavior that is important or that someone needs to use the product, and a test can catch it, keep a guard for it: the reproduction, or a cheaper test that goes red on the bug. When the reproduction isn't the guard, remove what it added and put its red-then-green output in the PR.
 
 ## A test that fails after a change
 
