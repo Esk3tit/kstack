@@ -12,7 +12,7 @@ A test guards **observable** behavior: what someone outside the code can see. Th
 A **sound** test passes two edits:
 
 - **The break.** Make the behavior wrong, and the test goes **red**. Its expected value comes from the requirement, not from the code under test.
-- **The refactor.** Change the internals and keep every observable result, and the test stays **green**. One that goes red is **pinned**: it asserts internal state, call order, class names or markup. A selector that only finds the element pins nothing.
+- **The refactor.** Change the internals and keep every observable result, and the test stays **green**. A test whose assertion then goes red is **pinned**: it asserts internal state, call order, class names or markup. What only reaches the outcome, such as a selector or the setup, pins nothing.
 
 ## Checked once
 
