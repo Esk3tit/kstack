@@ -31,7 +31,7 @@ Tests overlap, so judge them together. Each outcome worth guarding has one **gua
 
 Give each test the first verdict that fits:
 
-- **Rewrite:** an important outcome has no guard, and this test, rewritten, would be its guard. Name the outcome it should assert.
+- **Rewrite:** an important outcome has no guard, and this is the test to make its guard. Name the outcome it should assert.
 - **Keep:** it is a guard, and every assertion serves an outcome it guards.
 - **Trim:** it is a guard; drop the assertions that serve no outcome it guards.
 - **Delete:** it guards nothing. A duplicate's reason names the guard that stays.
