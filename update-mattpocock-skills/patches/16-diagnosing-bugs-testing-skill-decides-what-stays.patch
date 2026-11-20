@@ -4,7 +4,7 @@
  3. Apply the fix.
  4. Watch it pass.
  5. Re-run the Phase 1 feedback loop against the original (un-minimised) scenario.
-+6. Decide whether the test stays, by the `testing` skill's bug-fix rule. When it doesn't, put its red-then-green output in the PR and delete it.
++6. Decide what stays by the `testing` skill's bug-fix rule.
  
  ## Phase 6: Cleanup
  

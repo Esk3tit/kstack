@@ -115,5 +115,5 @@ patch -p1 -d ~/.agents/skills/<skill> < ~/.claude/skills/update-mattpocock-skill
 
 `patches/16-diagnosing-bugs-testing-skill-decides-what-stays.patch`, added 2026-11-19. Requires kstack's `testing` skill.
 
-- **What it does:** a new last step of Phase 5 decides by the `testing` skill's bug-fix rule whether the regression test is committed; when it isn't, its red-then-green output goes in the PR and the test is deleted. The Phase 6 checklist accepts either.
+- **What it does:** a new last step of Phase 5 hands the decision of what stays to the `testing` skill's bug-fix rule, and the Phase 6 checklist accepts either a committed regression test or its red-then-green output in the PR.
 - **Why:** Phase 5 made a permanent regression test the default for every bug with a seam, which is how looks-only and pinned reproductions piled up in WT Records' browser suite.
