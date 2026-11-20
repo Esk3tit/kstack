@@ -33,7 +33,7 @@ Give each test one verdict from everything it guards:
 
 - **Keep:** it guards an outcome, and every check serves its guards.
 - **Trim:** drop its checks that are pinned, checked once, or another guard's, keeping the steps its own outcomes need.
-- **Rewrite:** it fails the bar on an important outcome that nothing else soundly guards. Name the outcome it should assert. Tests that lean on the rewrite stay until it passes the bar.
+- **Rewrite:** an important outcome has no sound guard, and this is the test cheapest to make one. Name the outcome it should assert. Tests that lean on the rewrite stay until it passes the bar.
 - **Delete:** it guards nothing. A duplicate's reason names the guard that stays.
 
 Done when every test in scope has a verdict and a one-line reason.
@@ -55,7 +55,7 @@ Ask whether the observable outcome changed:
 - **On purpose:** update the expected value, and say in the PR what changed for the user.
 - **By accident:** the test caught a bug. Fix the product and keep the assertion.
 - **Not at all:** re-point a broken locator at what the user finds (role, label, visible text). Otherwise the test is pinned: judge it by **Choosing what stays**, since patching it to the new internals keeps it alive for the next refactor to break.
-- **Green on a rerun:** it is flaky. A race users can hit is a product bug; otherwise make the test wait for the observable outcome.
+- **Green on a rerun:** it is flaky. Find why the result changed: a race users can hit is a product bug, and a test that checked too early waits for the observable outcome.
 
 ## Auditing a suite
 
