@@ -18,7 +18,7 @@ A **sound** test passes two edits:
 
 A one-time truth gets no committed test. Check it on the change and put the evidence (the commands and their output, the screenshots) in the PR, even when the change also needs a lasting test.
 
-- **A one-time change to data** (a migration, a backfill, a repair): run it on rows in the old shape, and count through a read-only path the production rows it will touch.
+- **A one-time change to data** (a migration, a backfill, a repair): check the values it leaves on sample rows in the old shape, and count through a read-only path the production rows it will touch.
 - **Internal backward compatibility:** retire an old data shape or call form, with its tests, once our callers and stored data have moved off it. A format someone outside still holds (a shared link, a published file format, a public API) is current behavior and stays guarded.
 - **Looks:** compare screenshots. Guard a measurement only when its failure stops someone using the product or hides what they need to act, such as a control off screen or which option is chosen.
 - **Developer tools a person reads** (dev scripts and their reports, CI config, test helpers): run them and read the output. Guard a tool that acts unattended where a wrong answer does lasting harm.
@@ -32,7 +32,7 @@ Tests overlap, so judge them together. Each outcome worth guarding, under one se
 Give each test one verdict from everything it guards:
 
 - **Keep:** it guards an outcome, and every check serves its guards.
-- **Trim:** drop its checks that are pinned, checked once, or another guard's, keeping the steps its own outcomes need.
+- **Trim:** it guards an outcome; drop its checks that serve none of its guards, keeping the steps those outcomes need.
 - **Rewrite:** an important outcome has no sound guard, and this test, rewritten or added to CI, would be its guard. Name the outcome it should assert. Tests that lean on the rewrite stay until it passes the bar.
 - **Delete:** it guards nothing. A duplicate's reason names the guard that stays.
 
