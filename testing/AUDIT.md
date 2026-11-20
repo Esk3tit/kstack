@@ -20,7 +20,7 @@ An audit gives every test in a suite one verdict against [SKILL.md](SKILL.md), w
 
 5. **Reconcile.**
    - **Disagreements:** where both auditors agree, the verdict stands. Where they differ, a third reader from the strongest model at hand reads each test and rules, one area at a time; an auditor whose reason is generic carries no weight.
-   - **Hand-offs:** across all areas, gather each failure a Delete, Trim or Rewrite touches with every test that catches it. Once every verdict is carried out, a test in each gathering must still keep the check: a Keep or Trim where one exists, otherwise a single Rewrite. The third reader reopens verdicts to make it so, and the reason of every other Delete, Trim or Rewrite in the gathering names that test.
+   - **Hand-offs:** across all areas, gather each failure a verdict leaves to another test, or a Rewrite would catch, with every test that catches it. Once every verdict is carried out, a test in each gathering must still keep the check: a Keep or Trim where one exists, otherwise a single Rewrite. The third reader reopens verdicts to make it so, and the reason of every other Delete, Trim or Rewrite in the gathering names that test.
    - **Owner calls** (legal, brand, visual direction, a rule's edge) go to whoever the owner has delegated judgement to, and to the owner only when that delegate can't settle them or the step needs the owner's permission.
    - **Gaps in SKILL.md** a disagreement exposes: draft the clause each needs in the audit notes. The skill is shared by every repo, so the clause lands as its own change with the owner's yes.
 
