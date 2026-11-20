@@ -103,3 +103,17 @@ patch -p1 -d ~/.agents/skills/<skill> < ~/.claude/skills/update-mattpocock-skill
 
 - **What it does:** a retro on a Claude Code session starts from the session summary's counts of executed tool calls, errors, hook denials, indexed outputs and compaction summaries, with their definitions, and counts any figure it does not print by the same definitions.
 - **Why:** the #579 retro first counted 336 agent calls and 157 Codex runs; the real figures were 203 and 85, because replayed API copies in the log were counted as new work.
+
+## 15 · tdd · the testing skill decides what stays
+
+`patches/15-tdd-testing-skill-decides-what-stays.patch`, added 2026-11-19. Requires kstack's `testing` skill.
+
+- **What it does:** the agent applies the `testing` skill before the first test of a red → green loop, and its **Choosing what stays** before committing the tests a loop leaves behind.
+- **Why:** `tdd` keeps every test a loop writes. A WT Records audit marked 1,259 of its 3,953 tests for deletion: vacuous, tied to implementation, duplicated, looks-only, or guarding one-time changes.
+
+## 16 · diagnosing-bugs · the testing skill decides what stays
+
+`patches/16-diagnosing-bugs-testing-skill-decides-what-stays.patch`, added 2026-11-19. Requires kstack's `testing` skill.
+
+- **What it does:** a line closing Phase 5, for a bug with a seam or without one, hands the decision of what stays to the `testing` skill's **Fixing a bug**, and the Phase 6 checklist asks for a committed regression test or the repro's red-then-green output in the PR.
+- **Why:** Phase 5 made a permanent regression test the default for every bug with a seam, whatever the bug broke.

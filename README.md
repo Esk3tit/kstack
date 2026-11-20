@@ -40,6 +40,7 @@ nothing to lose and needs no prompt.
 |------|------------|
 | `CLAUDE.md` | Global instructions for Claude Code. **Shared with Codex** via a symlink (below). |
 | `cleanup/` | Shared session cleanup and archive-time resource ownership checks. |
+| `testing/` | Skill — which tests to write, keep, trim, rewrite or delete; `AUDIT.md` audits a whole suite. |
 | `pr-loop/` | Canonical merge-ready skill; the slash command is an alias. |
 | `commands/` | Custom slash commands (Codex-driven review loops + PR hygiene). |
 | `no-mistakes/` · `no-mistakes-frontend/` · `no-mistakes-backend/` · `no-mistakes-a11y/` · `no-mistakes-setup/` | The verification skill family (router + three specialists: frontend, backend, deep-a11y) plus the onboarding skill that generates a project's `.no-mistakes.json`. See each `SKILL.md`. |
@@ -91,6 +92,7 @@ All user-authored, and the same files serve Claude Code and Codex. Reviews come 
 ## 3. Custom skills (mine)
 
 - **`cleanup/`**: inventory session resources, shut down authorized leftovers, preserve worktree artifacts and produce an archive verdict.
+- **`testing/`**: which tests to write, keep, trim, rewrite or delete, and what is checked once instead. `AUDIT.md` audits a whole suite. Patches 15 and 16 make `tdd` and `diagnosing-bugs` defer to it.
 - **`pr-loop/`**: the shared finishing workflow; `commands/pr-loop.md` is its alias. `FABLE.md` says how to run a Fable pass, `CROSS-REPO.md` what a change spanning repos adds, `FLAKY.md` how to diagnose a check that passed on a re-run, and `MERGED.md` the steps after a merge. `HANDOFF.md` is the common child-brief contract, plus the dispatcher's cloud-memory sync.
 - **`update-mattpocock-skills/`** — the only supported way to update the mattpocock skills (`npx skills check -g` applies updates and wipes local edits). `PATCHES.md` lists each local patch in plain words; the skill reads upstream history for breaking changes, judges each patch against the new version (reapply, rewrite or drop), asks which to apply, then rebuilds the patch set. `/pr-loop` and the decision log depend on patches 03 (`/implement` logs decisions), 04 (`/pr` gains "Behavior changes vs master"), 12 (`/code-review` runs one axis and Spec reads the PR body) and 13 (`/pr` carries the facts block and edits the live body); on a new machine, first link the shared `learning/` module from a permanent kstack clone as shown below, then install the mattpocock skills and apply `patches/` in number order.
 

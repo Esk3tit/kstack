@@ -1,0 +1,11 @@
+--- a/SKILL.md
++++ b/SKILL.md
+@@ -15,6 +15,8 @@
+ 
+ See [tests.md](tests.md) for examples and [mocking.md](mocking.md) for mocking guidelines.
+ 
++Which tests a loop writes and keeps is the `testing` skill's call: apply it before the first test, and its **Choosing what stays** before committing the tests the loop leaves behind.
++
+ ## Seams: where tests go
+ 
+ A **seam** is the public boundary you test at: the interface where you observe behavior without reaching inside. Tests live at seams, never against internals.
