@@ -63,7 +63,7 @@ While writing:
 
 1. Reproduce it on the surface where the user met it, and watch the reproduction go red.
 2. Fix it, and watch the same reproduction go green on the same surface. A unit test shows how one branch behaves, not that the bug is gone.
-3. Decide what stays. When the bug broke something important or stopped someone using the page, its failure needs a guard: the reproduction, or a cheaper test that catches it (**Where a test lives**). Judge the reproduction by **Judging tests** like any other test and carry out its verdict, then watch the guard in its final form go red without the fix and green with it. Commit a new or changed guard in its own commit ahead of the fix's, so the history shows red first. When the reproduction's verdict is Delete, put its red-then-green output in the PR.
+3. Decide what stays. When the bug broke something important or stopped someone using the page, its failure needs a guard: the reproduction, or a cheaper test that catches it (**Where a test lives**). Judge the reproduction by **Judging tests** and carry out its verdict, then watch the guard in its final form go red without the fix and green with it, and commit a new or changed guard in its own commit ahead of the fix's, so the history shows red first. For any other bug, or a reproduction judged Delete, delete the reproduction and put its red-then-green output in the PR.
 
 ## A test that fails after a change
 
@@ -81,7 +81,7 @@ Weaken an assertion only when the behavior genuinely changed, and say why in the
 Tests overlap in what they catch, so a verdict comes from the whole suite: settle each test's failures, then each failure's guard, then read off the verdicts.
 
 1. **List each test's failures.** Run the two edits on it (in your head, or for real when unsure) and match it against the smells. List each failure it is for, marked **sound** where it passes the bar on that failure, or **unsound** where it fails the bar and the behavior is important. Every other check is for no failure and takes a smell. Done when every test in scope has its list, read from that test and the code it drives.
-2. **Give each failure its guard.** Gather every test CI runs that lists the same failure, listing any outside the scope by step 1. Two tests list the same failure when they check the same outcome under the same conditions; read both bodies to confirm. Choose the guard by **Where a test lives** among the sound tests. When none is sound, choose one unsound test to rewrite; the failure counts as guarded once the rewrite goes red on the break. A test that skips unless a flag CI never sets gets a CI job or goes. Done when every listed failure names one guard.
+2. **Give each failure its guard.** Gather every test CI runs that lists the same failure, listing any outside the scope by step 1. Two tests list the same failure when they check the same outcome under the same conditions; read both bodies to confirm. Choose the guard by **Where a test lives** among the sound tests, or among the unsound ones when none is sound; an unsound guard covers its failure only once its rewrite passes the bar. A test that skips unless a flag CI never sets gets a CI job or goes. Done when every listed failure names one guard.
 3. **Read off each verdict.**
    - **Keep:** it guards only failures it is sound on, and every check serves one of them.
    - **Trim:** it guards only failures it is sound on, and other checks carry a smell or belong to a failure another test guards. Drop those, keeping any the test needs to reach an outcome it guards.
