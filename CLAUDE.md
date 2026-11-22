@@ -47,6 +47,8 @@ Look for the signals before editing any file you did not write: a `@generated` /
 
 ## Code comments — sparse by default
 
+Where a repo's lint bans comments (wt-records does), write none; a decision that meets the domain-modeling skill's ADR-FORMAT.md bar goes in an ADR.
+
 Default to **NO comments**. Well-named identifiers explain WHAT. Only add a comment when WHY is non-obvious from reading the code: a hidden constraint, subtle invariant, workaround for a specific bug, surprising behavior.
 
 When a comment IS needed:
