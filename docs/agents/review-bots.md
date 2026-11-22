@@ -6,7 +6,7 @@ Macroscope and Cursor Bugbot are this repo's final-pass reviewers.
 
 ## Final-pass reviewer: Macroscope
 
-Its tag is a PR comment: `@macroscope-app review`. Its automatic reviews are off for this repo, so it reviews only when tagged; `/address-pr-comments`, **The final pass**, says when.
+Its tag is a PR comment: `@macroscope-app review`. Its automatic reviews are off for this repo, so it reviews only when tagged; `~/.agents/skills/pr-loop/TAIL.md`, **The final pass**, says when.
 
 - **Why last:** every review is billed. In this repo's Balanced mode that's $0.05 per KB of reviewable diff, with a $0.50 minimum (10 KB) per review, plus $0.30 when its Approvability check runs its eligibility agent ([pricing](https://docs.macroscope.com/pricing)). Most of its findings repeat the cheaper bots'; reviewing last, it finds only what they missed.
 - **What it bills for:** the diff minus the files its [ignore rules](https://docs.macroscope.com/code-review/ignore-files) match: the repo's ignore file, or Macroscope's defaults without one, and its test patterns. A test file those patterns miss is billed. Before requesting it for a risk, check that its ignore rules leave the file carrying the risk in what it bills for.
@@ -15,7 +15,7 @@ Its tag is a PR comment: `@macroscope-app review`. Its automatic reviews are off
 
 ## Final-pass reviewer: Cursor Bugbot
 
-Its tag is a PR comment: `bugbot run`, posted with `gh` as a person (`gh api user --jq .type` says `User`), not through an app's GitHub tools such as Claude's: Bugbot ignores a tag from a bot or GitHub App. The owner's Cursor account runs it only when tagged, so `/address-pr-comments`, **The final pass**, says when, and when `/pr-loop`'s tail requests it again.
+Its tag is a PR comment: `bugbot run`, posted with `gh` as a person (`gh api user --jq .type` says `User`), not through an app's GitHub tools such as Claude's: Bugbot ignores a tag from a bot or GitHub App. The owner's Cursor account runs it only when tagged, so `~/.agents/skills/pr-loop/TAIL.md`, **The final pass**, says when.
 
 - **Why last:** every run is billed ([pricing](https://cursor.com/docs/bugbot.md#pricing); Cursor puts the average run at $1). Run on every push, it averaged over three runs per PR.
 - **Reading its review:** a tagged run ends with a review on the PR, which wakes a T3 watch: "✅ Bugbot reviewed your changes and found no new issues!" when clean, otherwise its findings as review threads. The review for your request is the one on the head you tagged, submitted after your `bugbot run` comment. Its PR summary comment (`prSummary` in `.cursor/config/bugbot.yaml`) posts when a review starts, not when it finishes.
